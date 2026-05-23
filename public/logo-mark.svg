@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 56" fill="none" role="img" aria-labelledby="crtitle">
+  <title id="crtitle">CourseRocket</title>
+  <defs>
+    <linearGradient id="cr-main" x1="4" y1="54" x2="60" y2="6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6366f1"/>
+      <stop offset="0.5" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="cr-flame" x1="40" y1="41" x2="40" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#cr-main)" stroke-width="2.25" stroke-linecap="round" opacity="0.92">
+    <path d="M6 20h14"/>
+    <path d="M6 28h18"/>
+    <path d="M6 36h11"/>
+  </g>
+  <path fill="url(#cr-main)" d="M40 6 54 43h-7.5l-4.2-11.8L39 43h-7.5L40 6Z"/>
+  <circle cx="40" cy="22" r="3.25" fill="rgba(255,255,255,0.22)"/>
+  <path fill="url(#cr-flame)" d="M40 40.5c-2 0-3.6 1.55-3.6 3.5 0 2.35 3.6 7 3.6 7s3.6-4.65 3.6-7c0-1.95-1.6-3.5-3.6-3.5Z"/>
+</svg>

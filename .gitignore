@@ -1,0 +1,14 @@
+# Dependencies (The heavy stuff you don't need to upload)
+node_modules/
+.pnpm-store/
+
+# Secrets & Environment Variables (Keep these safe!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
