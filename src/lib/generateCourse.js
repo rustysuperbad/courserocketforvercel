@@ -17,7 +17,7 @@
 
 import { fetchYouTubeVideos } from "./fetchYoutube";
 import { fetchPapers } from "./fetchPapers";
-import { groqGenerateJson, GROQ_PLANNER_MODEL } from "./groqChat";
+import { generateStructuredJson } from "./courseAiApi";
 import { buildCurriculumPrompt, generateModuleLessons } from "./courseWriterPipeline";
 import { detectComplexity, MODULE_COUNT } from "./courseGenerationUtils";
 import {
@@ -259,6 +259,7 @@ function fallbackStructure(topic, complexity) {
     .filter((w) => w.length > 2)
     .slice(0, 8);
   return {
+    generationQuality: "template-fallback",
     title: "Introduction to " + topic,
     description: "A structured course on " + topic + " from fundamentals to practical application.",
     level: "Beginner",
@@ -287,11 +288,11 @@ export async function generateCourseStructure(topic, onProgress) {
   cb("Designing your course…");
 
   try {
-    const raw = await groqGenerateJson(
-      buildCurriculumPrompt(moduleTarget, topic),
-      buildStructureUserMessage(topic),
-      { model: GROQ_PLANNER_MODEL, maxTokens: 2400, timeoutMs: 30000, temperature: 0.3 }
-    );
+    const raw = await generateStructuredJson({
+      kind: "outline",
+      systemPrompt: buildCurriculumPrompt(moduleTarget, topic),
+      userMessage: buildStructureUserMessage(topic),
+    });
     const course = parseJSON(raw);
     if (!Array.isArray(course.modules) || course.modules.length === 0) {
       throw new Error("Empty modules.");
@@ -307,6 +308,7 @@ export async function generateCourseStructure(topic, onProgress) {
 
     course.title = refineCatalogTitleIfLazy(course.title, topic);
     course.courseKeyConcepts = normalizeCourseKeyConcepts(course.courseKeyConcepts, course.modules);
+    course.generationQuality = "generated";
     return course;
   } catch (e) {
     console.warn("[gen] structure failed, using fallback:", e.message);
@@ -363,7 +365,7 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
             summary: `${m.summary || ""}\nNotes: ${String(extraUserInstructions).trim()}`,
           }
         : m;
-    const { lessons: rawLessons, quiz: rawQuiz } = await generateModuleLessons(
+    const { lessons: rawLessons, quiz: rawQuiz, sources, groundingStatus } = await generateModuleLessons(
       moduleInput,
       topic,
       level,
@@ -376,12 +378,18 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
     const gate = assessModuleContentGate(lessons, quiz, fingerprints);
     if (!gate.gateOk || lessons.length < 2) {
       console.warn(`[gen] quality fallback for ${m.id}`);
-      return { lessons: fallbackLessons(m, topic), quiz: [] };
+      return { lessons: fallbackLessons(m, topic), quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "template-fallback" };
     }
-    return { lessons, quiz: quiz.length >= 2 ? quiz : [] };
+    return {
+      lessons,
+      quiz: quiz.length >= 2 ? quiz : [],
+      sources: Array.isArray(sources) ? sources : [],
+      groundingStatus: groundingStatus || "unavailable",
+      generationQuality: "generated",
+    };
   } catch (e) {
     console.warn(`[gen] write failed for ${m.id}:`, e.message);
-    return { lessons: fallbackLessons(m, topic), quiz: [] };
+    return { lessons: fallbackLessons(m, topic), quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "template-fallback" };
   }
 }
 
@@ -421,7 +429,6 @@ async function fetchModulePapers(m) {
 
 export async function enrichModules(modules, topic, level, onProgress, options = {}) {
   const cb = onProgress || (() => {});
-  const hasGroq = Boolean(import.meta.env.VITE_GROQ_API_KEY);
   const vidLangOpt = options.preferredVideoLanguage;
   cb("Writing lessons, videos, and papers…");
 
@@ -434,9 +441,7 @@ export async function enrichModules(modules, topic, level, onProgress, options =
       await wait(i * 80);
 
       const [lessonResult, videos, papers] = await Promise.all([
-        hasGroq
-          ? generateLessonForModule(m, topic, i, total, level, "")
-          : Promise.resolve({ lessons: fallbackLessons(m, topic), quiz: [] }),
+        generateLessonForModule(m, topic, i, total, level, ""),
         fetchModuleVideos(m, { preferredVideoLanguage: vidLangOpt }),
         fetchModulePapers(m),
       ]);
@@ -452,6 +457,9 @@ export async function enrichModules(modules, topic, level, onProgress, options =
         ...m,
         lessons: lessonResult.lessons,
         quiz: lessonResult.quiz,
+        sources: lessonResult.sources || [],
+        groundingStatus: lessonResult.groundingStatus || "unavailable",
+        generationQuality: lessonResult.generationQuality || "template-fallback",
         videos,
         papers,
       };
@@ -479,12 +487,9 @@ export async function enrichOneModule(
   onProgress,
   options = {}
 ) {
-  const hasGroq = Boolean(import.meta.env.VITE_GROQ_API_KEY);
   const vidLangOpt = options.preferredVideoLanguage;
   const [lessonResult, videos, papers] = await Promise.all([
-    hasGroq
-      ? generateLessonForModule(module, topic, moduleIndex, totalModules, level, "")
-      : Promise.resolve({ lessons: fallbackLessons(module, topic), quiz: [] }),
+    generateLessonForModule(module, topic, moduleIndex, totalModules, level, ""),
     fetchModuleVideos(module, { preferredVideoLanguage: vidLangOpt }),
     fetchModulePapers(module),
   ]);
@@ -493,6 +498,9 @@ export async function enrichOneModule(
     ...module,
     lessons: lessonResult.lessons,
     quiz: lessonResult.quiz,
+    sources: lessonResult.sources || [],
+    groundingStatus: lessonResult.groundingStatus || "unavailable",
+    generationQuality: lessonResult.generationQuality || "template-fallback",
     videos,
     papers,
   };
@@ -518,11 +526,8 @@ export async function regenerateModuleContent(module, topic, level, moduleIndex,
   }
   const extraBlock = parts.join("\n\n");
   const base = outlineModuleForRegenerate(module);
-  const hasGroq = Boolean(import.meta.env.VITE_GROQ_API_KEY);
   const [lessonResult, videos, papers] = await Promise.all([
-    hasGroq
-      ? generateLessonForModule(base, topic, moduleIndex, totalModules, level, extraBlock)
-      : Promise.resolve({ lessons: fallbackLessons(base, topic), quiz: [] }),
+    generateLessonForModule(base, topic, moduleIndex, totalModules, level, extraBlock),
     fetchModuleVideos(base, {
       preferredVideoLanguage: preferredVideoLanguage ?? module.preferredVideoLanguage,
     }),
@@ -532,6 +537,9 @@ export async function regenerateModuleContent(module, topic, level, moduleIndex,
     ...module,
     lessons: lessonResult.lessons,
     quiz: lessonResult.quiz,
+    sources: lessonResult.sources || [],
+    groundingStatus: lessonResult.groundingStatus || "unavailable",
+    generationQuality: lessonResult.generationQuality || "template-fallback",
     videos,
     papers,
   };

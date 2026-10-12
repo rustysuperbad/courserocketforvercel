@@ -3,14 +3,13 @@
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 /**
- * Model tiers — override in .env for stronger APIs when available.
- * VITE_GROQ_WRITER_MODEL / VITE_GROQ_PLANNER_MODEL (e.g. llama-3.3-70b-versatile, openai/gpt-oss-120b)
- * Never use lite/mini models for final lesson prose.
+ * Content generation models — override in .env if needed.
+ * VITE_GROQ_WRITER_MODEL / VITE_GROQ_PLANNER_MODEL
  */
 export const GROQ_WRITER_MODEL =
-  import.meta.env.VITE_GROQ_WRITER_MODEL || "llama-3.3-70b-versatile";
+  import.meta.env.VITE_GROQ_WRITER_MODEL || "deepseek-r1-distill-llama-70b";
 export const GROQ_PLANNER_MODEL =
-  import.meta.env.VITE_GROQ_PLANNER_MODEL || "llama-3.3-70b-versatile";
+  import.meta.env.VITE_GROQ_PLANNER_MODEL || "deepseek-r1-distill-llama-70b";
 
 /** @deprecated alias */
 export const GROQ_COURSE_MODEL = GROQ_WRITER_MODEL;

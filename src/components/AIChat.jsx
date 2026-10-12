@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { askGroq, buildSystemPrompt } from "../lib/groqChat";
+import { buildTutorSystemPrompt, requestCourseTutor } from "../lib/courseAiApi";
 
 const SUGGESTIONS = [
   "Explain this module in simple terms",
@@ -124,14 +124,15 @@ export default function AIChat({ open, onOpen, onClose, course, module: currentM
 
   const systemPrompt = useMemo(
     () =>
-      buildSystemPrompt({
+      buildTutorSystemPrompt({
         courseTitle: course?.title,
         moduleTitle: currentModule?.title,
         moduleSummary: currentModule?.summary,
         concepts: currentModule?.concepts,
         lessons: currentModule?.lessons,
+        sources: currentModule?.sources,
       }),
-    [course?.title, currentModule?.title, currentModule?.summary, currentModule?.concepts, currentModule?.lessons]
+    [course?.title, currentModule?.title, currentModule?.summary, currentModule?.concepts, currentModule?.lessons, currentModule?.sources]
   );
 
   useEffect(() => {
@@ -171,10 +172,7 @@ export default function AIChat({ open, onOpen, onClose, course, module: currentM
       setInput("");
       setLoading(true);
       try {
-        const reply = await askGroq([
-          { role: "system", content: systemPrompt },
-          ...next.slice(-10),
-        ]);
+        const reply = await requestCourseTutor({ systemPrompt, messages: next.slice(-10) });
         setMessages((m) => [...m, { role: "assistant", content: reply }]);
       } catch (e) {
         const msg = String(e?.message || "");
@@ -241,6 +239,7 @@ export default function AIChat({ open, onOpen, onClose, course, module: currentM
 
       {/* Panel */}
       <aside
+        className="cr-ai-chat-panel"
         style={{
           ...p.panel,
           transform: open ? "translateX(0)" : "translateX(110%)",

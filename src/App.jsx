@@ -1,10 +1,20 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Course from "./pages/Course";
-import Profile from "./pages/Profile";
+
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Course = lazy(() => import("./pages/Course"));
+const Profile = lazy(() => import("./pages/Profile"));
 import { useAuth } from "./context/AuthContext";
+
+function DeferredPage({ children }) {
+  return (
+    <Suspense fallback={<div className="cr-route-loading"><span /></div>}>
+      {children}
+    </Suspense>
+  );
+}
 
 function AuthGate() {
   return (
@@ -30,11 +40,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/course/:id" element={<ProtectedRoute><Course /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/" element={<DeferredPage><Landing /></DeferredPage>} />
+        <Route path="/login" element={<PublicOnlyRoute><DeferredPage><Login /></DeferredPage></PublicOnlyRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><DeferredPage><Dashboard /></DeferredPage></ProtectedRoute>} />
+        <Route path="/course/:id" element={<ProtectedRoute><DeferredPage><Course /></DeferredPage></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><DeferredPage><Profile /></DeferredPage></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

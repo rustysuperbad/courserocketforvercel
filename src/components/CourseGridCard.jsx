@@ -135,8 +135,8 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration }) {
   }
 
   return (
-    <div className="cr-card" style={s.courseCard} onClick={onClick}>
-      <div style={s.cardTopRow}>
+    <div className="cr-card cr-course-card" style={s.courseCard} onClick={onClick} role="button" tabIndex={0} aria-label={"Open course " + (course.title || course.topic || "course")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick?.(); } }}>
+      <div style={s.cardTopRow} className="cr-course-card-top">
         <span style={s.levelPill}>
           {isFailed ? "Failed" : isGenerating ? "Generating" : course.level || "Course"}
         </span>
@@ -144,7 +144,7 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration }) {
           {isGenerating ? "Building…" : `${totalModules} modules · ${course.estimatedHours || "—"}h`}
         </span>
       </div>
-      <div style={s.courseTitle}>{course.title || course.topic}</div>
+      <div style={s.courseTitle} className="cr-course-title">{course.title || course.topic}</div>
       {keyConcepts.length > 0 && !isFailed ? (
         <div style={s.conceptStrip}>
           {keyConcepts.slice(0, 4).map((k) => (
@@ -154,7 +154,7 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration }) {
           ))}
         </div>
       ) : null}
-      <div style={s.courseDesc}>
+      <div style={s.courseDesc} className="cr-course-desc">
         {isFailed
           ? course.generationError || "Something went wrong. Tap Retry or open the course."
           : isGenerating && course.generationMessage

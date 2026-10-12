@@ -1,0 +1,80 @@
+[
+  {
+    "key": "wikipedia-computer-network",
+    "title": "Computer network",
+    "publisher": "Wikipedia contributors",
+    "url": "https://en.wikipedia.org/wiki/Computer_network",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, Computer network; https://en.wikipedia.org/wiki/Computer_network (CC BY-SA 4.0). Verify article history for author attribution.",
+    "authorityScore": 0.62,
+    "level": 1,
+    "commercialAllowed": true,
+    "sourceKind": "wikipedia",
+    "shareAlike": true
+  },
+  {
+    "key": "wikipedia-internet-protocol-suite",
+    "title": "Internet protocol suite",
+    "publisher": "Wikipedia contributors",
+    "url": "https://en.wikipedia.org/wiki/Internet_protocol_suite",
+    "license": "CC BY-SA 4.0",
+    "attribution": "Wikipedia contributors, Internet protocol suite; https://en.wikipedia.org/wiki/Internet_protocol_suite (CC BY-SA 4.0). Verify article history for author attribution.",
+    "authorityScore": 0.62,
+    "level": 2,
+    "commercialAllowed": true,
+    "sourceKind": "wikipedia",
+    "shareAlike": true
+  },
+  {
+    "key": "mdn-http",
+    "title": "HTTP | MDN Web Docs",
+    "publisher": "Mozilla Contributors",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP",
+    "license": "CC BY-SA 2.5 or later (page may specify another license)",
+    "attribution": "Mozilla Contributors, HTTP | MDN Web Docs; https://developer.mozilla.org/en-US/docs/Web/HTTP (check the page-specific terms; default documentation license is CC BY-SA 2.5 or later).",
+    "authorityScore": 0.9,
+    "level": 2,
+    "commercialAllowed": true,
+    "sourceKind": "mdn",
+    "shareAlike": true
+  },
+  {
+    "key": "openstax-computer-networking",
+    "title": "Linking Up: Computer Networks",
+    "publisher": "OpenStax",
+    "url": "https://openstax.org/books/introduction-business-2e/pages/13-2-linking-up-computer-networks",
+    "license": "CC BY-NC-SA 4.0 (verify book page) ",
+    "attribution": "OpenStax, Introduction to Business 2e, section 13.2; https://openstax.org/books/introduction-business-2e/pages/13-2-linking-up-computer-networks.",
+    "authorityScore": 0.88,
+    "level": 1,
+    "commercialAllowed": false,
+    "sourceKind": "openstax",
+    "shareAlike": true
+  },
+  {
+    "key": "rfc791",
+    "title": "RFC 791: Internet Protocol",
+    "publisher": "Internet Engineering Task Force",
+    "url": "https://www.rfc-editor.org/rfc/rfc791",
+    "license": "IETF Trust terms applicable on RFC publication date; confirm individual rights notice",
+    "attribution": "IETF, RFC 791; https://www.rfc-editor.org/rfc/rfc791. Review the RFC's copyright and rights notice before ingesting.",
+    "authorityScore": 0.98,
+    "level": 4,
+    "commercialAllowed": false,
+    "sourceKind": "rfc",
+    "shareAlike": false
+  },
+  {
+    "key": "official-cisco-networking",
+    "title": "Cisco Networking Academy",
+    "publisher": "Cisco",
+    "url": "https://www.netacad.com/",
+    "license": "Link only; no content license reviewed",
+    "attribution": "Cisco Networking Academy; https://www.netacad.com/.",
+    "authorityScore": 0.88,
+    "level": 1,
+    "commercialAllowed": false,
+    "sourceKind": "link-only",
+    "shareAlike": false
+  }
+]

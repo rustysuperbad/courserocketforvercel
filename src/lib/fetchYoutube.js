@@ -1,8 +1,4 @@
-const SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
-
-const FIELDS =
-  "items(id/videoId,snippet/title,snippet/channelTitle," +
-  "snippet/thumbnails/medium,snippet/description)";
+import { searchYouTubeResults } from "./courseAiApi";
 
 const cache = new Map();
 
@@ -299,35 +295,14 @@ function rankVideoPool(rawItems, poolCap, preferred) {
   return out.slice(0, cap);
 }
 
-async function runSearch(apiKey, q, opts) {
-  const {
-    relevanceLang,
-    maxResultsFetch,
-    regionCode,
+async function runSearch(q, opts) {
+  const { relevanceLang, maxResultsFetch, signal } = opts;
+  return searchYouTubeResults({
+    query: q,
+    maxResults: maxResultsFetch,
+    language: relevanceLang,
     signal,
-    videoCaption,
-    order,
-  } = opts;
-
-  const u = new URL(SEARCH_URL);
-  const p = u.searchParams;
-  p.set("part", "snippet");
-  p.set("type", "video");
-  p.set("safeSearch", "moderate");
-  p.set("videoDuration", "medium");
-  p.set("relevanceLanguage", relevanceLang);
-  p.set("regionCode", regionCode);
-  p.set("maxResults", String(maxResultsFetch));
-  p.set("fields", FIELDS);
-  p.set("q", q);
-  p.set("order", order || "relevance");
-  p.set("key", apiKey);
-  if (videoCaption) p.set("videoCaption", videoCaption);
-
-  const res = await fetch(u.toString(), { signal });
-  if (!res.ok) throw new Error("YouTube HTTP " + res.status);
-  const data = await res.json();
-  return Array.isArray(data?.items) ? data.items : [];
+  });
 }
 
 /**
@@ -338,9 +313,6 @@ async function runSearch(apiKey, q, opts) {
  * @returns {Promise<Array<{ videoId, title, channel, thumbnail, description }>>}
  */
 export async function fetchYouTubeVideos(query, maxResults = 1, signal, opts = {}) {
-  const key = import.meta.env.VITE_YOUTUBE_API_KEY;
-  if (!key) return [];
-
   const n = Math.min(Math.max(maxResults, 1), 5);
   const relevanceLang = normalizeYouTubePreferredLanguage(opts.preferredLanguage);
   const regionExplicit = String(opts.regionCode || "").trim().toUpperCase();
@@ -354,7 +326,7 @@ export async function fetchYouTubeVideos(query, maxResults = 1, signal, opts = {
 
   const attempt = async (q, overrides = {}) =>
     rankVideoPool(
-      await runSearch(key, q, {
+      await runSearch(q, {
         relevanceLang,
         maxResultsFetch,
         regionCode: overrides.regionCode || regionCode,

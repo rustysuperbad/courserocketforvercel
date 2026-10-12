@@ -6,7 +6,7 @@
  * No per-lesson blueprint/editorial chains. Strong model for prose.
  */
 
-import { groqGenerateJson, GROQ_WRITER_MODEL, GROQ_PLANNER_MODEL } from "./groqChat";
+import { generateStructuredJson } from "./courseAiApi";
 import { detectSubjectDomain, domainTeachingHint, lessonMeetsSimpleBar } from "./lessonBlueprint";
 import {
   assessLessonTextQuality,
@@ -26,52 +26,74 @@ function parseJSON(raw) {
 }
 
 export const WRITING_RULES = [
-  "Voice: experienced instructor / strong YouTube educator / modern course creator teaching one real person.",
-  "NOT: textbook, corporate e-learning, generic AI educational tone, motivational LinkedIn posts, fake-deep philosophy.",
+  "Write like an experienced instructor teaching one real person — not a textbook, not corporate eLearning, not generic AI content.",
+  "Voice: confident, direct, human. The tone of a strong YouTube educator or modern course creator.",
   "",
-  "Avoid completely: filler, repeating concepts, robotic transitions, generic 'why this matters' paragraphs,",
-  "fake storytelling, constant 'imagine this…', overexplaining simple ideas, buzzwords, overly formal tone.",
-  "Do: explain naturally, teach practically, realistic specific examples, clarity first, short paragraphs, get to the point fast.",
+  "Avoid: filler, robotic transitions, repeating concepts, generic 'why this matters' paragraphs,",
+  "overexplaining simple ideas, buzzwords, fake-deep philosophy, constant 'imagine this...' openers.",
   "",
-  "Structure: ## headings only. Use 4–7 sections per lesson — pick only what genuinely helps THIS lesson:",
+  "Do: get to the point fast, use realistic specific examples, explain naturally, sound like a real expert.",
+  "Teach practically. Every paragraph should move the learner's understanding forward.",
+  "",
+  "Sections — use ## headings. Pick only what genuinely helps this lesson:",
   "Introduction | Core Concept | Example | Real Use Case | Common Mistake | Quick Exercise | Key Takeaway",
-  "Do NOT use the same section list on both lessons. Do NOT force every section every time.",
+  "Do NOT use the same sections on both lessons. Do NOT force every section every time.",
   "",
-  "Quick Exercise: one concrete task learners can actually do (you may start a line with Exercise:).",
-  "Programming/tech: practical implementation, debugging, real workflows — explain what code does and how it behaves.",
-  "Never write fake-deep lines (e.g. 'syntax is the bridge between logic and execution').",
+  "Exercises: one concrete task the learner can actually do — not a recall question.",
+  "Programming courses: show what the code does, why it behaves that way, how to debug it.",
+  "Never write fake-deep lines like 'syntax is the bridge between logic and execution.'",
+  "",
+  "Length: 350–600 words per lesson. Dense and clear — not padded. Short paragraphs.",
 ].join("\n");
 
 export function buildCurriculumPrompt(moduleTarget, topic) {
   const domain = detectSubjectDomain(topic);
+  const hint = domainTeachingHint(topic);
   return [
-    "Design a course outline. JSON only — no lesson prose.",
-    `Topic domain: ${domain}. ${domainTeachingHint(topic)}`,
-    `Exactly ${moduleTarget} modules with id, title, summary, concepts[4-7], youtubeQueries, paperTopics.`,
-    "Also: title, description (2 clear sentences), level, estimatedHours, courseKeyConcepts[6-10].",
-    "Module titles = real subject content, not slogans.",
+    "Design a course curriculum. Return ONLY valid JSON — no prose, no markdown fences.",
+    `Domain: ${domain}. ${hint}`,
+    "",
+    "Rules:",
+    "— Module titles name real subject matter — not slogans, not 'Foundations of X', not 'Introduction to X'.",
+    "— Each module covers distinct territory. No concept overlap between modules.",
+    "— Modules progress logically from fundamentals to application to nuance.",
+    "— Module summaries: 2 sentences, specific to that module's actual content.",
+    "— Concepts: 5–7 real domain terms practitioners use. No vague nouns.",
+    "— No placeholder text, variable names, or template artifacts.",
+    `— Exactly ${moduleTarget} modules.`,
+    "",
+    "OUTPUT JSON:",
+    '{ "title": "...", "description": "2 clear sentences", "level": "Beginner|Intermediate|Advanced",',
+    '  "estimatedHours": number, "courseKeyConcepts": ["6–10 real terms"],',
+    '  "modules": [{ "title": "...", "summary": "...", "concepts": ["..."],',
+    '    "youtubeQueries": ["..."], "paperTopics": ["..."] }] }',
   ].join("\n");
 }
 
 function buildModuleWritePrompt(module, topic, level, moduleIndex, totalModules, codeLang) {
+  const concepts = (module.concepts || []).filter(Boolean).join(", ");
   return [
     WRITING_RULES,
     "",
     domainTeachingHint(topic, module),
     codeLang
-      ? `Include at most one \`\`\`${codeLang} fence per lesson where code helps — explain lines in plain language.`
-      : "No programming code fences unless the topic truly requires them.",
+      ? `Include at most one \`\`\`${codeLang} block per lesson where code genuinely helps. Explain what the code does in plain language.`
+      : "No code blocks unless the topic truly requires them.",
     "",
-    `Level: ${level || "Intermediate"}. Module ${moduleIndex + 1}/${totalModules}.`,
+    `Level: ${level || "Intermediate"}. Module ${moduleIndex + 1} of ${totalModules}.`,
     `Module: ${module.title}`,
-    `Scope: ${module.summary}`,
-    `Concepts: ${(module.concepts || []).join(", ")}`,
+    `Description: ${module.summary || "(see title)"}`,
+    concepts ? `Concepts: ${concepts}` : "",
     "",
-    'OUTPUT JSON: {"lessons":[{"heading":"engaging title","text":"markdown with ## sections"},{"heading":"...","text":"..."}],',
+    "Write 2 lessons on this module. Each covers a distinct angle — no overlap between them.",
+    "Lesson headings should be specific and engaging, not just the concept name.",
+    "Include realistic examples, a practical exercise, and at least one common mistake or misconception.",
+    "",
+    'OUTPUT JSON: {"lessons":[{"heading":"...","text":"markdown with ## sections"},{"heading":"...","text":"..."}],',
     '"quiz":[{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},',
     '{"question":"...","options":["a","b","c","d"],"correctIndex":2,"explanation":"..."}]}',
-    "Exactly 2 lessons. ~250–450 words each.",
-  ].join("\n");
+    "Exactly 2 lessons (350–600 words each) and 2 quiz questions. Return only JSON.",
+  ].filter(Boolean).join("\n");
 }
 
 /** @deprecated — kept for coursePipeline import compatibility */
@@ -91,11 +113,14 @@ export async function writeModuleLessons(module, topic, level, moduleIndex, tota
   const system = buildModuleWritePrompt(module, topic, level, moduleIndex, totalModules, codeLang);
   const user = `Course topic: ${deriveTeachingScopeFromPrompt(topic) || topic}\nWrite the JSON now.`;
 
-  const raw = await groqGenerateJson(system, user, {
-    model: GROQ_WRITER_MODEL,
-    maxTokens: codeLang ? 4200 : 3600,
-    temperature: 0.36,
-    timeoutMs: 55000,
+  const raw = await generateStructuredJson({
+    kind: "module",
+    systemPrompt: system,
+    userMessage: user,
+    evidenceQuery: [topic, module.title, module.summary, (module.concepts || []).join(" ")]
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 700),
   });
   return parseJSON(raw);
 }
@@ -117,7 +142,12 @@ export async function generateModuleLessons(module, topic, level, moduleIndex, t
       lessons.every((l) => assessLessonTextQuality(l.text, fingerprints).ok) &&
       lessons.every((l) => !proseContainsBannedPatterns(l.text));
 
-    if (ok) return { lessons, quiz };
+    if (ok) return {
+      lessons,
+      quiz,
+      sources: Array.isArray(data.sources) ? data.sources : [],
+      groundingStatus: data.groundingStatus || "unavailable",
+    };
 
     console.warn(`[write] retry module ${module.id}`);
     const data2 = await writeModuleLessons(module, topic, level, moduleIndex, totalModules);
@@ -125,7 +155,12 @@ export async function generateModuleLessons(module, topic, level, moduleIndex, t
       heading: String(l?.heading || "").trim(),
       text: String(l?.text || "").trim(),
     }));
-    return { lessons: lessons2, quiz: Array.isArray(data2.quiz) ? data2.quiz.slice(0, 2) : [] };
+    return {
+      lessons: lessons2,
+      quiz: Array.isArray(data2.quiz) ? data2.quiz.slice(0, 2) : [],
+      sources: Array.isArray(data2.sources) ? data2.sources : [],
+      groundingStatus: data2.groundingStatus || "unavailable",
+    };
   } catch (e) {
     throw e;
   }

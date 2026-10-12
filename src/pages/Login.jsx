@@ -74,10 +74,10 @@ export default function Login() {
   };
 
   return (
-    <div style={s.root}>
+    <div className="cr-login-root" style={s.root}>
       <Navbar minimal />
 
-      <div style={s.wrap}>
+      <div style={s.wrap} className="cr-login-layout">
         <div style={s.left}>
           <div style={s.eyebrow}>
             <span style={s.dot} /> Welcome to CourseRocket
@@ -98,7 +98,7 @@ export default function Login() {
           </ul>
         </div>
 
-        <div className="cr-card cr-fade" style={s.card}>
+        <div className="cr-card cr-fade cr-login-card" style={s.card}>
           <div style={s.tabs}>
             <button
               style={tabStyle(!isSignUp)}

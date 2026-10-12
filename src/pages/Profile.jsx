@@ -122,11 +122,11 @@ export default function Profile() {
     .join("");
 
   return (
-    <div style={s.root}>
+    <div className="cr-profile-root" style={s.root}>
       <Navbar />
 
-      <div style={s.body}>
-        <div className="cr-card cr-fade" style={s.header}>
+      <div style={s.body} className="cr-profile-body">
+        <div className="cr-card cr-fade cr-profile-header" style={s.header}>
           <div style={s.headerLeft}>
             <div style={s.avatar}>{initials || "U"}</div>
             <div>

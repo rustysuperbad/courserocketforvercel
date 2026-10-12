@@ -379,7 +379,7 @@ export default function Course() {
 
   if (loading && !course) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.skeletonWrap}>
           <div style={s.skeletonSidebar}>
@@ -400,7 +400,7 @@ export default function Course() {
 
   if (loadError) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.errorWrap}>
           <div className="cr-card" style={s.errorCard}>
@@ -422,7 +422,7 @@ export default function Course() {
 
   if (confirmedMissing || !course) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.errorWrap}>
           <div className="cr-card" style={s.errorCard}>
@@ -448,7 +448,7 @@ export default function Course() {
 
   if (isGeneratingCourse && mods.length === 0) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.errorWrap}>
           <div className="cr-card" style={s.genWaitCard}>
@@ -468,7 +468,7 @@ export default function Course() {
 
   if (genFailed && mods.length === 0) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.errorWrap}>
           <div className="cr-card" style={s.genWaitCard}>
@@ -496,7 +496,7 @@ export default function Course() {
 
   if (!module) {
     return (
-      <div style={s.root}>
+      <div className="cr-course-root" style={s.root}>
         <Navbar />
         <div style={s.errorWrap}>
           <div className="cr-card" style={s.errorCard}>
@@ -522,7 +522,7 @@ export default function Course() {
     : 0;
 
   return (
-    <div style={s.root}>
+    <div className="cr-course-root" style={s.root}>
       <style>{`
         .cr-video-card:hover .cr-video-overlay { opacity: 1 !important; }
         .cr-video-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md) !important; }
@@ -592,14 +592,14 @@ export default function Course() {
         </div>
       )}
 
-      <div style={s.subBar}>
+      <div className="cr-course-subbar" style={s.subBar}>
         <div style={s.subInner}>
-          <div style={s.subTopRow}>
+          <div style={s.subTopRow} className="cr-sub-top-row">
             <div style={s.subTitleWrap}>
               <div style={s.courseTitleNav}>{displayCourse.title}</div>
             </div>
-            <div style={s.subRight}>
-              <div style={s.progressPill}>
+            <div style={s.subRight} className="cr-sub-right">
+              <div style={s.progressPill} className="cr-progress-pill">
                 {progressPct}% complete
               </div>
               {courseReady && (
@@ -628,9 +628,9 @@ export default function Course() {
         </div>
       </div>
 
-      <div style={s.layout}>
-        <aside style={s.sidebar}>
-          <div style={s.sidebarHead}>
+      <div style={s.layout} className="cr-course-layout">
+        <aside style={s.sidebar} className="cr-course-sidebar">
+          <div style={s.sidebarHead} className="cr-sidebar-head">
             <div style={s.sidebarLabel}>Modules</div>
             <div style={s.sidebarMeta}>
               {completedCount}/{mods.length} done
@@ -641,7 +641,7 @@ export default function Course() {
             <div style={{ ...s.progFill, width: `${progressPct}%` }} />
           </div>
 
-          <div style={s.modList}>
+          <div style={s.modList} className="cr-course-mod-list">
             {mods.map((m, i) => {
               const done = progress[m.id]?.completed || progress[m.id] === true;
               const active = i === ai;
@@ -692,9 +692,9 @@ export default function Course() {
           </div>
         </aside>
 
-        <main style={s.main}>
+        <main style={s.main} className="cr-course-main">
           {!showQuiz ? (
-            <div className="cr-fade" style={s.contentColumn}>
+            <div className="cr-fade cr-course-content-column" style={s.contentColumn}>
               <div style={s.moduleHeader}>
                 <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
                 <h1 style={s.moduleTitle}>{module.title}</h1>
@@ -715,7 +715,7 @@ export default function Course() {
                 {module.lessons?.length > 0 ? (
                   <div style={s.lessonsContainer}>
                     {module.lessons.map((lesson, i) => (
-                      <div key={i} className="cr-card" style={s.lessonBlock}>
+                      <div key={i} className="cr-card cr-lesson-card" style={s.lessonBlock}>
                         <h3 style={s.lessonHeading}>{renderLessonInlineMd(lesson.heading, `lh-${i}`)}</h3>
                         <LessonBody text={lesson.text} />
                       </div>
@@ -730,6 +730,41 @@ export default function Course() {
                   <div style={s.empty}>No lesson content available for this module.</div>
                 )}
               </Section>
+
+              {course?.generationQuality === "template-fallback" ? (
+                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.28)", background: "rgba(245, 158, 11, 0.08)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                  This outline is a starter structure because CourseRocket could not generate a tailored path. Try generating the course again.
+                </div>
+              ) : null}
+              {module.generationQuality === "template-fallback" ? (
+                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.28)", background: "rgba(245, 158, 11, 0.08)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                  This module is a starter template because its content did not pass CourseRocket’s quality checks. Try regenerating it for tailored lessons and a quiz.
+                </div>
+              ) : null}
+              {module.generationQuality !== "template-fallback" && module.groundingStatus === "unavailable" ? (
+                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.2)", background: "rgba(245, 158, 11, 0.055)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                  Web sources were unavailable while this module was written. Check time-sensitive claims against a current reference.
+                </div>
+              ) : null}
+              {module.sources?.length > 0 ? (
+                <Section title="Sources used in these lessons">
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {module.sources.map((source, index) => (
+                      <a
+                        key={source.url || index}
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: "flex", gap: 10, alignItems: "baseline", color: "var(--primary-2)", textDecoration: "none", fontSize: 13, lineHeight: 1.5 }}
+                      >
+                        <span style={{ flex: "0 0 auto", opacity: 0.75 }}>[{source.id || index + 1}]</span>
+                        <span>{source.title || source.url}</span>
+                        <span aria-hidden="true" style={{ flex: "0 0 auto", opacity: 0.7 }}>↗</span>
+                      </a>
+                    ))}
+                  </div>
+                </Section>
+              ) : null}
 
               {typeof module.customSectionNotes === "string" && module.customSectionNotes.trim() ? (
                 <Section title="Your notes">
@@ -848,7 +883,7 @@ export default function Course() {
               {module.quiz?.map((q, qIndex) => {
                 const selected = quizAnswers[qIndex];
                 return (
-                  <div key={qIndex} className="cr-card" style={s.questionCard}>
+                  <div key={qIndex} className="cr-card cr-quiz-question" style={s.questionCard}>
                     <div style={s.questionNum}>Question {qIndex + 1}</div>
                     <div style={s.questionText}>{renderLessonInlineMd(q.question, `qq-${qIndex}`)}</div>
                     <div style={s.optionsList}>
@@ -1007,8 +1042,8 @@ export default function Course() {
 
 function Section({ title, children }) {
   return (
-    <div style={s.section}>
-      <h2 style={s.sectionTitle}>{title}</h2>
+    <div style={s.section} className="cr-course-section">
+      <h2 style={s.sectionTitle} className="cr-section-title">{title}</h2>
       {children}
     </div>
   );

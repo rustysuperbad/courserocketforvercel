@@ -35,14 +35,21 @@ export function domainTeachingHint(topic, module) {
   const d = detectSubjectDomain(topic, module);
   const hints = {
     coding:
-      "Hands-on: what the code does, debugging, real workflows. No fake-deep lines like 'syntax is the bridge between logic and execution.'",
-    business: "Decisions, tradeoffs, real operations — not buzzword strategy fluff.",
-    design: "Visual intuition, real product examples, concrete critique.",
-    fitness: "Actionable steps, progression, safety — motivating but not cheesy.",
-    finance: "Clear numbers, assumptions, when models break — no hype.",
-    language: "Patterns, real dialogue, mistakes natives notice.",
-    gaming: "Tactical, match-based examples — specific not generic.",
-    general: "Concrete examples with names, numbers, or tools where possible.",
+      "Show what code does, why it behaves that way, and how to debug it. Use real libraries and realistic scenarios. No fake-deep lines.",
+    business:
+      "Teach through real company decisions — name the company, the stakes, the outcome. Avoid buzzword strategy. Show the tradeoff.",
+    design:
+      "Use specific real products and screens. Explain WHY a design works or fails — cognitive load, hierarchy, affordance.",
+    fitness:
+      "Be precise: name the muscle, the rep range, the adaptation. Ground every claim in physiology, not vague motivation.",
+    finance:
+      "Use real numbers, real assets, real events. Walk through actual calculations. Flag where models break.",
+    language:
+      "Teach through real dialogue and authentic usage — not textbook sentences. Focus on patterns that transfer.",
+    gaming:
+      "Be tactical and match-specific. Name the map, the scenario, the decision. Reference real pro play where relevant.",
+    general:
+      "Use specific, named real-world examples — not hypothetical sketches. Numbers, dates, people, tools where possible.",
   };
   return hints[d] || hints.general;
 }
@@ -60,6 +67,6 @@ export function lessonMeetsSimpleBar(text) {
   const t = String(text || "");
   const h2 = extractLessonH2(t);
   if (h2.length < 3 || h2.length > 8) return false;
-  if (t.length < 450 || t.length > 5200) return false;
+  if (t.length < 600 || t.length > 6000) return false;
   return true;
 }

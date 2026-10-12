@@ -1,14 +1,19 @@
-# Dependencies (The heavy stuff you don't need to upload)
-node_modules/
-.pnpm-store/
-
-# Secrets & Environment Variables (Keep these safe!)
+# secrets and environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
-# Build outputs
+# dependencies and build output
+node_modules/
 dist/
 build/
+
+# firebase and logs
+.firebase/
+*.log
+serviceAccount*.json
+*.pem
+*.key

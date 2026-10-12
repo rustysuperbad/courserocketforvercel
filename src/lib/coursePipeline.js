@@ -321,6 +321,7 @@ export async function runOrResumeCourseGeneration(courseId, userId) {
           description: courseData.description,
           level: courseData.level,
           estimatedHours: courseData.estimatedHours,
+          generationQuality: courseData.generationQuality || "generated",
           courseKeyConcepts: Array.isArray(courseData.courseKeyConcepts)
             ? courseData.courseKeyConcepts
             : [],

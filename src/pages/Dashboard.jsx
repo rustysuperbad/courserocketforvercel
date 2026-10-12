@@ -41,6 +41,8 @@ export default function Dashboard() {
   const { user, authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [topic, setTopic] = useState(searchParams.get("topic") || "");
+  const [courseSearch, setCourseSearch] = useState("");
+  const [courseFilter, setCourseFilter] = useState("all");
   const [mainCourses, setMainCourses] = useState([]);
   const [indexCourses, setIndexCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
@@ -180,6 +182,38 @@ export default function Dashboard() {
     [displayCourses]
   );
 
+  const courseCounts = useMemo(() => {
+    const counts = { all: displayCourses.length, progress: 0, complete: 0 };
+    displayCourses.forEach((course) => {
+      const modules = course.modules || [];
+      const completed = modules.filter((module) => {
+        const progress = course.progress?.[module.id];
+        return progress?.completed || progress === true;
+      }).length;
+      if (course.generationStatus === "generating" || (completed > 0 && completed < modules.length)) counts.progress += 1;
+      if (modules.length > 0 && completed === modules.length && course.generationStatus !== "generating") counts.complete += 1;
+    });
+    return counts;
+  }, [displayCourses]);
+
+  const filteredCourses = useMemo(() => {
+    const search = courseSearch.trim().toLowerCase();
+    return displayCourses.filter((course) => {
+      const modules = course.modules || [];
+      const completed = modules.filter((module) => {
+        const progress = course.progress?.[module.id];
+        return progress?.completed || progress === true;
+      }).length;
+      const isComplete = modules.length > 0 && completed === modules.length && course.generationStatus !== "generating";
+      const isInProgress = course.generationStatus === "generating" || (completed > 0 && completed < modules.length);
+      const matchesFilter = courseFilter === "all" ||
+        (courseFilter === "progress" && isInProgress) ||
+        (courseFilter === "complete" && isComplete);
+      const searchable = ((course.title || "") + " " + (course.topic || "") + " " + (course.description || "")).toLowerCase();
+      return matchesFilter && (!search || searchable.includes(search));
+    });
+  }, [displayCourses, courseFilter, courseSearch]);
+
   const startGeneration = useCallback(
     async (rawTopic) => {
       const myTopic = (rawTopic || "").trim();
@@ -296,33 +330,36 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={s.root}>
+    <div className="cr-dashboard" style={s.root}>
       <Navbar />
 
-      <div className="cr-page" style={s.body}>
-        <div style={s.heading} className="cr-fade">
+      <div className="cr-page cr-dashboard-body" style={s.body}>
+        <div style={s.heading} className="cr-fade cr-dashboard-heading">
           <div>
+            <div className="cr-page-kicker">YOUR LEARNING SPACE</div>
             <h1 style={s.h1}>
               Welcome back{user?.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}.
             </h1>
             <p style={s.sub}>Pick up an existing course or generate a new one. Your list stays in sync with the cloud on every Dashboard visit and when you switch back to this tab.</p>
           </div>
-          <div style={s.statRow}>
+          <div style={s.statRow} className="cr-stat-row">
             <Stat label="Courses" value={stats.total} />
             <Stat label="Modules done" value={`${stats.completedModules}/${stats.totalModules}`} />
             <Stat label="Avg progress" value={`${stats.avg}%`} />
           </div>
         </div>
 
-        <div className="cr-card" style={s.generateBox}>
-          <div style={s.generateHead}>
+        <div className="cr-card cr-generate-panel" style={s.generateBox}>
+          <div style={s.generateHead} className="cr-generator-header">
+            <div className="cr-generator-icon" aria-hidden="true">✦</div>
             <div>
-              <div style={s.generateLabel}>Generate a new course</div>
-              <div style={s.generateHint}>One sentence is enough — be specific for best results.</div>
+              <div style={s.generateLabel}>What do you want to be able to do?</div>
+              <div style={s.generateHint}>Start with an outcome. CourseRocket will shape the learning path around it.</div>
             </div>
+            <div className="cr-generator-note"><strong>YOUR GOAL</strong><br />BECOMES A COURSE</div>
           </div>
 
-          <div style={s.inputRow}>
+          <div style={s.inputRow} className="cr-generator-input-row">
             <input
               className="cr-input"
               style={s.input}
@@ -347,10 +384,11 @@ export default function Dashboard() {
             </button>
           </div>
 
-          <div style={s.chipRow}>
+          <div style={s.chipRow} className="cr-topic-ideas">
             {PROMPT_IDEAS.map((p) => (
               <button
                 key={p}
+                className="cr-topic-chip"
                 style={s.chip}
                 onClick={() => setTopic(p)}
               >
@@ -387,7 +425,7 @@ export default function Dashboard() {
           {error && <div style={s.error}>{error}</div>}
         </div>
 
-        <div style={s.sectionHead}>
+        <div style={s.sectionHead} className="cr-library-head">
           <h2 style={s.h2}>Your courses</h2>
           {displayCourses.length > 0 && (
             <div style={s.muted}>
@@ -396,6 +434,33 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {displayCourses.length > 0 && (
+          <div className="cr-library-toolbar">
+            <div className="cr-library-tabs" role="tablist" aria-label="Filter courses">
+              {[
+                ["all", "All", courseCounts.all],
+                ["progress", "In progress", courseCounts.progress],
+                ["complete", "Completed", courseCounts.complete],
+              ].map(([key, label, count]) => (
+                <button
+                  type="button"
+                  key={key}
+                  role="tab"
+                  aria-selected={courseFilter === key}
+                  className={"cr-library-tab" + (courseFilter === key ? " is-active" : "")}
+                  onClick={() => setCourseFilter(key)}
+                >
+                  {label}<span>{count}</span>
+                </button>
+              ))}
+            </div>
+            <label className="cr-course-search">
+              <span aria-hidden="true">⌕</span>
+              <input type="search" aria-label="Search your courses" placeholder="Find a course" value={courseSearch} onChange={(event) => setCourseSearch(event.target.value)} />
+            </label>
+          </div>
+        )}
 
         {coursesLoading && displayCourses.length === 0 ? (
           <div style={s.courseGrid}>
@@ -409,7 +474,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : displayCourses.length === 0 ? (
-          <div className="cr-card" style={s.empty}>
+          <div className="cr-card cr-empty-state" style={s.empty}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>◇</div>
             <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
               No courses yet
@@ -418,9 +483,11 @@ export default function Dashboard() {
               Generate your first course using the box above.
             </div>
           </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="cr-empty-search">No courses match that search. Try another topic or choose a different filter.</div>
         ) : (
-          <div style={s.courseGrid}>
-            {displayCourses.map((c) => (
+          <div style={s.courseGrid} className="cr-dashboard-grid">
+            {filteredCourses.map((c) => (
               <CourseGridCard
                 key={c.id}
                 course={c}
@@ -437,9 +504,9 @@ export default function Dashboard() {
 
 function Stat({ label, value }) {
   return (
-    <div style={s.stat}>
-      <div style={s.statValue}>{value}</div>
-      <div style={s.statLabel}>{label}</div>
+    <div className="cr-card cr-stat" style={s.stat}>
+      <div style={s.statValue} className="cr-stat-value">{value}</div>
+      <div style={s.statLabel} className="cr-stat-label">{label}</div>
     </div>
   );
 }
