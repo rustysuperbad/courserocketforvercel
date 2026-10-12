@@ -131,7 +131,7 @@ export default function Profile() {
             <div style={s.avatar}>{initials || "U"}</div>
             <div>
               <div style={s.name}>
-                {profile?.name || user?.displayName || "Welcome"}
+                {profile?.name || user?.displayName || user?.email || "You"}
               </div>
               <div style={s.email}>{user?.email}</div>
               <div style={s.uid}>UID: {user?.uid?.slice(0, 12)}…</div>

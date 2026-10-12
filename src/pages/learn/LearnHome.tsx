@@ -7,6 +7,7 @@ import {
   clearIdempotencyKey, describeCallableError, getCourseJobStatus, idempotencyKeyFor, listLearningRuns, searchLearningSources,
   startCourseJob, type JobDomain, type RunView, type SourceChunk,
 } from "../../lib/learningApi";
+import GenerationTheatre from "../../components/GenerationTheatre";
 import "../../styles/learn.css";
 
 const ACTIVE: ReadonlySet<string> = new Set(["queued", "running"]);
@@ -42,6 +43,7 @@ export default function LearnHome() {
 
   useEffect(() => { void refreshRuns(); }, [refreshRuns]);
 
+  const activeRun = useMemo(() => runs.find((run) => ACTIVE.has(run.status)), [runs]);
   const activeRunIds = useMemo(() => runs.filter((run) => ACTIVE.has(run.status)).map((run) => run.runId), [runs]);
   useEffect(() => {
     if (!activeRunIds.length) return;
@@ -104,8 +106,8 @@ export default function LearnHome() {
       <Navbar />
       <main className="lr-page" id="main">
         <header className="lr-head">
-          <div className="cr-page-kicker">LEARN FROM WHAT YOU KNOW</div>
-          <h1>Your learning path</h1>
+          <div className="cr-page-kicker">VERIFIED PATHS</div>
+          <h1>Start at the first thing you cannot yet do.</h1>
           <p>
             Tell CourseRocket what you want to be able to do. For networking, start with the onboarding diagnostic so the
             path skips what you already know; every lesson is written from cited sources and labelled by how it was checked.
@@ -159,6 +161,7 @@ export default function LearnHome() {
                 </button>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/review">Daily review</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
+                <Link className="cr-btn cr-btn-ghost" to="/learn/studio">Studio</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/notes">Private notes</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/analytics">Analytics</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/privacy">Privacy</Link>
@@ -181,6 +184,16 @@ export default function LearnHome() {
             )}
           </section>
 
+          {activeRun && (
+            <div className="lr-span">
+              <GenerationTheatre
+                status={activeRun.status}
+                stage={typeof activeRun.progress?.stage === "string" ? activeRun.progress.stage : activeRun.status}
+                note={typeof activeRun.progress?.note === "string" ? activeRun.progress.note : ""}
+                percent={Number(activeRun.progress?.percent ?? 0)}
+              />
+            </div>
+          )}
           <section className="cr-card lr-card lr-span" aria-labelledby="runs-heading" aria-live="polite">
             <h2 id="runs-heading">Recent course jobs</h2>
             {runsLoading ? (

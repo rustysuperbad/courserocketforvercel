@@ -80,7 +80,7 @@ export default function Login() {
       <div style={s.wrap} className="cr-login-layout">
         <div style={s.left}>
           <div style={s.eyebrow}>
-            <span style={s.dot} /> Welcome to CourseRocket
+            <span style={s.dot} /> Your paths stay with this account
           </div>
           <h1 style={s.h1}>
             {isSignUp ? "Create your account" : "Sign in to continue"}
@@ -92,9 +92,9 @@ export default function Login() {
           </p>
 
           <ul style={s.list}>
-            <li style={s.li}><span style={s.tick}>✓</span> Persistent course progress</li>
-            <li style={s.li}><span style={s.tick}>✓</span> Auto-saved videos and papers</li>
-            <li style={s.li}><span style={s.tick}>✓</span> Instant resume on any device</li>
+            <li style={s.li}><span className="cr-kicker">01</span> Progress stays on this account</li>
+            <li style={s.li}><span className="cr-kicker">02</span> Videos and papers sit next to the lesson</li>
+            <li style={s.li}><span className="cr-kicker">03</span> Resume on another device without a new path</li>
           </ul>
         </div>
 

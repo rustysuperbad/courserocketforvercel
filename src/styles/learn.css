@@ -54,7 +54,7 @@
 .lr-sources { font-size: 13px; color: var(--text-2); line-height: 1.6; }
 .lr-sources li { margin-bottom: 8px; }
 .lr-sources a { color: var(--primary-2); }
-.lr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0; }
+.lr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0; position: sticky; top: 70px; z-index: 4; padding: 8px 0; background: var(--bg); }
 .lr-tabs button { font-size: 13px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-2); cursor: pointer; }
 .lr-tabs button[aria-selected="true"] { border-color: var(--primary); color: var(--text); background: var(--primary-soft); }
 .lr-tabs button:focus-visible { outline: 2px solid var(--primary-ring); outline-offset: 2px; }

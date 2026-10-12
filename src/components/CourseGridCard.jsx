@@ -92,7 +92,7 @@ const cardStyles = {
   },
 };
 
-export default function CourseGridCard({ course, onClick, onRetryGeneration }) {
+export default function CourseGridCard({ course, onClick, onRetryGeneration, featured = false, compact = false }) {
   const s = cardStyles;
   const keyConcepts = Array.isArray(course.courseKeyConcepts) ? course.courseKeyConcepts : [];
   const totalModules = course.modules?.length || 0;
@@ -135,7 +135,7 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration }) {
   }
 
   return (
-    <div className="cr-card cr-course-card" style={s.courseCard} onClick={onClick} role="button" tabIndex={0} aria-label={"Open course " + (course.title || course.topic || "course")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick?.(); } }}>
+    <div className={"cr-lib-card" + (featured ? " is-feature" : compact ? " is-compact" : "")} style={s.courseCard} onClick={onClick} role="button" tabIndex={0} aria-label={"Open course " + (course.title || course.topic || "course")} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onClick?.(); } }}>
       <div style={s.cardTopRow} className="cr-course-card-top">
         <span style={s.levelPill}>
           {isFailed ? "Failed" : isGenerating ? "Generating" : course.level || "Course"}

@@ -22,6 +22,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import CourseGridCard from "../components/CourseGridCard";
+import GenerationTheatre from "../components/GenerationTheatre";
 import { firestoreSetupHelpFromError } from "../lib/firestoreErrors";
 
 const PROMPT_IDEAS = [
@@ -336,11 +337,9 @@ export default function Dashboard() {
       <div className="cr-page cr-dashboard-body" style={s.body}>
         <div style={s.heading} className="cr-fade cr-dashboard-heading">
           <div>
-            <div className="cr-page-kicker">YOUR LEARNING SPACE</div>
-            <h1 style={s.h1}>
-              Welcome back{user?.displayName ? `, ${user.displayName.split(" ")[0]}` : ""}.
-            </h1>
-            <p style={s.sub}>Pick up an existing course or generate a new one. Your list stays in sync with the cloud on every Dashboard visit and when you switch back to this tab.</p>
+            <div className="cr-page-kicker">LIBRARY</div>
+            <h1 style={s.h1}>Courses you can actually continue.</h1>
+            <p style={s.sub}>Pick up a path, or type a goal. Generation stays visible — it is not a spinner over an empty page.</p>
           </div>
           <div style={s.statRow} className="cr-stat-row">
             <Stat label="Courses" value={stats.total} />
@@ -351,10 +350,9 @@ export default function Dashboard() {
 
         <div className="cr-card cr-generate-panel" style={s.generateBox}>
           <div style={s.generateHead} className="cr-generator-header">
-            <div className="cr-generator-icon" aria-hidden="true">✦</div>
             <div>
-              <div style={s.generateLabel}>What do you want to be able to do?</div>
-              <div style={s.generateHint}>Start with an outcome. CourseRocket will shape the learning path around it.</div>
+              <div style={s.generateLabel}>What should you be able to do?</div>
+              <div style={s.generateHint}>One outcome. The library stores the path; verified lessons live under Learn.</div>
             </div>
             <div className="cr-generator-note"><strong>YOUR GOAL</strong><br />BECOMES A COURSE</div>
           </div>
@@ -423,10 +421,20 @@ export default function Dashboard() {
             </div>
           )}
           {error && <div style={s.error}>{error}</div>}
+          {generatingCount > 0 && displayCourses.some((course) => course.generationStatus === "generating") && (
+            <div style={{ marginTop: 18 }}>
+              <GenerationTheatre
+                status="running"
+                stage={displayCourses.find((course) => course.generationStatus === "generating")?.generationMessage || "write"}
+                note={displayCourses.find((course) => course.generationStatus === "generating")?.generationMessage}
+                percent={Number(displayCourses.find((course) => course.generationStatus === "generating")?.generationProgressDone || 0)}
+              />
+            </div>
+          )}
         </div>
 
         <div style={s.sectionHead} className="cr-library-head">
-          <h2 style={s.h2}>Your courses</h2>
+          <h2 style={s.h2}>Shelf</h2>
           {displayCourses.length > 0 && (
             <div style={s.muted}>
               {mainCourses.length} saved
@@ -477,20 +485,22 @@ export default function Dashboard() {
           <div className="cr-card cr-empty-state" style={s.empty}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>◇</div>
             <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
-              No courses yet
+              Empty shelf
             </div>
             <div style={{ color: "var(--text-2)", fontSize: 14 }}>
-              Generate your first course using the box above.
+              Type a goal above. The first card appears as soon as the run is reserved.
             </div>
           </div>
         ) : filteredCourses.length === 0 ? (
           <div className="cr-empty-search">No courses match that search. Try another topic or choose a different filter.</div>
         ) : (
-          <div style={s.courseGrid} className="cr-dashboard-grid">
-            {filteredCourses.map((c) => (
+          <div className="cr-library">
+            {filteredCourses.map((c, index) => (
               <CourseGridCard
                 key={c.id}
                 course={c}
+                featured={c.generationStatus === "generating" || index === 0}
+                compact={c.generationStatus !== "generating" && index > 2}
                 onClick={() => navigate(`/course/${c.id}`)}
                 onRetryGeneration={handleRetryFailedCourse}
               />

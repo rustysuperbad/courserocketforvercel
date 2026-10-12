@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { ContentStatusBadge } from "../../components/learn/StatusBadge";
+import CitationChip from "../../components/CitationChip";
+import MasteryMap from "../../components/MasteryMap";
 import { describeCallableError, getLearningCourse, recordLearningOutcome, submitCourseProject, submitLessonFeedback, submitQuizAttempt, type FeedbackCategory, type LearningCourse } from "../../lib/learningApi";
 import "../../styles/learn.css";
 
@@ -51,6 +53,11 @@ export default function LearnCourse() {
                 </button>
               ))}
             </div>
+            <MasteryMap nodes={data.modules.map((item) => ({
+              id: item.id,
+              label: item.title,
+              state: item.claims.some((claim) => claim.verified) ? "known" : "open",
+            }))} />
             {module && <ModuleView module={module} courseId={data.course.id} />}
             <OutcomeBlock />
             <ProjectBlock courseId={data.course.id} />
@@ -95,7 +102,8 @@ function ModuleView({ module, courseId }: { module: LearningCourse["modules"][nu
               {paragraph.text}
               {paragraph.claimIds.map((claimId) => {
                 const citation = citationFor(claimId);
-                return citation ? <a key={claimId} className="lr-cite" href={`#source-${citation}`} aria-label={`Source ${citation}`}>[{citation}]</a> : null;
+                const source = sources.find((item) => item.citation === citation);
+                return source ? <CitationChip key={claimId} source={source} /> : null;
               })}
             </p>
           ))}
