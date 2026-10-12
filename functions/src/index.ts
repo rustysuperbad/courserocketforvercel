@@ -17,6 +17,10 @@ import {
 } from "./config";
 import { guarded, parseInput, verifiedUid } from "./auth";
 import { estimateRunCostUsd, publicRunView, reservationFailure, startJobSchema } from "./jobs";
+import {
+  diagnosticChoiceSchema, learnerProfileSchema, loadPathForUser, nextDiagnosticQuestion as loadNextDiagnostic,
+  publicNetworkingCatalog, saveLearnerOnboarding, submitDiagnosticChoice as recordDiagnosticChoice,
+} from "./onboarding";
 
 const legacy = require("../index.js") as Record<string, unknown>;
 if (!getApps().length) initializeApp();
@@ -506,29 +510,73 @@ export const generateNetworkingPath = onCall({
   cors: true,
   timeoutSeconds: 20,
   secrets: [...supabaseSecrets, sentryDsn],
-}, async (request) => {
+}, guarded("generate-networking-path", async (request) => {
   const uid = await verifiedUid(request);
-  const input = pathSchema.safeParse(request.data);
-  if (!input.success) throw new HttpsError("invalid-argument", "Choose a networking learning goal.");
-  const targetSlug = input.data.targetConceptSlug.startsWith("networking-") ? input.data.targetConceptSlug : `networking-${input.data.targetConceptSlug}`;
-  const supabase = serviceClient();
-  const { data: rows, error: conceptError } = await supabase.from("concepts").select("id,slug,title,estimated_minutes").eq("domain", "networking");
-  if (conceptError || !rows?.length) throw new HttpsError("failed-precondition", "The networking concept graph has not been seeded yet.");
-  const ids = rows.map((row) => row.id);
-  const [{ data: edges, error: edgeError }, { data: masteryRows, error: masteryError }] = await Promise.all([
-    supabase.from("concept_prereqs").select("concept_id,prerequisite_id").in("concept_id", ids),
-    supabase.from("learner_mastery").select("concept_id,p_known").eq("firebase_uid", uid).in("concept_id", ids),
-  ]);
-  if (edgeError || masteryError) throw new HttpsError("internal", "Could not load your learning path data.");
-  const suffix = (slug: string) => slug.replace(/^networking-/, "");
-  const concepts = rows.map((row) => ({
-    id: suffix(row.slug), title: row.title, estimatedMinutes: row.estimated_minutes,
-    prerequisiteIds: (edges ?? []).filter((edge) => edge.concept_id === row.id).map((edge) => suffix(rows.find((candidate) => candidate.id === edge.prerequisite_id)?.slug ?? "")),
-  }));
-  const targetId = suffix(targetSlug);
-  const mastery = Object.fromEntries((masteryRows ?? []).map((row) => [suffix(rows.find((candidate) => candidate.id === row.concept_id)?.slug ?? ""), { pKnown: row.p_known }]));
-  let steps;
-  try { steps = buildLearningPath(concepts, targetId, mastery); }
-  catch { throw new HttpsError("not-found", "That networking goal is not in the launch concept graph yet."); }
-  return { targetConceptSlug: targetSlug, steps, totalEstimatedMinutes: steps.reduce((total, step) => total + step.estimatedMinutes, 0), contentStatus: "ai_generated" as const };
-});
+  const input = parseInput(pathSchema, request.data, "Choose a networking learning goal.");
+  try {
+    return await loadPathForUser(serviceClient(), uid, input.targetConceptSlug);
+  } catch (error) {
+    if (error instanceof Error && error.message === "unknown_target") throw new HttpsError("not-found", "That networking goal is not in the launch concept graph yet.");
+    throw error;
+  }
+}));
+
+export const listNetworkingCatalog = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 15,
+}, guarded("list-networking-catalog", async (request) => {
+  await verifiedUid(request);
+  return publicNetworkingCatalog();
+}));
+
+export const saveLearnerProfile = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("save-learner-profile", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(learnerProfileSchema, request.data, "Check your goal, known topics, and interests.");
+  try {
+    return await saveLearnerOnboarding(serviceClient(), uid, input);
+  } catch (error) {
+    if (error instanceof Error && error.message === "unknown_target") throw new HttpsError("not-found", "That networking goal is not in the launch concept graph yet.");
+    throw error;
+  }
+}));
+
+const nextDiagnosticSchema = z.object({ targetConceptSlug: z.string().trim().min(1).max(160).optional() }).strict();
+export const getNextDiagnosticQuestion = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("next-diagnostic", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(nextDiagnosticSchema, request.data ?? {}, "Choose a networking learning goal.");
+  try {
+    return await loadNextDiagnostic(serviceClient(), uid, input.targetConceptSlug);
+  } catch (error) {
+    if (error instanceof Error && error.message === "unknown_target") throw new HttpsError("not-found", "That networking goal is not in the launch concept graph yet.");
+    throw error;
+  }
+}));
+
+export const submitDiagnosticChoice = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("submit-diagnostic-choice", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(diagnosticChoiceSchema, request.data, "That diagnostic answer could not be saved.");
+  try {
+    return await recordDiagnosticChoice(serviceClient(), uid, input);
+  } catch (error) {
+    if (error instanceof Error && (error.message === "unknown_target" || error.message === "unknown_concept")) {
+      throw new HttpsError("not-found", "That networking concept is not available yet.");
+    }
+    throw error;
+  }
+}));

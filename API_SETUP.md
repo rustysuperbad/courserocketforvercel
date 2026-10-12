@@ -100,7 +100,7 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 - Unexpected callable errors are reported to Sentry (when `SENTRY_DSN` is set) with an area tag and no request payload.
 - Supabase schema includes source storage, hybrid vector/full-text retrieval, per-user search/course quotas, and a UTC project-spend limit.
 - Source retrieval callable returns attributed chunks.
-- Networking concept seed, baseline mastery, diagnostic answer update, and adaptive path endpoints are available.
+- Networking concept seed, learner profile, server-graded adaptive diagnostic, and adaptive path endpoints are available. Apply `20261012130000_learner_profiles.sql` after the retrieval migration. Two learners with different known topics receive different topological paths for the same goal.
 - FSRS scheduling logic is implemented and covered by unit tests; the daily review UI/worker connection is still pending.
 - Langfuse and Sentry are optional until their credentials are set. Trace metadata excludes learner goal text, prompts, and model content.
 

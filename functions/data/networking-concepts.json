@@ -1,24 +1,354 @@
 [
-  { "id": "digital-data", "title": "Bits, bytes, and digital data", "estimatedMinutes": 20, "prerequisiteIds": [] },
-  { "id": "computer-basics", "title": "How computers send and receive data", "estimatedMinutes": 20, "prerequisiteIds": ["digital-data"] },
-  { "id": "network-purpose", "title": "What a network does", "estimatedMinutes": 15, "prerequisiteIds": ["computer-basics"] },
-  { "id": "network-types", "title": "LANs, WANs, and the internet", "estimatedMinutes": 20, "prerequisiteIds": ["network-purpose"] },
-  { "id": "topologies", "title": "Network devices and topologies", "estimatedMinutes": 25, "prerequisiteIds": ["network-types"] },
-  { "id": "layering", "title": "Why network protocols use layers", "estimatedMinutes": 25, "prerequisiteIds": ["network-types"] },
-  { "id": "encapsulation", "title": "Encapsulation and packets", "estimatedMinutes": 25, "prerequisiteIds": ["layering", "digital-data"] },
-  { "id": "ethernet", "title": "Ethernet and local networks", "estimatedMinutes": 25, "prerequisiteIds": ["topologies", "encapsulation"] },
-  { "id": "mac-addresses", "title": "MAC addresses and switching", "estimatedMinutes": 25, "prerequisiteIds": ["ethernet"] },
-  { "id": "ip-addresses", "title": "IPv4 and IPv6 addresses", "estimatedMinutes": 30, "prerequisiteIds": ["encapsulation"] },
-  { "id": "subnetting", "title": "Subnet masks and subnetting", "estimatedMinutes": 40, "prerequisiteIds": ["ip-addresses", "digital-data"] },
-  { "id": "routing", "title": "Routers and IP routing", "estimatedMinutes": 30, "prerequisiteIds": ["ip-addresses", "mac-addresses"] },
-  { "id": "arp-ndp", "title": "ARP, Neighbor Discovery, and local delivery", "estimatedMinutes": 25, "prerequisiteIds": ["routing", "mac-addresses"] },
-  { "id": "udp-tcp", "title": "UDP and TCP", "estimatedMinutes": 35, "prerequisiteIds": ["ip-addresses", "encapsulation"] },
-  { "id": "dns", "title": "DNS and name resolution", "estimatedMinutes": 25, "prerequisiteIds": ["udp-tcp"] },
-  { "id": "http", "title": "HTTP and HTTPS", "estimatedMinutes": 30, "prerequisiteIds": ["dns", "udp-tcp"] },
-  { "id": "tls", "title": "TLS and secure connections", "estimatedMinutes": 30, "prerequisiteIds": ["http"] },
-  { "id": "dhcp", "title": "DHCP and getting online", "estimatedMinutes": 25, "prerequisiteIds": ["ip-addresses", "udp-tcp"] },
-  { "id": "wifi", "title": "Wi-Fi and wireless networking", "estimatedMinutes": 25, "prerequisiteIds": ["network-types", "mac-addresses"] },
-  { "id": "firewalls", "title": "Firewalls and basic network security", "estimatedMinutes": 30, "prerequisiteIds": ["routing", "udp-tcp"] },
-  { "id": "troubleshooting", "title": "A method for troubleshooting connectivity", "estimatedMinutes": 35, "prerequisiteIds": ["dns", "dhcp", "routing", "http"] },
-  { "id": "packet-journey", "title": "Trace a web request across a network", "estimatedMinutes": 45, "prerequisiteIds": ["tls", "firewalls", "troubleshooting"] }
+  {
+    "id": "digital-data",
+    "title": "Bits, bytes, and digital data",
+    "estimatedMinutes": 20,
+    "prerequisiteIds": [],
+    "description": "How computers represent information as bits and group them into bytes before anything can travel on a network.",
+    "level": 1,
+    "objectives": ["Explain what a bit and a byte are", "Relate binary values to everyday digital data"],
+    "diagnostic": {
+      "question": "How many bits are in one byte?",
+      "options": ["4", "8", "16", "32"],
+      "correctAnswer": "8",
+      "explanation": "A byte is a group of 8 bits, the usual unit for a single character of text or a small piece of stored data.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "computer-basics",
+    "title": "How computers send and receive data",
+    "estimatedMinutes": 20,
+    "prerequisiteIds": ["digital-data"],
+    "description": "A host needs a network interface, an address, and a way to turn bytes into signals that another host can read.",
+    "level": 1,
+    "objectives": ["Name the role of a network interface", "Describe sending data as a request and a response"],
+    "diagnostic": {
+      "question": "When your laptop visits a website, what is the laptop acting as?",
+      "options": ["A router for the whole internet", "A client requesting a service", "A DNS root server", "A certificate authority"],
+      "correctAnswer": "A client requesting a service",
+      "explanation": "Your computer is a client: it sends a request and the remote server replies with the page or API data.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "network-purpose",
+    "title": "What a network does",
+    "estimatedMinutes": 15,
+    "prerequisiteIds": ["computer-basics"],
+    "description": "A network exists so independent devices can share information and services without each one connecting to every other one directly.",
+    "level": 1,
+    "objectives": ["State why we build networks", "Distinguish a link from a path of several hops"],
+    "diagnostic": {
+      "question": "What is the main job of a computer network?",
+      "options": ["Store files only on one disk", "Let separate devices exchange data", "Replace the need for IP addresses", "Encrypt every cable by default"],
+      "correctAnswer": "Let separate devices exchange data",
+      "explanation": "Networking is about moving data between independent devices so they can share services.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "network-types",
+    "title": "LANs, WANs, and the internet",
+    "estimatedMinutes": 20,
+    "prerequisiteIds": ["network-purpose"],
+    "description": "Local networks cover a home or office; wide-area networks span cities; the internet is the public interconnection of many networks.",
+    "level": 1,
+    "objectives": ["Contrast LAN, WAN, and the internet", "Give an example of each"],
+    "diagnostic": {
+      "question": "A home Wi-Fi network is best described as which of the following?",
+      "options": ["A WAN that spans countries", "A LAN covering a small area", "The public internet backbone", "A DNS root zone"],
+      "correctAnswer": "A LAN covering a small area",
+      "explanation": "A home or office network is a local area network (LAN). The internet is many such networks linked together.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "topologies",
+    "title": "Network devices and topologies",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["network-types"],
+    "description": "Switches, routers, and access points sit in star and mixed topologies so hosts do not have to cable directly to each other.",
+    "level": 2,
+    "objectives": ["Identify switch, router, and access point roles", "Recognize a star topology"],
+    "diagnostic": {
+      "question": "Which device typically forwards Ethernet frames inside one LAN using MAC addresses?",
+      "options": ["A switch", "A DNS resolver", "A web browser", "A certificate authority"],
+      "correctAnswer": "A switch",
+      "explanation": "A switch learns MAC addresses and forwards frames on the local network. Routers forward IP packets between networks.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "layering",
+    "title": "Why network protocols use layers",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["network-types"],
+    "description": "Layering lets each protocol handle one job—links, routing, reliable delivery, or applications—so they can be swapped independently.",
+    "level": 2,
+    "objectives": ["Explain why protocols are layered", "Map a familiar app onto application and transport layers"],
+    "diagnostic": {
+      "question": "Why do networks use protocol layers instead of one giant protocol?",
+      "options": ["So each layer can change without rewriting every other job", "Because cables can only carry one layer", "So IP addresses become optional", "Because browsers refuse unlayered packets"],
+      "correctAnswer": "So each layer can change without rewriting every other job",
+      "explanation": "Layers isolate jobs: Ethernet can change without changing HTTP, and TCP can provide reliability without HTTP reimplementing it.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "encapsulation",
+    "title": "Encapsulation and packets",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["layering", "digital-data"],
+    "description": "Each layer wraps the payload from the layer above with its own header, forming frames and packets that other devices can inspect.",
+    "level": 2,
+    "objectives": ["Describe encapsulation", "Name headers added for IP and Ethernet"],
+    "diagnostic": {
+      "question": "When a web request leaves your laptop, which statement about encapsulation is true?",
+      "options": ["HTTP is wrapped by transport and IP headers, then a link-layer frame", "The switch deletes the IP header on the LAN", "Only the DNS header travels to the server", "Encapsulation happens only on the server"],
+      "correctAnswer": "HTTP is wrapped by transport and IP headers, then a link-layer frame",
+      "explanation": "Application data is encapsulated: HTTP inside TCP (or QUIC), inside IP, inside an Ethernet or Wi-Fi frame.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "ethernet",
+    "title": "Ethernet and local networks",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["topologies", "encapsulation"],
+    "description": "Ethernet is the common wired LAN technology: frames carry a destination MAC, a source MAC, and a payload for the next protocol.",
+    "level": 2,
+    "objectives": ["Identify Ethernet frame addressing", "Relate Ethernet to a local link"],
+    "diagnostic": {
+      "question": "An Ethernet frame is delivered on a LAN using which kind of address?",
+      "options": ["A MAC address", "A UDP port only", "An autonomous system number", "A TLS certificate fingerprint"],
+      "correctAnswer": "A MAC address",
+      "explanation": "Ethernet uses 48-bit MAC addresses to deliver frames on the local link. IP addresses are used to route between networks.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "mac-addresses",
+    "title": "MAC addresses and switching",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["ethernet"],
+    "description": "Each interface has a MAC address. Switches learn which MAC sits on which port so they can forward frames instead of flooding forever.",
+    "level": 2,
+    "objectives": ["Explain what a MAC address identifies", "Describe how a switch learns ports"],
+    "diagnostic": {
+      "question": "A switch forwards a frame to one port instead of every port because it has learned what?",
+      "options": ["Which MAC address was last seen on that port", "The destination website's TLS certificate", "The sender's username", "The WAN default gateway's DNS name"],
+      "correctAnswer": "Which MAC address was last seen on that port",
+      "explanation": "Switches build a MAC address table from source addresses so later frames to that MAC go only to the right port.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "ip-addresses",
+    "title": "IPv4 and IPv6 addresses",
+    "estimatedMinutes": 30,
+    "prerequisiteIds": ["encapsulation"],
+    "description": "IP addresses identify interfaces on an internetwork. IPv4 uses 32-bit dotted decimal; IPv6 uses 128-bit hexadecimal groups.",
+    "level": 2,
+    "objectives": ["Read an IPv4 address and prefix", "Recognize that IPv6 uses a larger address space"],
+    "diagnostic": {
+      "question": "Which of these is a valid IPv4 address?",
+      "options": ["192.168.1.10", "192.168.1.300", "https://example.com", "aa:bb:cc:dd:ee:ff"],
+      "correctAnswer": "192.168.1.10",
+      "explanation": "IPv4 addresses have four decimal numbers from 0 to 255. 300 is out of range; a MAC address uses hex pairs; a URL is not an IP address.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "subnetting",
+    "title": "Subnet masks and subnetting",
+    "estimatedMinutes": 40,
+    "prerequisiteIds": ["ip-addresses", "digital-data"],
+    "description": "A subnet mask or prefix length splits an IP address into network and host parts so routers can group addresses into networks.",
+    "level": 3,
+    "objectives": ["Split a simple address into network and host parts", "Read slash notation such as /24"],
+    "diagnostic": {
+      "question": "In 192.168.4.19/24, what does /24 tell you?",
+      "options": ["The first 24 bits are the network prefix", "The host can use 24 IP addresses only", "The LAN is limited to 24 switches", "IPv6 must be used after 24 hops"],
+      "correctAnswer": "The first 24 bits are the network prefix",
+      "explanation": "CIDR prefix length /24 means the first 24 bits identify the network; the remaining 8 bits identify hosts on that subnet.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "routing",
+    "title": "Routers and IP routing",
+    "estimatedMinutes": 30,
+    "prerequisiteIds": ["ip-addresses", "mac-addresses"],
+    "description": "Routers forward packets between networks by matching the destination IP against routes, including a default route for everything else.",
+    "level": 3,
+    "objectives": ["Contrast a router with a switch", "Explain what a default gateway does"],
+    "diagnostic": {
+      "question": "Your PC sends a packet to an address that is not on its own subnet. Where does it send that packet first?",
+      "options": ["To its configured default gateway", "To a random MAC on the LAN", "Straight to the distant web server's MAC", "To UDP port 53 only"],
+      "correctAnswer": "To its configured default gateway",
+      "explanation": "Hosts send off-subnet packets to the default gateway (a router), which then forwards based on IP routes.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "arp-ndp",
+    "title": "ARP, Neighbor Discovery, and local delivery",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["routing", "mac-addresses"],
+    "description": "IP still needs a local MAC. ARP (IPv4) and Neighbor Discovery (IPv6) map a next-hop IP address to a link-layer address on this LAN.",
+    "level": 3,
+    "objectives": ["State why ARP or NDP is needed", "Describe a next-hop lookup on a LAN"],
+    "diagnostic": {
+      "question": "Why does a host use ARP on an IPv4 Ethernet LAN?",
+      "options": ["To learn the MAC address that matches a next-hop IPv4 address", "To encrypt HTTP", "To assign a public autonomous system number", "To compress TCP headers"],
+      "correctAnswer": "To learn the MAC address that matches a next-hop IPv4 address",
+      "explanation": "Ethernet delivers frames by MAC address. ARP answers “who has this IPv4 address?” so the frame can be addressed locally.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "udp-tcp",
+    "title": "UDP and TCP",
+    "estimatedMinutes": 35,
+    "prerequisiteIds": ["ip-addresses", "encapsulation"],
+    "description": "UDP sends datagrams with little setup. TCP adds ports, a handshake, retransmission, and ordered byte streams for applications that need reliability.",
+    "level": 3,
+    "objectives": ["Contrast UDP and TCP", "Explain what a port number identifies"],
+    "diagnostic": {
+      "question": "Which statement about TCP versus UDP is accurate?",
+      "options": ["TCP provides retransmission and ordered delivery; UDP does not", "UDP always handshakes before sending", "TCP cannot use port numbers", "UDP encrypts payloads by default"],
+      "correctAnswer": "TCP provides retransmission and ordered delivery; UDP does not",
+      "explanation": "TCP is connection-oriented with acknowledgements and retransmission. UDP is a simple datagram service; encryption is a separate layer such as TLS or DTLS.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "dns",
+    "title": "DNS and name resolution",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["udp-tcp"],
+    "description": "DNS maps human names such as example.com to IP addresses by querying resolvers and, when needed, the hierarchical name servers.",
+    "level": 3,
+    "objectives": ["Describe what a DNS query returns", "Place DNS before a typical web request"],
+    "diagnostic": {
+      "question": "What does DNS mainly do before your browser opens a website by name?",
+      "options": ["Translate the name into an IP address", "Issue the site's TLS certificate", "Assign your computer a MAC address", "Compress the HTML"],
+      "correctAnswer": "Translate the name into an IP address",
+      "explanation": "Packets are delivered to IP addresses. DNS resolves the name you typed into one or more addresses the client can connect to.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "http",
+    "title": "HTTP and HTTPS",
+    "estimatedMinutes": 30,
+    "prerequisiteIds": ["dns", "udp-tcp"],
+    "description": "HTTP is the application protocol for web requests and responses. HTTPS is HTTP over a TLS-protected connection, usually on port 443.",
+    "level": 3,
+    "objectives": ["Read a simple HTTP request line", "Explain how HTTPS differs from HTTP"],
+    "diagnostic": {
+      "question": "HTTPS is best described as which of the following?",
+      "options": ["HTTP running inside a TLS-protected connection", "A replacement for DNS", "A switch protocol for MAC learning", "Plain HTTP on port 80 with a longer timeout"],
+      "correctAnswer": "HTTP running inside a TLS-protected connection",
+      "explanation": "HTTPS is HTTP over TLS. The HTTP methods and URLs are the same; the connection is encrypted and authenticated.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "tls",
+    "title": "TLS and secure connections",
+    "estimatedMinutes": 30,
+    "prerequisiteIds": ["http"],
+    "description": "TLS authenticates the server with certificates and encrypts the bytes so observers on the path cannot read or easily alter the application data.",
+    "level": 3,
+    "objectives": ["State what a certificate is used for", "Explain confidentiality versus authentication"],
+    "diagnostic": {
+      "question": "What is the main purpose of a website's TLS certificate in HTTPS?",
+      "options": ["Help the client authenticate the server and set up encryption keys", "Assign the site an IPv6 address", "Replace the need for DNS", "List the switch ports on the LAN"],
+      "correctAnswer": "Help the client authenticate the server and set up encryption keys",
+      "explanation": "The certificate binds a public key to a name so the client can authenticate the server, then TLS derives keys that encrypt the session.",
+      "questionType": "explain"
+    }
+  },
+  {
+    "id": "dhcp",
+    "title": "DHCP and getting online",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["ip-addresses", "udp-tcp"],
+    "description": "DHCP automatic configuration gives a host an address, mask, default gateway, and usually DNS resolvers so it can join a network without static setup.",
+    "level": 2,
+    "objectives": ["List the settings DHCP typically provides", "Contrast DHCP with a static address"],
+    "diagnostic": {
+      "question": "Which set of settings does DHCP commonly provide to a joining host?",
+      "options": ["IP address, subnet mask, default gateway, and DNS servers", "Only a TLS private key", "Only a MAC address burned into the NIC", "An autonomous system number"],
+      "correctAnswer": "IP address, subnet mask, default gateway, and DNS servers",
+      "explanation": "A typical DHCP lease includes address, mask, gateway, and resolver information so the host can send packets off the LAN and look up names.",
+      "questionType": "recall"
+    }
+  },
+  {
+    "id": "wifi",
+    "title": "Wi-Fi and wireless networking",
+    "estimatedMinutes": 25,
+    "prerequisiteIds": ["network-types", "mac-addresses"],
+    "description": "Wi-Fi is a wireless LAN. Stations associate with an access point that bridges wireless frames onto the wired Ethernet network.",
+    "level": 2,
+    "objectives": ["Describe association with an access point", "Relate Wi-Fi to Ethernet bridging"],
+    "diagnostic": {
+      "question": "On a typical home network, what does the Wi-Fi access point do?",
+      "options": ["Lets wireless devices join the same LAN as wired Ethernet ports", "Replaces the need for IP addresses", "Runs the public DNS root", "Issues TLS certificates for every laptop"],
+      "correctAnswer": "Lets wireless devices join the same LAN as wired Ethernet ports",
+      "explanation": "The access point is a LAN bridge for wireless clients. Routing to the internet is a separate router function, often in the same box.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "firewalls",
+    "title": "Firewalls and basic network security",
+    "estimatedMinutes": 30,
+    "prerequisiteIds": ["routing", "udp-tcp"],
+    "description": "A firewall allows or blocks packets using addresses and ports. Home routers often hide internal hosts with NAT as well as filtering.",
+    "level": 3,
+    "objectives": ["Describe allow/deny using address and port", "Recognize NAT as hiding internal addresses"],
+    "diagnostic": {
+      "question": "A simple host firewall that blocks inbound TCP port 22 is making a decision based on what?",
+      "options": ["Addresses and transport ports in the packet headers", "The colour of the Ethernet cable", "The HTML of the website", "The Wi-Fi channel number only"],
+      "correctAnswer": "Addresses and transport ports in the packet headers",
+      "explanation": "Packet filters match IP addresses and TCP/UDP ports (and related state). They do not need the web page contents to block SSH on port 22.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "troubleshooting",
+    "title": "A method for troubleshooting connectivity",
+    "estimatedMinutes": 35,
+    "prerequisiteIds": ["dns", "dhcp", "routing", "http"],
+    "description": "Work from the host outward: address and gateway, then ping, then DNS, then the application. Ping and traceroute use ICMP to test a path.",
+    "level": 3,
+    "objectives": ["Order basic connectivity checks", "Interpret a failed DNS lookup versus a failed ping"],
+    "diagnostic": {
+      "question": "A site name will not load, but pinging 8.8.8.8 works. Which check should you try next?",
+      "options": ["DNS resolution for the site name", "Replacing the Ethernet switch immediately", "Disabling IPv4 on every host", "Deleting the default gateway"],
+      "correctAnswer": "DNS resolution for the site name",
+      "explanation": "A working ping to a public IP shows IP routing is probably fine. Failure by name points to DNS or the application, not the whole path.",
+      "questionType": "apply"
+    }
+  },
+  {
+    "id": "packet-journey",
+    "title": "Trace a web request across a network",
+    "estimatedMinutes": 45,
+    "prerequisiteIds": ["tls", "firewalls", "troubleshooting"],
+    "description": "Follow one HTTPS request: DNS, TCP, TLS, HTTP, and the return path through LAN, gateway, and the public internet.",
+    "level": 4,
+    "objectives": ["Order DNS, TCP, TLS, and HTTP in a browser fetch", "Name devices the packet may pass"],
+    "diagnostic": {
+      "question": "Which order best describes a typical browser fetch of https://example.com?",
+      "options": ["DNS lookup, TCP handshake, TLS handshake, then HTTP request", "HTTP request, then DNS, then ARP only", "TLS certificate first, then DHCP, then UDP to port 80", "Ping the MAC address, then skip DNS"],
+      "correctAnswer": "DNS lookup, TCP handshake, TLS handshake, then HTTP request",
+      "explanation": "The client resolves the name, opens a TCP connection to the server address, performs TLS, then sends HTTP on that protected stream.",
+      "questionType": "apply"
+    }
+  }
 ]

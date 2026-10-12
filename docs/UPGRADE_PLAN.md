@@ -57,10 +57,9 @@ mounted beside them under `/learn`.
    full-article Wikipedia extraction, per-source license decisions, concept tags,
    idempotent re-ingestion, a shared `retrieval.ts` with level-fit scoring and
    per-source diversity, plus a second migration. `/learn` can query attributed chunks.
-3. **Prerequisite graph and diagnostic** — enriched concept JSON (descriptions,
-   levels, objectives, diagnostic items), learner profile (goal, known topics,
-   interests), server-graded adaptive diagnostic with prerequisite propagation,
-   onboarding UI, and tests showing two learners get different paths.
+3. **Prerequisite graph and diagnostic** — enriched concept JSON, learner
+   profiles, server-graded adaptive diagnostic with prerequisite propagation,
+   `/learn/onboarding`, and tests showing two learners get different paths.
 4. **Verified lesson pipeline** — extract the worker into an injectable
    `pipeline.ts` with an integration test using mocked providers, add the
    verified-module cache, claim rewrite support, analogy personalization from the

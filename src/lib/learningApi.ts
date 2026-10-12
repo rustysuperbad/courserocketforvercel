@@ -48,9 +48,43 @@ const startCourseJobCall = callable<{ goal: string; idempotencyKey: string; doma
 const jobStatusCall = callable<{ runId: string }, RunView>("getCourseJobStatus", 15_000);
 const listRunsCall = callable<Record<string, never>, { runs: RunView[] }>("listLearningRuns", 15_000);
 const learningSourcesCall = callable<{ query: string; limit?: number; targetLevel?: number; conceptSlugs?: string[] }, { chunks: SourceChunk[]; retrievalStatus: "attributed" | "no_approved_sources" | "unavailable"; provider: string; model: string; inputTokens: number; estimatedCostUsd: number }>("searchLearningSources");
+export type PublicConcept = {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  estimatedMinutes: number;
+  prerequisiteIds: string[];
+  objectives: string[];
+  diagnostic: { question: string; options: string[]; questionType: "recall" | "explain" | "apply" };
+};
+
+export type DiagnosticQuestion = {
+  conceptSlug: string;
+  title: string;
+  question: string;
+  options: string[];
+  questionType: "recall" | "explain" | "apply";
+};
+
+export type DiagnosticState = {
+  done: boolean;
+  askedCount: number;
+  question: DiagnosticQuestion | null;
+  steps: PathStep[] | null;
+  totalEstimatedMinutes: number | null;
+  isCorrect?: boolean;
+  explanation?: string;
+  pKnown?: number;
+};
+
 const saveBaselineCall = callable<{ knownConceptSlugs: string[] }, { saved: number }>("saveNetworkingBaseline", 20_000);
 const diagnosticAnswerCall = callable<{ conceptSlug: string; isCorrect: boolean }, { pKnown: number; attempts: number; correctAttempts: number }>("submitDiagnosticAnswer", 20_000);
-const networkingPathCall = callable<{ targetConceptSlug: string }, { targetConceptSlug: string; steps: PathStep[]; totalEstimatedMinutes: number; contentStatus: ContentStatus }>("generateNetworkingPath", 20_000);
+const networkingPathCall = callable<{ targetConceptSlug: string }, { targetConceptSlug: string; steps: PathStep[]; totalEstimatedMinutes: number; contentStatus: ContentStatus; interests?: string[]; goal?: string }>("generateNetworkingPath", 20_000);
+const catalogCall = callable<Record<string, never>, { concepts: PublicConcept[]; interestSuggestions: string[] }>("listNetworkingCatalog", 15_000);
+const saveProfileCall = callable<{ goal: string; targetConceptSlug: string; knownConceptSlugs: string[]; interests: string[] }, { savedKnown: number; targetConceptSlug: string }>("saveLearnerProfile", 20_000);
+const nextDiagnosticCall = callable<{ targetConceptSlug?: string }, DiagnosticState>("getNextDiagnosticQuestion", 20_000);
+const diagnosticChoiceCall = callable<{ conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string }, DiagnosticState>("submitDiagnosticChoice", 20_000);
 
 /** Stable per-browser idempotency key so a retry after a network blip reuses the same run. */
 export function idempotencyKeyFor(uid: string, goal: string, domain: JobDomain, targetConceptSlug?: string): string {
@@ -112,6 +146,28 @@ export async function submitDiagnosticAnswer(conceptSlug: string, isCorrect: boo
 
 export async function generateNetworkingPath(targetConceptSlug: string) {
   const { data } = await networkingPathCall({ targetConceptSlug });
+  return data;
+}
+
+export async function listNetworkingCatalog() {
+  const { data } = await catalogCall({});
+  return data;
+}
+
+export async function saveLearnerProfile(input: { goal: string; targetConceptSlug: string; knownConceptSlugs: string[]; interests: string[] }) {
+  const { data } = await saveProfileCall(input);
+  return data;
+}
+
+export async function getNextDiagnosticQuestion(targetConceptSlug?: string) {
+  const { data } = await nextDiagnosticCall(targetConceptSlug ? { targetConceptSlug } : {});
+  return data;
+}
+
+export async function submitDiagnosticChoice(conceptSlug: string, selectedAnswer: string, targetConceptSlug?: string) {
+  const payload: { conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string } = { conceptSlug, selectedAnswer };
+  if (targetConceptSlug) payload.targetConceptSlug = targetConceptSlug;
+  const { data } = await diagnosticChoiceCall(payload);
   return data;
 }
 
