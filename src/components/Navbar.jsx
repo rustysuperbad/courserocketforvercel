@@ -23,8 +23,9 @@ export default function Navbar({ minimal = false }) {
           </button>
           {!minimal && (
             <div className="cr-nav-links" aria-label="Main navigation">
-              {user && <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Dashboard</NavLink>}
-              {user && <NavLink active={location.pathname.startsWith("/learn")} onClick={() => navigate("/learn")}>Learn</NavLink>}
+              {user && <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Library</NavLink>}
+              {user && <NavLink active={location.pathname.startsWith("/learn") && !location.pathname.includes("studio")} onClick={() => navigate("/learn")}>Learn</NavLink>}
+              {user && <NavLink active={location.pathname === "/learn/studio"} onClick={() => navigate("/learn/studio")}>Studio</NavLink>}
               <NavLink active={location.pathname === "/"} onClick={() => navigate("/")}>Home</NavLink>
             </div>
           )}
@@ -36,12 +37,13 @@ export default function Navbar({ minimal = false }) {
                 <span className="cr-user-avatar">{(user.displayName || user.email || "U").charAt(0).toUpperCase()}</span>
                 <span className="cr-user-name">{user.displayName || user.email}</span>
               </button>
+              <span className="cr-kbd" aria-hidden="true">⌘K</span>
               <button type="button" className="cr-btn cr-btn-ghost cr-nav-signout" onClick={handleSignOut}>Sign out</button>
             </>
           ) : (
             <>
               <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/login")}>Sign in</button>
-              <button type="button" className="cr-btn cr-btn-primary" onClick={() => navigate("/login?signup=1")}>Get started <span aria-hidden="true">↗</span></button>
+              <button type="button" className="cr-btn cr-btn-primary" onClick={() => navigate("/login?signup=1")}>Create account</button>
             </>
           )}
         </div>

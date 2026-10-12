@@ -13,8 +13,11 @@ const Review = lazy(() => import("./pages/learn/Review"));
 const Practice = lazy(() => import("./pages/learn/Practice"));
 const Analytics = lazy(() => import("./pages/learn/Analytics"));
 const Notes = lazy(() => import("./pages/learn/Notes"));
+const Studio = lazy(() => import("./pages/learn/Studio"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 import { useAuth } from "./context/AuthContext";
+import BrandIntro from "./components/BrandIntro";
+const CommandPalette = lazy(() => import("./components/CommandPalette"));
 
 function DeferredPage({ children }) {
   return (
@@ -47,6 +50,9 @@ function PublicOnlyRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <a className="cr-skip" href="#main">Skip to content</a>
+      <BrandIntro />
+      <Suspense fallback={null}><CommandPalette /></Suspense>
       <Routes>
         <Route path="/" element={<DeferredPage><Landing /></DeferredPage>} />
         <Route path="/login" element={<PublicOnlyRoute><DeferredPage><Login /></DeferredPage></PublicOnlyRoute>} />
@@ -60,6 +66,7 @@ export default function App() {
         <Route path="/learn/practice" element={<ProtectedRoute><DeferredPage><Practice /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/analytics" element={<ProtectedRoute><DeferredPage><Analytics /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/notes" element={<ProtectedRoute><DeferredPage><Notes /></DeferredPage></ProtectedRoute>} />
+        <Route path="/learn/studio" element={<ProtectedRoute><DeferredPage><Studio /></DeferredPage></ProtectedRoute>} />
         <Route path="/privacy" element={<DeferredPage><Privacy /></DeferredPage>} />
       </Routes>
     </BrowserRouter>
