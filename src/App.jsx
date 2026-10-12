@@ -12,6 +12,7 @@ const LearnCourse = lazy(() => import("./pages/learn/LearnCourse"));
 const Review = lazy(() => import("./pages/learn/Review"));
 const Practice = lazy(() => import("./pages/learn/Practice"));
 const Analytics = lazy(() => import("./pages/learn/Analytics"));
+const Notes = lazy(() => import("./pages/learn/Notes"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 import { useAuth } from "./context/AuthContext";
 
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/learn/review" element={<ProtectedRoute><DeferredPage><Review /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/practice" element={<ProtectedRoute><DeferredPage><Practice /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/analytics" element={<ProtectedRoute><DeferredPage><Analytics /></DeferredPage></ProtectedRoute>} />
+        <Route path="/learn/notes" element={<ProtectedRoute><DeferredPage><Notes /></DeferredPage></ProtectedRoute>} />
         <Route path="/privacy" element={<DeferredPage><Privacy /></DeferredPage>} />
       </Routes>
     </BrowserRouter>

@@ -159,6 +159,7 @@ export default function LearnHome() {
                 </button>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/review">Daily review</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
+                <Link className="cr-btn cr-btn-ghost" to="/learn/notes">Private notes</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/analytics">Analytics</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/privacy">Privacy</Link>
               </div>
