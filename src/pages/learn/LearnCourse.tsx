@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { ContentStatusBadge } from "../../components/learn/StatusBadge";
-import { describeCallableError, getLearningCourse, type LearningCourse } from "../../lib/learningApi";
+import { describeCallableError, getLearningCourse, submitCourseProject, submitQuizAttempt, type LearningCourse } from "../../lib/learningApi";
 import "../../styles/learn.css";
 
 export default function LearnCourse() {
@@ -52,6 +52,7 @@ export default function LearnCourse() {
               ))}
             </div>
             {module && <ModuleView module={module} />}
+            <ProjectBlock courseId={data.course.id} />
             <p className="lr-muted" style={{ marginTop: 18 }}><Link className="cr-link" to="/learn">Back to Learn</Link></p>
           </>
         )}
@@ -131,13 +132,71 @@ function ModuleView({ module }: { module: LearningCourse["modules"][number] }) {
         </>
       )}
       <h3>Practice</h3>
-      <p className="lr-muted">Unverified quiz items are labelled and do not count as a checked answer key.</p>
-      {(module.quizItems ?? []).map((item) => (
-        <div key={item.item_key} className="lr-run" style={{ marginTop: 10 }}>
-          <strong>{item.question}</strong>
-          <div className="lr-muted">{item.question_type} · {item.verified ? "answer key verified" : "unverified answer key"}</div>
-        </div>
-      ))}
+      <p className="lr-muted">Unverified quiz items are labelled and do not count as a checked answer key. A miss updates mastery, can insert a remedial module, and schedules a review.</p>
+      {(module.quizItems ?? []).map((item) => <QuizBlock key={item.item_key} moduleId={module.id} item={item} />)}
     </article>
+  );
+}
+
+function QuizBlock({ moduleId, item }: { moduleId: string; item: LearningCourse["modules"][number]["quizItems"][number] }) {
+  const options = Array.isArray(item.options) ? item.options.map(String) : [];
+  const [choice, setChoice] = useState<string | null>(null);
+  const [result, setResult] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  async function submit() {
+    if (!choice) return;
+    setBusy(true);
+    try {
+      const outcome = await submitQuizAttempt(moduleId, item.item_key, choice);
+      const bits = [outcome.isCorrect ? "Correct." : "Not quite.", item.explanation];
+      if (outcome.remediationInserted) bits.push("A short remedial module was added for the missing prerequisite.");
+      if (outcome.reviewDueAt) bits.push("A review card was scheduled.");
+      if (!item.verified) bits.push("This answer key is not independently verified.");
+      setResult(bits.join(" "));
+    } catch (err) {
+      setResult(describeCallableError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="lr-run" style={{ marginTop: 10 }}>
+      <strong>{item.question}</strong>
+      <div className="lr-muted">{item.question_type} · {item.verified ? "answer key verified" : "unverified answer key"}</div>
+      <div className="lr-list">
+        {options.map((option) => (
+          <button key={option} type="button" className="lr-option" aria-pressed={choice === option} onClick={() => setChoice(option)}>{option}</button>
+        ))}
+      </div>
+      <div className="lr-actions">
+        <button type="button" className="cr-btn cr-btn-soft" onClick={() => void submit()} disabled={!choice || busy}>{busy ? "Checking…" : "Check answer"}</button>
+      </div>
+      {result && <div className="lr-notice" role="status">{result}</div>}
+    </div>
+  );
+}
+
+function ProjectBlock({ courseId }: { courseId: string }) {
+  const [writeup, setWriteup] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <section style={{ marginTop: 22 }} aria-labelledby="project-heading">
+      <h3 id="project-heading">Final project</h3>
+      <p>Explain, in your own words, how a browser fetch of https://example.com travels across a network. The rubric looks for DNS, TCP, TLS, HTTP, and the default gateway.</p>
+      <label className="lr-field">
+        <span>Your explanation</span>
+        <textarea className="cr-input" rows={6} maxLength={8000} value={writeup} onChange={(event) => setWriteup(event.target.value)} />
+      </label>
+      <div className="lr-actions">
+        <button type="button" className="cr-btn cr-btn-primary" disabled={busy || writeup.trim().length < 40} onClick={() => {
+          setBusy(true);
+          void submitCourseProject(courseId, writeup).then((result) => {
+            setMessage(`${Math.round(result.score * 100)}% · ${result.rubric.feedback}`);
+          }).catch((err) => setMessage(describeCallableError(err))).finally(() => setBusy(false));
+        }}>{busy ? "Scoring…" : "Submit for rubric feedback"}</button>
+      </div>
+      {message && <div className="lr-notice" role="status">{message}</div>}
+    </section>
   );
 }

@@ -180,7 +180,7 @@ export type LearningCourse = {
     };
     content_status: ContentStatus;
     claims: Array<{ claim_key: string; claim_text: string; supporting_chunk_ids: string[]; verified: boolean; verification_status: string }>;
-    quizItems: Array<{ item_key: string; question: string; options: string[] | unknown; correct_answer: string; explanation: string; question_type: string; verified: boolean }>;
+    quizItems: Array<{ item_key: string; question: string; options: string[] | unknown; explanation: string; question_type: string; verified: boolean }>;
   }>;
 };
 
@@ -195,6 +195,34 @@ export async function submitDiagnosticChoice(conceptSlug: string, selectedAnswer
   const payload: { conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string } = { conceptSlug, selectedAnswer };
   if (targetConceptSlug) payload.targetConceptSlug = targetConceptSlug;
   const { data } = await diagnosticChoiceCall(payload);
+  return data;
+}
+
+export type QuizAttemptResult = { isCorrect: boolean; duplicate: boolean; pKnown: number | null; remediationInserted: boolean; reviewDueAt?: string | null; verifiedKey: boolean };
+export type DueReview = { cardId: string; conceptSlug: string; title: string; description: string; dueAt: string; question: { question: string; options: string[]; questionType: string } | null };
+
+const quizAttemptCall = callable<{ moduleId: string; itemKey: string; selectedAnswer: string; responseKey: string }, QuizAttemptResult>("submitQuizAttempt", 20_000);
+const dueReviewsCall = callable<Record<string, never>, { reviews: DueReview[] }>("listDueReviews", 20_000);
+const reviewGradeCall = callable<{ conceptSlug: string; rating: "again" | "hard" | "good" | "easy" }, { dueAt: string; pKnown: number }>("submitReviewGrade", 20_000);
+const projectCall = callable<{ courseId: string; writeup: string }, { id: string; score: number; rubric: { score: number; passed: string[]; missed: string[]; feedback: string }; created_at: string }>("submitCourseProject", 20_000);
+
+export async function submitQuizAttempt(moduleId: string, itemKey: string, selectedAnswer: string) {
+  const { data } = await quizAttemptCall({ moduleId, itemKey, selectedAnswer, responseKey: crypto.randomUUID() });
+  return data;
+}
+
+export async function listDueReviews() {
+  const { data } = await dueReviewsCall({});
+  return data.reviews;
+}
+
+export async function submitReviewGrade(conceptSlug: string, rating: "again" | "hard" | "good" | "easy") {
+  const { data } = await reviewGradeCall({ conceptSlug, rating });
+  return data;
+}
+
+export async function submitCourseProject(courseId: string, writeup: string) {
+  const { data } = await projectCall({ courseId, writeup });
   return data;
 }
 

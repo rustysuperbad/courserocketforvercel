@@ -9,6 +9,8 @@ const Profile = lazy(() => import("./pages/Profile"));
 const LearnHome = lazy(() => import("./pages/learn/LearnHome"));
 const Onboarding = lazy(() => import("./pages/learn/Onboarding"));
 const LearnCourse = lazy(() => import("./pages/learn/LearnCourse"));
+const Review = lazy(() => import("./pages/learn/Review"));
+const Practice = lazy(() => import("./pages/learn/Practice"));
 import { useAuth } from "./context/AuthContext";
 
 function DeferredPage({ children }) {
@@ -51,6 +53,8 @@ export default function App() {
         <Route path="/learn" element={<ProtectedRoute><DeferredPage><LearnHome /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/onboarding" element={<ProtectedRoute><DeferredPage><Onboarding /></DeferredPage></ProtectedRoute>} />
         <Route path="/learn/course/:courseId" element={<ProtectedRoute><DeferredPage><LearnCourse /></DeferredPage></ProtectedRoute>} />
+        <Route path="/learn/review" element={<ProtectedRoute><DeferredPage><Review /></DeferredPage></ProtectedRoute>} />
+        <Route path="/learn/practice" element={<ProtectedRoute><DeferredPage><Practice /></DeferredPage></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

@@ -63,10 +63,9 @@ mounted beside them under `/learn`.
 4. **Verified lesson pipeline** — injectable `pipeline.ts` with mocked-provider
    tests, verified-module cache, claim rewrite, analogy personalization, resource
    scoring/caching, link checks, and `/learn/course/:id` with honest status.
-5. **Practice and mastery loop** — server-graded quiz attempts that update
-   mastery, trace back through the prerequisite graph for remediation, schedule
-   FSRS reviews; review queue UI; final project with rubric and AI feedback;
-   Pyodide sandbox, subnetting trainer and protocol-ordering exercise.
+5. **Practice and mastery loop** — server-graded quizzes update mastery, insert
+   remediation, and schedule FSRS reviews; `/learn/review`, `/learn/practice`
+   (subnetting, protocol order, Pyodide), and a rubric-scored capstone.
 6. **Evaluation and trust** — 50+ prompt eval harness with a report, per-lesson
    feedback and review queue, export/delete flows and privacy placeholder,
    pre/post/delayed outcome tracking and an analytics summary.

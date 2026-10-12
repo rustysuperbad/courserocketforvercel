@@ -23,6 +23,7 @@ import {
   diagnosticChoiceSchema, learnerProfileSchema, loadPathForUser, nextDiagnosticQuestion as loadNextDiagnostic,
   publicNetworkingCatalog, saveLearnerOnboarding, submitDiagnosticChoice as recordDiagnosticChoice,
 } from "./onboarding";
+import { gradeReviewCard, listDueReviews as loadDueReviews, quizAttemptSchema, reviewGradeSchema, scoreNetworkingProject, submitQuizAttempt as persistQuizAttempt } from "./masteryLoop";
 
 const legacy = require("../index.js") as Record<string, unknown>;
 if (!getApps().length) initializeApp();
@@ -555,7 +556,7 @@ export const getLearningCourse = onCall({
   const moduleIds = (modules ?? []).map((row) => row.id);
   const [{ data: claims }, { data: quizzes }] = await Promise.all([
     moduleIds.length ? supabase.from("lesson_claims").select("module_id, claim_key, claim_text, supporting_chunk_ids, verified, verification_status").in("module_id", moduleIds) : Promise.resolve({ data: [] }),
-    moduleIds.length ? supabase.from("quiz_items").select("module_id, item_key, question, options, correct_answer, explanation, question_type, verified, source_chunk_ids, concept_id").in("module_id", moduleIds) : Promise.resolve({ data: [] }),
+    moduleIds.length ? supabase.from("quiz_items").select("module_id, item_key, question, options, explanation, question_type, verified, source_chunk_ids, concept_id").in("module_id", moduleIds) : Promise.resolve({ data: [] }),
   ]);
   return {
     course,
@@ -565,4 +566,66 @@ export const getLearningCourse = onCall({
       quizItems: (quizzes ?? []).filter((item) => item.module_id === module.id),
     })),
   };
+}));
+
+export const submitQuizAttempt = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("submit-quiz-attempt", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(quizAttemptSchema, request.data, "That quiz answer could not be saved.");
+  try {
+    return await persistQuizAttempt(serviceClient(), uid, input);
+  } catch (error) {
+    if (error instanceof Error && error.message === "unknown_quiz") throw new HttpsError("not-found", "That quiz item is not on your course.");
+    throw error;
+  }
+}));
+
+export const listDueReviews = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("list-due-reviews", async (request) => {
+  const uid = await verifiedUid(request);
+  return { reviews: await loadDueReviews(serviceClient(), uid) };
+}));
+
+export const submitReviewGrade = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("submit-review-grade", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(reviewGradeSchema, request.data, "Choose a review rating.");
+  try {
+    return await gradeReviewCard(serviceClient(), uid, input);
+  } catch (error) {
+    if (error instanceof Error && error.message === "unknown_concept") throw new HttpsError("not-found", "That review card is not available.");
+    throw error;
+  }
+}));
+
+const projectSchema = z.object({ courseId: z.string().uuid(), writeup: z.string().trim().min(40).max(8000) }).strict();
+export const submitCourseProject = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("submit-course-project", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(projectSchema, request.data, "Write at least a short explanation of the packet journey.");
+  const supabase = serviceClient();
+  const { data: course } = await supabase.from("courses").select("id, domain").eq("id", input.courseId).eq("firebase_uid", uid).maybeSingle();
+  if (!course) throw new HttpsError("not-found", "That course does not exist or is not yours.");
+  const rubric = scoreNetworkingProject(input.writeup);
+  const { data, error } = await supabase.from("project_submissions").insert({
+    firebase_uid: uid, course_id: course.id, writeup: input.writeup, rubric, score: rubric.score,
+  }).select("id, score, rubric, created_at").single();
+  if (error || !data) throw new HttpsError("internal", "Could not save your project.");
+  return data;
 }));

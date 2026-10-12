@@ -12,7 +12,7 @@ export function gradeDiagnosticChoice(concept: NetworkingConcept, selectedAnswer
 }
 
 /** Immediate prerequisite with the lowest mastery; used when a question is missed. */
-export function weakestPrerequisite(concepts: Concept[], conceptId: string, mastery: Record<string, Mastery | undefined>): string | null {
+export function weakestPrerequisite(concepts: Array<{ id: string; prerequisiteIds: string[] }>, conceptId: string, mastery: Record<string, Mastery | undefined>): string | null {
   const concept = concepts.find((item) => item.id === conceptId);
   if (!concept?.prerequisiteIds.length) return null;
   let weakest: string | null = null;
