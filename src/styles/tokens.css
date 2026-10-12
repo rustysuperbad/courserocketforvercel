@@ -1,0 +1,68 @@
+:root {
+  --bg: #0a0e1a;
+  --bg-2: #0f1525;
+  --surface: #131a2c;
+  --surface-2: #1a2238;
+  --surface-3: #232c45;
+  --border: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(148, 163, 184, 0.22);
+  --text: #e6ebf5;
+  --text-2: #aab2c5;
+  --text-3: #8b94ad;
+  --primary: #6366f1;
+  --primary-2: #818cf8;
+  --primary-soft: rgba(99, 102, 241, 0.12);
+  --primary-ring: rgba(99, 102, 241, 0.28);
+  --accent: #22d3ee;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --white: #ffffff;
+  --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-display: "Syne Variable", Syne, Inter, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --leading-body: 1.65;
+  --leading-tight: 1.2;
+  --track-display: -0.04em;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-page-x: 32px;
+  --space-page-y: 48px;
+  --space-section: 96px;
+  --content-max: 1120px;
+  --page-max: 1280px;
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --shadow-sm: inset 0 1px 0 rgba(230, 235, 245, 0.04);
+  --shadow-md: inset 0 1px 0 rgba(230, 235, 245, 0.05), 0 1px 0 rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.28);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 420ms;
+  --hairline: 1px solid var(--border);
+  --key-surface: var(--shadow-md), 0 0 0 1px var(--border);
+}
+
+@media (max-width: 680px) {
+  :root {
+    --space-page-x: 16px;
+    --space-page-y: 28px;
+    --space-section: 64px;
+  }
+}
