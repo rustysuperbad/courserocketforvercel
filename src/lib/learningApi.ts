@@ -164,6 +164,33 @@ export async function getNextDiagnosticQuestion(targetConceptSlug?: string) {
   return data;
 }
 
+export type LearningCourse = {
+  course: { id: string; goal: string; domain: string; status: string; content_status: ContentStatus; estimated_minutes: number | null; created_at: string; updated_at: string };
+  modules: Array<{
+    id: string;
+    position: number;
+    title: string;
+    summary: string;
+    body: {
+      sections?: Array<{ heading: string; paragraphs: Array<{ text: string; claimIds: string[] }> }>;
+      verificationIssues?: string[];
+      sources?: Array<{ id: string; citation: number; title: string; url: string; license: string; attribution: string; linkStatus?: string }>;
+      resources?: Array<{ kind: string; title: string; url: string; score?: number; snippet?: string }>;
+      learningStatus?: string;
+    };
+    content_status: ContentStatus;
+    claims: Array<{ claim_key: string; claim_text: string; supporting_chunk_ids: string[]; verified: boolean; verification_status: string }>;
+    quizItems: Array<{ item_key: string; question: string; options: string[] | unknown; correct_answer: string; explanation: string; question_type: string; verified: boolean }>;
+  }>;
+};
+
+const learningCourseCall = callable<{ courseId: string }, LearningCourse>("getLearningCourse", 20_000);
+
+export async function getLearningCourse(courseId: string) {
+  const { data } = await learningCourseCall({ courseId });
+  return data;
+}
+
 export async function submitDiagnosticChoice(conceptSlug: string, selectedAnswer: string, targetConceptSlug?: string) {
   const payload: { conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string } = { conceptSlug, selectedAnswer };
   if (targetConceptSlug) payload.targetConceptSlug = targetConceptSlug;

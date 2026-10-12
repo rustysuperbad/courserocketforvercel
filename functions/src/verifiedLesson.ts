@@ -27,15 +27,18 @@ export type LessonCritic = {
   claims: Array<{ id: string; supported: boolean; reason: string }>;
   quizItems: Array<{ id: string; solvedAnswer: string; supportedBySources: boolean; reason: string }>;
 };
+export const rewriteSchema = z.object({ claims: z.array(claimSchema).max(50) });
+
 export type LessonProvider = {
   generate(input: { goal: string; targetLevel: string; analogyContext?: string; chunks: EvidenceChunk[] }): Promise<unknown>;
   critique(input: { draft: GeneratedLesson; chunks: EvidenceChunk[] }): Promise<unknown>;
+  rewrite?(input: { unsupported: GeneratedLesson["claims"]; chunks: EvidenceChunk[] }): Promise<unknown>;
 };
 
 export type VerifiedLessonResult = {
   title: string;
   sections: Array<{ heading: string; paragraphs: Array<{ text: string; claimIds: string[] }> }>;
-  claims: Array<{ id: string; text: string; sourceChunkIds: string[]; verified: boolean; verificationStatus: "supported" | "unsupported" }>;
+  claims: Array<{ id: string; text: string; sourceChunkIds: string[]; verified: boolean; verificationStatus: "supported" | "unsupported" | "rewritten" }>;
   quizItems: Array<GeneratedLesson["quizItems"][number] & { verified: boolean }>;
   contentStatus: "ai_generated" | "ai_verified";
   verificationIssues: string[];
@@ -55,15 +58,28 @@ export async function generateVerifiedLesson(
     verificationIssues: ["No approved evidence was retrieved; no lesson content was generated."],
   };
 
-  const draft = generatedLessonSchema.parse(await provider.generate(input));
-  const critic = critiqueSchema.parse(await provider.critique({ draft, chunks: input.chunks }));
-  const claimsById = new Map(draft.claims.map((claim) => [claim.id, claim]));
+  let draft = generatedLessonSchema.parse(await provider.generate(input));
+  let critic = critiqueSchema.parse(await provider.critique({ draft, chunks: input.chunks }));
+  let evaluated = evaluateDraft(draft, critic, chunkIds);
+  const unsupported = evaluated.claims.filter((claim) => !claim.verified);
+  if (unsupported.length && provider.rewrite) {
+    const rewritten = rewriteSchema.parse(await provider.rewrite({ unsupported: unsupported.map(({ verified, verificationStatus, ...claim }) => claim), chunks: input.chunks }));
+    const replacements = new Map(rewritten.claims.map((claim) => [claim.id, claim]));
+    draft = { ...draft, claims: draft.claims.map((claim) => replacements.get(claim.id) ?? claim) };
+    critic = critiqueSchema.parse(await provider.critique({ draft, chunks: input.chunks }));
+    evaluated = evaluateDraft(draft, critic, chunkIds, new Set(replacements.keys()));
+  }
+  return evaluated;
+}
+
+function evaluateDraft(draft: GeneratedLesson, critic: LessonCritic, chunkIds: Set<string>, rewrittenIds = new Set<string>()): VerifiedLessonResult {
   const criticClaims = new Map(critic.claims.map((item) => [item.id, item]));
   const checkedClaims = draft.claims.map((claim) => {
-    const citationValid = claim.sourceChunkIds.every((id) => chunkIds.has(id));
+    const citationValid = claim.sourceChunkIds.length > 0 && claim.sourceChunkIds.every((id) => chunkIds.has(id));
     const review = criticClaims.get(claim.id);
     const verified = citationValid && review?.supported === true;
-    return { ...claim, verified, verificationStatus: verified ? "supported" as const : "unsupported" as const };
+    const verificationStatus = verified ? "supported" as const : rewrittenIds.has(claim.id) ? "rewritten" as const : "unsupported" as const;
+    return { ...claim, verified, verificationStatus };
   });
   const supportedClaimIds = new Set(checkedClaims.filter((claim) => claim.verified).map((claim) => claim.id));
   const sections = draft.sections.map((section) => ({
@@ -85,15 +101,19 @@ export async function generateVerifiedLesson(
   if (checkedClaims.some((claim) => !claim.verified)) verificationIssues.push("Unsupported or uncited claims were removed from the lesson.");
   if (quizItems.some((item) => !item.verified)) verificationIssues.push("Quiz items that failed independent answer or evidence checks were marked unverified.");
   if (!sections.length) verificationIssues.push("No lesson paragraph passed claim-level evidence verification.");
-  const contentStatus = verificationIssues.length === 0 ? "ai_verified" : "ai_generated";
   return {
     title: draft.title,
     sections,
     claims: checkedClaims,
     quizItems,
-    contentStatus,
+    contentStatus: verificationIssues.length === 0 ? "ai_verified" : "ai_generated",
     verificationIssues,
   };
+}
+
+/** Every stored claim must have at least one citation and a verification result. */
+export function claimsHaveCitationsAndVerdicts(claims: VerifiedLessonResult["claims"]): boolean {
+  return claims.every((claim) => claim.sourceChunkIds.length > 0 && (claim.verificationStatus === "supported" || claim.verificationStatus === "unsupported" || claim.verificationStatus === "rewritten"));
 }
 
 export function buildLessonPrompts() {
@@ -105,12 +125,17 @@ export function buildLessonPrompts() {
       "Write at least three quiz items and include recall, explain, and apply question types.",
       "The correct answer must be one of the four exact option strings. Keep explanations traceable to evidence.",
       "If the sources do not support a fact, omit it instead of guessing.",
+      "When analogyContext is provided, use the learner's known topics or interests as a metaphor only; do not invent facts from it.",
     ].join("\n"),
     critic: [
       "Independently verify each claim against only the supplied source passages.",
       "Independently solve each quiz item from the source passages; do not trust the proposed answer key.",
       "For every claim report whether it is supported. For every quiz item return your solved answer and whether the sources support the question.",
       "Return only the requested JSON and do not fill evidence gaps with outside knowledge.",
+    ].join("\n"),
+    rewrite: [
+      "Rewrite only the unsupported claims so each is strictly entailed by the supplied passages.",
+      "Keep the same claim ids. Cite only supplied chunk ids. If a claim cannot be grounded, omit it.",
     ].join("\n"),
   };
 }

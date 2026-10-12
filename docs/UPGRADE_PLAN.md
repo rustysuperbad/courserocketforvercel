@@ -60,11 +60,9 @@ mounted beside them under `/learn`.
 3. **Prerequisite graph and diagnostic** — enriched concept JSON, learner
    profiles, server-graded adaptive diagnostic with prerequisite propagation,
    `/learn/onboarding`, and tests showing two learners get different paths.
-4. **Verified lesson pipeline** — extract the worker into an injectable
-   `pipeline.ts` with an integration test using mocked providers, add the
-   verified-module cache, claim rewrite support, analogy personalization from the
-   learner profile, resource scoring/deduplication/caching, link checking, and a
-   course viewer that shows citations and honest content status.
+4. **Verified lesson pipeline** — injectable `pipeline.ts` with mocked-provider
+   tests, verified-module cache, claim rewrite, analogy personalization, resource
+   scoring/caching, link checks, and `/learn/course/:id` with honest status.
 5. **Practice and mastery loop** — server-graded quiz attempts that update
    mastery, trace back through the prerequisite graph for remediation, schedule
    FSRS reviews; review queue UI; final project with rubric and AI feedback;

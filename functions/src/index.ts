@@ -5,15 +5,17 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import OpenAI from "openai";
 import { z } from "zod";
 import { getServiceSupabase } from "./supabase";
-import { buildLearningPath } from "./learning";
 import { flushObservability, reportWorkflowError, traceOperation, traceWorkflow } from "./observability";
 import { createVerifiedLessonProvider } from "./providers";
-import { generateVerifiedLesson, type EvidenceChunk } from "./verifiedLesson";
+import { generateVerifiedLesson, type VerifiedLessonResult } from "./verifiedLesson";
 import { hybridSearchParams, rankRetrievedChunks, retrievalQuerySchema, toEvidenceChunks, toPublicChunks } from "./retrieval";
+import { analogyContextFrom, buildVerifiedModule, loadCoursePath, persistLessonModule, type GenerationRun } from "./pipeline";
+import { checkUrls } from "./linkCheck";
+import { fetchOpenAlexItems, fetchYoutubeItems, resourceCacheKey, type ResourceItem } from "./resources";
 import {
   REGION, allowNonCommercialSources, booleanParam, dailyUserLimit, embeddingCostPerMillion, geminiApiKey, inngestEventKey,
   inngestSigningKey, langfusePublicKey, langfuseSecretKey, numberParam, openAiApiKey, projectDailySpendLimit, sentryDsn,
-  supabaseSecrets, supabaseServiceRoleKey, supabaseUrl,
+  supabaseSecrets, supabaseServiceRoleKey, supabaseUrl, youtubeApiKey,
 } from "./config";
 import { guarded, parseInput, verifiedUid } from "./auth";
 import { estimateRunCostUsd, publicRunView, reservationFailure, startJobSchema } from "./jobs";
@@ -68,10 +70,6 @@ async function finalizeRun(runId: string, status: "completed" | "failed" | "bloc
   if (error) throw new Error("Could not finalize generation run.");
 }
 
-type GenerationRun = { id: string; firebase_uid: string; goal: string; domain: "general" | "networking"; target_concept_slug: string | null; course_id: string | null };
-type CourseConcept = { id: string; slug: string; title: string; estimated_minutes: number; level: number };
-type JobStep = { conceptId: string; title: string; action: "learn" | "shorten" | "skip"; pKnown: number; estimatedMinutes: number };
-
 async function retrieveForGeneration(query: string, options: { targetLevel?: number; conceptSlug?: string; ownerUid?: string } = {}): Promise<{ chunks: ReturnType<typeof toEvidenceChunks>; inputTokens: number; costUsd: number; retrievalStatus: "attributed" | "no_approved_sources" }> {
   const openai = new OpenAI({ apiKey: openAiApiKey.value() });
   const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
@@ -105,41 +103,6 @@ async function retrieveForGeneration(query: string, options: { targetLevel?: num
   };
 }
 
-function inferNetworkingTarget(goal: string, concepts: CourseConcept[], requestedSlug: string | null): CourseConcept {
-  const normalize = (value: string) => value.toLowerCase().replace(/^networking-/, "").replace(/[^a-z0-9]+/g, " ").trim();
-  const requested = requestedSlug ? concepts.find((concept) => concept.slug === (requestedSlug.startsWith("networking-") ? requestedSlug : `networking-${requestedSlug}`)) : undefined;
-  if (requested) return requested;
-  const words = new Set(normalize(goal).split(" ").filter((word) => word.length > 3));
-  const ranked = concepts.map((concept) => ({ concept, matches: normalize(`${concept.slug} ${concept.title}`).split(" ").filter((word) => words.has(word)).length }))
-    .sort((left, right) => right.matches - left.matches);
-  return ranked[0]?.matches ? ranked[0].concept : concepts.find((concept) => concept.slug === "networking-network-purpose") ?? concepts[0]!;
-}
-
-async function loadCoursePath(run: GenerationRun): Promise<{ steps: JobStep[]; conceptById: Map<string, CourseConcept>; totalMinutes: number }> {
-  if (run.domain !== "networking") {
-    return { steps: [{ conceptId: "general-topic", title: run.goal, action: "learn", pKnown: 0.1, estimatedMinutes: 30 }], conceptById: new Map(), totalMinutes: 30 };
-  }
-  const supabase = serviceClient();
-  const { data: concepts, error: conceptError } = await supabase.from("concepts").select("id,slug,title,estimated_minutes,level").eq("domain", "networking");
-  if (conceptError || !concepts?.length) throw new Error("The networking concept graph has not been seeded.");
-  const target = inferNetworkingTarget(run.goal, concepts, run.target_concept_slug);
-  const conceptIds = concepts.map((concept) => concept.id);
-  const [{ data: edges, error: edgeError }, { data: masteryRows, error: masteryError }] = await Promise.all([
-    supabase.from("concept_prereqs").select("concept_id,prerequisite_id").in("concept_id", conceptIds),
-    supabase.from("learner_mastery").select("concept_id,p_known").eq("firebase_uid", run.firebase_uid).in("concept_id", conceptIds),
-  ]);
-  if (edgeError || masteryError) throw new Error("Could not load learner prerequisite data.");
-  const suffix = (slug: string) => slug.replace(/^networking-/, "");
-  const graph = concepts.map((concept) => ({
-    id: suffix(concept.slug), title: concept.title, estimatedMinutes: concept.estimated_minutes,
-    prerequisiteIds: (edges ?? []).filter((edge) => edge.concept_id === concept.id).map((edge) => suffix(concepts.find((candidate) => candidate.id === edge.prerequisite_id)?.slug ?? "")),
-  }));
-  const mastery = Object.fromEntries((masteryRows ?? []).map((row) => [suffix(concepts.find((concept) => concept.id === row.concept_id)?.slug ?? ""), { pKnown: row.p_known }]));
-  const steps = buildLearningPath(graph, suffix(target.slug), mastery);
-  const conceptById = new Map(concepts.map((concept) => [suffix(concept.slug), concept]));
-  return { steps, conceptById, totalMinutes: steps.reduce((sum, step) => sum + step.estimatedMinutes, 0) };
-}
-
 async function ensureCourse(run: GenerationRun, estimatedMinutes: number): Promise<string> {
   const supabase = serviceClient();
   const existing = await supabase.from("courses").select("id").eq("generation_run_id", run.id).maybeSingle();
@@ -159,35 +122,34 @@ async function ensureCourse(run: GenerationRun, estimatedMinutes: number): Promi
   return data.id;
 }
 
-async function persistLessonModule(args: { run: GenerationRun; courseId: string; position: number; step: JobStep; concept?: CourseConcept; lesson: Awaited<ReturnType<typeof generateVerifiedLesson>>; sources: EvidenceChunk[] }) {
+async function lessonFromCache(conceptId: string, hash: string): Promise<VerifiedLessonResult | null> {
+  const { data, error } = await serviceClient().from("verified_module_cache").select("lesson, content_status").eq("concept_id", conceptId).eq("evidence_hash", hash).maybeSingle();
+  if (error || !data?.lesson || data.content_status !== "ai_verified") return null;
+  return data.lesson as VerifiedLessonResult;
+}
+
+async function storeVerifiedCache(conceptId: string, hash: string, lesson: VerifiedLessonResult): Promise<void> {
+  if (lesson.contentStatus !== "ai_verified") return;
+  await serviceClient().from("verified_module_cache").upsert({ concept_id: conceptId, evidence_hash: hash, lesson, content_status: lesson.contentStatus }, { onConflict: "concept_id,evidence_hash" });
+}
+
+async function cachedResourceFetch(key: string, loader: () => Promise<ResourceItem[]>): Promise<ResourceItem[]> {
   const supabase = serviceClient();
-  const { data: module, error: moduleError } = await supabase.from("modules").upsert({
-    course_id: args.courseId,
-    concept_id: args.concept?.id ?? null,
-    position: args.position,
-    title: args.lesson.title,
-    summary: args.lesson.contentStatus === "ai_verified" ? `Verified lesson on ${args.step.title}.` : `Lesson draft on ${args.step.title}; evidence review is incomplete.`,
-    body: { sections: args.lesson.sections, verificationIssues: args.lesson.verificationIssues, sources: args.sources.map((source, index) => ({ id: source.id, citation: index + 1, title: source.title, url: source.url, license: source.license, attribution: source.attribution })) },
-    content_status: args.lesson.contentStatus,
-  }, { onConflict: "course_id,position" }).select("id").single();
-  if (moduleError || !module) throw new Error("Could not save the generated module.");
-  if (args.lesson.claims.length) {
-    const { error } = await supabase.from("lesson_claims").upsert(args.lesson.claims.map((claim) => ({
-      module_id: module.id, claim_key: claim.id, claim_text: claim.text, supporting_chunk_ids: claim.sourceChunkIds,
-      verified: claim.verified, verification_status: claim.verificationStatus,
-      verifier_model: "gemini-independent-review",
-    })), { onConflict: "module_id,claim_key" });
-    if (error) throw new Error("Could not save claim verification results.");
+  const { data } = await supabase.from("resource_cache").select("payload, expires_at").eq("cache_key", key).maybeSingle();
+  if (data?.payload && data.expires_at && new Date(String(data.expires_at)).getTime() > Date.now()) {
+    return Array.isArray(data.payload) ? data.payload as ResourceItem[] : [];
   }
-  if (args.lesson.quizItems.length) {
-    const { error } = await supabase.from("quiz_items").upsert(args.lesson.quizItems.map((item) => ({
-      module_id: module.id, item_key: item.id, concept_id: args.concept?.id ?? null, question: item.question,
-      options: item.options, correct_answer: item.correctAnswer, explanation: item.explanation,
-      question_type: item.questionType, verified: item.verified, source_chunk_ids: item.sourceChunkIds,
-    })), { onConflict: "module_id,item_key" });
-    if (error) throw new Error("Could not save verified quiz items.");
-  }
-  return module.id;
+  const payload = await loader();
+  await supabase.from("resource_cache").upsert({ cache_key: key, payload, expires_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString() });
+  return payload;
+}
+
+async function findResourcesForModule(query: string, _targetLevel: number): Promise<ResourceItem[]> {
+  const [videos, papers] = await Promise.all([
+    cachedResourceFetch(resourceCacheKey("youtube", query), () => fetchYoutubeItems(query, youtubeApiKey.value()).catch(() => [])),
+    cachedResourceFetch(resourceCacheKey("paper", query), () => fetchOpenAlexItems(query).catch(() => [])),
+  ]);
+  return [...videos, ...papers];
 }
 
 const processCourseGeneration = inngest.createFunction(
@@ -219,9 +181,11 @@ const processCourseGeneration = inngest.createFunction(
           await persistProgress(runId, "accepted", 3);
           return { accepted: true };
         });
-        const coursePath = await loadCoursePath(snapshot);
+        const coursePath = await loadCoursePath(serviceClient(), snapshot);
         const courseId = await step.run("ensure-course-record", () => ensureCourse(snapshot, coursePath.totalMinutes));
         const masteredTitles = coursePath.steps.filter((item) => item.action === "skip").map((item) => item.title).slice(0, 8).join(", ");
+        const { data: profile } = await serviceClient().from("learner_profiles").select("known_topics, interests").eq("firebase_uid", snapshot.firebase_uid).maybeSingle();
+        const analogy = analogyContextFrom(profile, masteredTitles);
         let verifiedCount = 0;
         let evidenceMissingCount = 0;
         let totalInputTokens = 0;
@@ -234,6 +198,21 @@ const processCourseGeneration = inngest.createFunction(
           const percent = 5 + Math.floor((position / Math.max(coursePath.steps.length, 1)) * 88);
           await persistProgress(runId, `module-${position + 1}-of-${coursePath.steps.length}`, percent);
           const result = await step.run(`build-module-${position + 1}`, async () => {
+            const built = await buildVerifiedModule({
+              step: item, concept, goal: snapshot.goal, domain: snapshot.domain, ownerUid: snapshot.firebase_uid, analogyContext: analogy,
+              retrieve: retrieveForGeneration,
+              writeLesson: async (input) => {
+                const model = process.env.OPENAI_MODEL || "gpt-6.1-sol";
+                const criticModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+                const lessonWriter = createVerifiedLessonProvider({ openAiKey: openAiApiKey.value(), geminiKey: geminiApiKey.value(), openAiModel: model, geminiModel: criticModel });
+                const lesson = await generateVerifiedLesson(input, lessonWriter.provider);
+                return { lesson, usage: lessonWriter.usage };
+              },
+              findResources: findResourcesForModule,
+              lookupCache: lessonFromCache,
+              storeCache: storeVerifiedCache,
+              checkLinks: (urls) => checkUrls(urls),
+            });
             if (item.action === "skip") {
               const { error } = await serviceClient().from("modules").upsert({
                 course_id: courseId, concept_id: concept?.id ?? null, position, title: item.title,
@@ -241,60 +220,33 @@ const processCourseGeneration = inngest.createFunction(
                 body: { learningStatus: "skipped_mastered", pKnown: item.pKnown }, content_status: "ai_generated",
               }, { onConflict: "course_id,position" });
               if (error) throw new Error("Could not save the mastered concept step.");
-              return { status: "skipped", inputTokens: 0, outputTokens: 0, costUsd: 0 };
+              return built;
             }
-
-            const query = snapshot.domain === "networking" ? `${item.title} ${snapshot.goal}` : snapshot.goal;
-            const evidence = await retrieveForGeneration(query, {
-              targetLevel: concept?.level ?? 1,
-              conceptSlug: concept?.slug,
-              ownerUid: snapshot.firebase_uid,
-            });
-            totalInputTokens += evidence.inputTokens;
-            totalCostUsd += evidence.costUsd;
-            if (!evidence.chunks.length) {
-              evidenceMissingCount += 1;
-              const emptyLesson = await generateVerifiedLesson({ goal: item.title, targetLevel: "beginner", chunks: [] }, {
-                generate: async () => ({}), critique: async () => ({}),
+            if (built.lesson) {
+              await persistLessonModule(serviceClient(), {
+                courseId, position, step: item, concept, lesson: built.lesson, sources: built.sources, resources: built.resources, linkStatus: built.linkStatus,
               });
-              await persistLessonModule({ run: snapshot, courseId, position, step: item, concept, lesson: emptyLesson, sources: [] });
-              await serviceClient().rpc("record_generation_usage", {
-                p_run_id: runId, p_usage_key: `module-${position}`, p_provider: "openai", p_model: "text-embedding-3-small",
-                p_input_tokens: evidence.inputTokens, p_output_tokens: 0, p_cost_usd: evidence.costUsd, p_latency_ms: 0,
-              });
-              return { status: "evidence-missing", inputTokens: evidence.inputTokens, outputTokens: 0, costUsd: evidence.costUsd };
             }
-
+            for (const [url, status] of Object.entries(built.linkStatus)) {
+              await serviceClient().from("sources").update({ link_status: status, link_checked_at: new Date().toISOString() }).eq("url", url);
+            }
             const model = process.env.OPENAI_MODEL || "gpt-6.1-sol";
             const criticModel = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-            const lessonWriter = createVerifiedLessonProvider({ openAiKey: openAiApiKey.value(), geminiKey: geminiApiKey.value(), openAiModel: model, geminiModel: criticModel });
-            const lesson = await generateVerifiedLesson({
-              goal: `${item.title}. Course goal: ${snapshot.goal}. Every quiz conceptSlug must be '${concept?.slug ?? "general-topic"}'.`,
-              targetLevel: "beginner",
-              analogyContext: masteredTitles,
-              chunks: evidence.chunks,
-            }, lessonWriter.provider);
-            await persistLessonModule({ run: snapshot, courseId, position, step: item, concept, lesson, sources: evidence.chunks });
-            const inputTokens = evidence.inputTokens + lessonWriter.usage.inputTokens;
-            const outputTokens = lessonWriter.usage.outputTokens;
-            const costUsd = evidence.costUsd + lessonWriter.usage.costUsd;
             const { error: usageError } = await serviceClient().rpc("record_generation_usage", {
-              p_run_id: runId,
-              p_usage_key: `module-${position}`,
-              p_provider: "openai+google-gemini",
-              p_model: `${model}+${criticModel}`,
-              p_input_tokens: inputTokens,
-              p_output_tokens: outputTokens,
-              p_cost_usd: costUsd,
+              p_run_id: runId, p_usage_key: `module-${position}`,
+              p_provider: built.cacheHit ? "cache" : "openai+google-gemini",
+              p_model: built.cacheHit ? "verified-module-cache" : `${model}+${criticModel}`,
+              p_input_tokens: built.inputTokens, p_output_tokens: built.outputTokens, p_cost_usd: built.costUsd,
               p_latency_ms: Date.now() - startedAt,
             });
             if (usageError) throw new Error("Could not save generation usage metadata.");
-            return { status: lesson.contentStatus, inputTokens, outputTokens, costUsd };
+            return built;
           });
           totalInputTokens += result.inputTokens;
           totalOutputTokens += result.outputTokens;
           totalCostUsd += result.costUsd;
-          if (result.status === "ai_verified") verifiedCount += 1;
+          if (result.status === "evidence-missing") evidenceMissingCount += 1;
+          if (result.status === "ai_verified" || result.status === "cached") verifiedCount += 1;
         }
 
         const allReviewed = verifiedCount + coursePath.steps.filter((item) => item.action === "skip").length === coursePath.steps.length && evidenceMissingCount === 0;
@@ -322,7 +274,7 @@ export const inngestEndpoint = onRequest({
   timeoutSeconds: 540,
   memory: "1GiB",
   maxInstances: 4,
-  secrets: [supabaseUrl, supabaseServiceRoleKey, inngestSigningKey, langfusePublicKey, langfuseSecretKey, sentryDsn, openAiApiKey, geminiApiKey],
+  secrets: [supabaseUrl, supabaseServiceRoleKey, inngestSigningKey, langfusePublicKey, langfuseSecretKey, sentryDsn, openAiApiKey, geminiApiKey, youtubeApiKey],
 }, serve({ client: inngest, functions: [processCourseGeneration] }));
 
 export const startCourseJob = onCall({
@@ -579,4 +531,38 @@ export const submitDiagnosticChoice = onCall({
     }
     throw error;
   }
+}));
+
+const courseLookupSchema = z.object({ courseId: z.string().uuid() }).strict();
+export const getLearningCourse = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("get-learning-course", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(courseLookupSchema, request.data, "A valid course id is required.");
+  const supabase = serviceClient();
+  const { data: course, error } = await supabase.from("courses")
+    .select("id, goal, domain, status, content_status, estimated_minutes, created_at, updated_at")
+    .eq("id", input.courseId).eq("firebase_uid", uid).maybeSingle();
+  if (error) throw new HttpsError("internal", "Could not load this course.");
+  if (!course) throw new HttpsError("not-found", "That course does not exist or is not yours.");
+  const { data: modules, error: moduleError } = await supabase.from("modules")
+    .select("id, position, title, summary, body, content_status, concept_id, remediation_for_concept")
+    .eq("course_id", course.id).order("position");
+  if (moduleError) throw new HttpsError("internal", "Could not load course modules.");
+  const moduleIds = (modules ?? []).map((row) => row.id);
+  const [{ data: claims }, { data: quizzes }] = await Promise.all([
+    moduleIds.length ? supabase.from("lesson_claims").select("module_id, claim_key, claim_text, supporting_chunk_ids, verified, verification_status").in("module_id", moduleIds) : Promise.resolve({ data: [] }),
+    moduleIds.length ? supabase.from("quiz_items").select("module_id, item_key, question, options, correct_answer, explanation, question_type, verified, source_chunk_ids, concept_id").in("module_id", moduleIds) : Promise.resolve({ data: [] }),
+  ]);
+  return {
+    course,
+    modules: (modules ?? []).map((module) => ({
+      ...module,
+      claims: (claims ?? []).filter((claim) => claim.module_id === module.id),
+      quizItems: (quizzes ?? []).filter((item) => item.module_id === module.id),
+    })),
+  };
 }));
