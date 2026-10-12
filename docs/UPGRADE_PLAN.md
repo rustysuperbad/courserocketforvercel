@@ -52,13 +52,11 @@ Each phase ends with `npm test`, `npm run lint`, `npm run build` (both packages)
 and a commit. Existing legacy flows stay in place; the new learner-model flow is
 mounted beside them under `/learn`.
 
-1. **Foundations** — repair build/packaging, lint hygiene, fix job start inputs,
-   add a token-free job status callable, document environment, remove dead Groq
-   code, add a `/learn` page that starts a job and shows its run record.
+1. **Foundations** — committed as `Phase 1: repair functions build and packaging, typed job APIs, /learn job console`.
 2. **Ingestion and retrieval** — larger reviewed networking source list with
    full-article Wikipedia extraction, per-source license decisions, concept tags,
    idempotent re-ingestion, a shared `retrieval.ts` with level-fit scoring and
-   per-source diversity, plus a second migration.
+   per-source diversity, plus a second migration. `/learn` can query attributed chunks.
 3. **Prerequisite graph and diagnostic** — enriched concept JSON (descriptions,
    levels, objectives, diagnostic items), learner profile (goal, known topics,
    interests), server-graded adaptive diagnostic with prerequisite propagation,

@@ -12,7 +12,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
-      hybrid_search_source_chunks: { Args: { p_query: string; p_query_embedding: string | null; p_limit?: number; p_allow_noncommercial?: boolean }; Returns: Array<{ chunk_id: string; source_id: string; chunk_text: string; url: string; title: string; license: string; attribution: string; authority_score: number; level: number; semantic_score: number | null; lexical_score: number; final_score: number }> };
+      hybrid_search_source_chunks: { Args: { p_query: string; p_query_embedding: string | null; p_limit?: number; p_allow_noncommercial?: boolean; p_target_level?: number; p_concept_slugs?: string[] | null; p_owner_uid?: string | null; p_candidate_pool?: number }; Returns: Array<{ chunk_id: string; source_id: string; chunk_index: number; chunk_text: string; url: string; title: string; publisher: string; license: string; attribution: string; authority_score: number; level: number; concept_tags: string[]; is_private: boolean; semantic_score: number | null; lexical_score: number; level_fit: number; concept_boost: number; final_score: number }> };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

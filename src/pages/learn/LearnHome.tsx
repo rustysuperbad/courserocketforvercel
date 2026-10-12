@@ -4,8 +4,8 @@ import Navbar from "../../components/Navbar";
 import { RunStatusBadge } from "../../components/learn/StatusBadge";
 import { useAuthState } from "../../lib/authState";
 import {
-  clearIdempotencyKey, describeCallableError, getCourseJobStatus, idempotencyKeyFor, listLearningRuns, startCourseJob,
-  type JobDomain, type RunView,
+  clearIdempotencyKey, describeCallableError, getCourseJobStatus, idempotencyKeyFor, listLearningRuns, searchLearningSources,
+  startCourseJob, type JobDomain, type RunView, type SourceChunk,
 } from "../../lib/learningApi";
 import "../../styles/learn.css";
 
@@ -23,6 +23,11 @@ export default function LearnHome() {
   const [runs, setRuns] = useState<RunView[]>([]);
   const [runsLoading, setRunsLoading] = useState(true);
   const [runsError, setRunsError] = useState("");
+  const [sourceQuery, setSourceQuery] = useState("subnet mask");
+  const [sourceSearching, setSourceSearching] = useState(false);
+  const [sourceError, setSourceError] = useState("");
+  const [sourceStatus, setSourceStatus] = useState("");
+  const [sourceChunks, setSourceChunks] = useState<SourceChunk[]>([]);
 
   const refreshRuns = useCallback(async () => {
     try {
@@ -73,6 +78,27 @@ export default function LearnHome() {
     }
   }
 
+  async function handleSourceSearch(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = sourceQuery.trim();
+    if (trimmed.length < 2) { setSourceError("Enter at least two characters."); return; }
+    setSourceSearching(true);
+    setSourceError("");
+    setSourceStatus("");
+    try {
+      const result = await searchLearningSources(trimmed, { limit: 6, targetLevel: 1 });
+      setSourceChunks(result.chunks);
+      if (result.retrievalStatus === "unavailable") setSourceStatus("Source search is temporarily unavailable. No unverified fallback is shown.");
+      else if (result.retrievalStatus === "no_approved_sources") setSourceStatus("No approved, attributed chunks matched that topic yet. Ingest vetted sources before generating lessons.");
+      else setSourceStatus(`${result.chunks.length} attributed chunk${result.chunks.length === 1 ? "" : "s"} · ${result.provider} · ~$${result.estimatedCostUsd.toFixed(5)}`);
+    } catch (err) {
+      setSourceChunks([]);
+      setSourceError(describeCallableError(err));
+    } finally {
+      setSourceSearching(false);
+    }
+  }
+
   return (
     <div style={{ minHeight: "100vh" }}>
       <Navbar />
@@ -118,14 +144,38 @@ export default function LearnHome() {
             </form>
           </section>
 
-          <section className="cr-card lr-card" aria-labelledby="more-heading">
-            <h2 id="more-heading">Practice and review</h2>
-            <p>Reviews are scheduled with spaced repetition after every quiz. Practice tools run entirely in your browser.</p>
-            <div className="lr-actions">
-              <Link className="cr-btn cr-btn-soft" to="/learn/review">Daily review queue</Link>
-              <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
-              <Link className="cr-btn cr-btn-ghost" to="/dashboard">Classic courses</Link>
-            </div>
+          <section className="cr-card lr-card" aria-labelledby="sources-heading">
+            <h2 id="sources-heading">Query attributed sources</h2>
+            <p>Hybrid retrieval ranks vector similarity, keywords, source authority, and beginner level fit. Every hit includes license and attribution.</p>
+            <form onSubmit={handleSourceSearch} noValidate>
+              <label className="lr-field">
+                <span>Concept or topic</span>
+                <input className="cr-input" value={sourceQuery} onChange={(event) => setSourceQuery(event.target.value)} maxLength={500} aria-describedby="source-help" />
+                <small id="source-help" className="lr-muted">Try “subnet mask”, “DNS resolver”, or “TCP handshake”.</small>
+              </label>
+              <div className="lr-actions">
+                <button type="submit" className="cr-btn cr-btn-soft" disabled={sourceSearching} aria-busy={sourceSearching}>
+                  {sourceSearching ? "Searching…" : "Search sources"}
+                </button>
+                <Link className="cr-btn cr-btn-ghost" to="/learn/review">Daily review</Link>
+                <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
+              </div>
+              {sourceError && <div className="lr-error" role="alert">{sourceError}</div>}
+              {sourceStatus && !sourceError && <div className="lr-notice" role="status">{sourceStatus}</div>}
+            </form>
+            {sourceChunks.length > 0 && (
+              <ol className="lr-sources" style={{ marginTop: 14 }}>
+                {sourceChunks.map((chunk) => (
+                  <li key={chunk.id}>
+                    <strong>[{chunk.citation}] {chunk.source.title}</strong>
+                    {" · "}
+                    <a href={chunk.source.url} target="_blank" rel="noreferrer">{chunk.source.url}</a>
+                    <div className="lr-muted">{chunk.source.license} · {chunk.source.attribution}</div>
+                    <p>{chunk.text.slice(0, 280)}{chunk.text.length > 280 ? "…" : ""}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
 
           <section className="cr-card lr-card lr-span" aria-labelledby="runs-heading" aria-live="polite">

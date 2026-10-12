@@ -9,6 +9,7 @@ import { buildLearningPath } from "./learning";
 import { flushObservability, reportWorkflowError, traceOperation, traceWorkflow } from "./observability";
 import { createVerifiedLessonProvider } from "./providers";
 import { generateVerifiedLesson, type EvidenceChunk } from "./verifiedLesson";
+import { hybridSearchParams, rankRetrievedChunks, retrievalQuerySchema, toEvidenceChunks, toPublicChunks } from "./retrieval";
 import {
   REGION, allowNonCommercialSources, booleanParam, dailyUserLimit, embeddingCostPerMillion, geminiApiKey, inngestEventKey,
   inngestSigningKey, langfusePublicKey, langfuseSecretKey, numberParam, openAiApiKey, projectDailySpendLimit, sentryDsn,
@@ -67,7 +68,7 @@ type GenerationRun = { id: string; firebase_uid: string; goal: string; domain: "
 type CourseConcept = { id: string; slug: string; title: string; estimated_minutes: number; level: number };
 type JobStep = { conceptId: string; title: string; action: "learn" | "shorten" | "skip"; pKnown: number; estimatedMinutes: number };
 
-async function retrieveForGeneration(query: string): Promise<{ chunks: EvidenceChunk[]; inputTokens: number; costUsd: number }> {
+async function retrieveForGeneration(query: string, options: { targetLevel?: number; conceptSlug?: string; ownerUid?: string } = {}): Promise<{ chunks: ReturnType<typeof toEvidenceChunks>; inputTokens: number; costUsd: number; retrievalStatus: "attributed" | "no_approved_sources" }> {
   const openai = new OpenAI({ apiKey: openAiApiKey.value() });
   const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
   const embedded = await traceOperation("courserocket-course-retrieval", {
@@ -80,18 +81,24 @@ async function retrieveForGeneration(query: string): Promise<{ chunks: EvidenceC
     const costUsd = (inputTokens * costPerMillion) / 1_000_000;
     return { vector, inputTokens, costUsd };
   }, (result) => ({ inputTokens: result.inputTokens, outputTokens: 0, costEstimateUsd: result.costUsd }));
-  const { data, error } = await serviceClient().rpc("hybrid_search_source_chunks", {
-    p_query: query,
-    p_query_embedding: `[${embedded.vector.join(",")}]`,
-    p_limit: 8,
-    p_allow_noncommercial: booleanParam(allowNonCommercialSources.value()),
+  const params = hybridSearchParams({
+    query,
+    embedding: embedded.vector,
+    limit: 8,
+    allowNonCommercial: booleanParam(allowNonCommercialSources.value()),
+    targetLevel: options.targetLevel ?? 1,
+    conceptSlugs: options.conceptSlug ? [options.conceptSlug] : null,
+    ownerUid: options.ownerUid ?? null,
   });
+  const { data, error } = await serviceClient().rpc("hybrid_search_source_chunks", params);
   if (error) throw new Error("Approved source retrieval failed.");
-  const chunks: EvidenceChunk[] = (data ?? []).map((row: Record<string, unknown>) => ({
-    id: String(row.chunk_id), text: String(row.chunk_text), title: String(row.title), url: String(row.url),
-    license: String(row.license), attribution: String(row.attribution),
-  }));
-  return { chunks, inputTokens: embedded.inputTokens, costUsd: embedded.costUsd };
+  const ranked = rankRetrievedChunks(data, 8);
+  return {
+    chunks: toEvidenceChunks(ranked),
+    inputTokens: embedded.inputTokens,
+    costUsd: embedded.costUsd,
+    retrievalStatus: ranked.length ? "attributed" : "no_approved_sources",
+  };
 }
 
 function inferNetworkingTarget(goal: string, concepts: CourseConcept[], requestedSlug: string | null): CourseConcept {
@@ -234,7 +241,11 @@ const processCourseGeneration = inngest.createFunction(
             }
 
             const query = snapshot.domain === "networking" ? `${item.title} ${snapshot.goal}` : snapshot.goal;
-            const evidence = await retrieveForGeneration(query);
+            const evidence = await retrieveForGeneration(query, {
+              targetLevel: concept?.level ?? 1,
+              conceptSlug: concept?.slug,
+              ownerUid: snapshot.firebase_uid,
+            });
             totalInputTokens += evidence.inputTokens;
             totalCostUsd += evidence.costUsd;
             if (!evidence.chunks.length) {
@@ -384,16 +395,14 @@ export const listLearningRuns = onCall({
   return { runs: (data ?? []).map((row) => ({ ...publicRunView(row), goal: row.goal })) };
 }));
 
-const sourceSearchSchema = z.object({ query: z.string().trim().min(2).max(500), limit: z.number().int().min(1).max(20).default(8) }).strict();
 export const searchLearningSources = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 30,
   secrets: [...supabaseSecrets, openAiApiKey, sentryDsn],
-}, async (request) => {
+}, guarded("search-learning-sources", async (request) => {
   const uid = await verifiedUid(request);
-  const input = sourceSearchSchema.safeParse(request.data);
-  if (!input.success) throw new HttpsError("invalid-argument", "Enter a short topic to search learning sources.");
+  const input = parseInput(retrievalQuerySchema, request.data, "Enter a short topic to search learning sources.");
   const supabase = serviceClient();
   const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
   const reservedUsd = 0.00005;
@@ -415,36 +424,39 @@ export const searchLearningSources = onCall({
     const embedding = await traceOperation("courserocket-source-retrieval", {
       provider: "openai", model: "text-embedding-3-small", fallbackUsed: false,
     }, async () => {
-      const response = await openai.embeddings.create({ model: "text-embedding-3-small", input: input.data.query, dimensions: 1536 });
+      const response = await openai.embeddings.create({ model: "text-embedding-3-small", input: input.query, dimensions: 1536 });
       const vector = response.data[0]?.embedding;
       if (!vector) throw new Error("OpenAI did not return an embedding.");
       const tokens = response.usage?.prompt_tokens ?? 0;
       actualUsd = (tokens * costPerMillion) / 1_000_000;
       return { vector, tokens };
     }, (result) => ({ inputTokens: result.tokens, outputTokens: 0, costEstimateUsd: actualUsd }));
-    const { data, error } = await supabase.rpc("hybrid_search_source_chunks", {
-      p_query: input.data.query,
-      p_query_embedding: `[${embedding.vector.join(",")}]`,
-      p_limit: input.data.limit,
-      p_allow_noncommercial: booleanParam(allowNonCommercialSources.value()),
+    const params = hybridSearchParams({
+      query: input.query,
+      embedding: embedding.vector,
+      limit: input.limit,
+      allowNonCommercial: booleanParam(allowNonCommercialSources.value()),
+      targetLevel: input.targetLevel,
+      conceptSlugs: input.conceptSlugs ?? null,
+      ownerUid: uid,
     });
+    const { data, error } = await supabase.rpc("hybrid_search_source_chunks", params);
     if (error) throw new Error("Hybrid source search failed.");
-    const chunks = (data ?? []).map((chunk: Record<string, unknown>, index: number) => ({
-      id: chunk.chunk_id,
-      citation: index + 1,
-      text: chunk.chunk_text,
-      source: { id: chunk.source_id, title: chunk.title, url: chunk.url, license: chunk.license, attribution: chunk.attribution },
-      authorityScore: chunk.authority_score,
-      level: chunk.level,
-      score: chunk.final_score,
-    }));
-    return { chunks, retrievalStatus: chunks.length ? "attributed" : "no_approved_sources", provider: "supabase-pgvector", model: "text-embedding-3-small", inputTokens: embedding.tokens, estimatedCostUsd: actualUsd };
+    const chunks = toPublicChunks(rankRetrievedChunks(data, input.limit));
+    return {
+      chunks,
+      retrievalStatus: chunks.length ? "attributed" as const : "no_approved_sources" as const,
+      provider: "supabase-pgvector",
+      model: "text-embedding-3-small",
+      inputTokens: embedding.tokens,
+      estimatedCostUsd: actualUsd,
+    };
   } catch {
-    return { chunks: [], retrievalStatus: "unavailable", provider: "openai+supabase", model: "text-embedding-3-small", inputTokens: 0, estimatedCostUsd: actualUsd };
+    return { chunks: [], retrievalStatus: "unavailable" as const, provider: "openai+supabase", model: "text-embedding-3-small", inputTokens: 0, estimatedCostUsd: actualUsd };
   } finally {
     await supabase.rpc("settle_source_search", { p_firebase_uid: uid, p_usage_day: usageDay, p_reserved_usd: reservedUsd, p_actual_usd: actualUsd });
   }
-});
+}));
 
 const baselineSchema = z.object({ knownConceptSlugs: z.array(z.string().trim().min(1).max(160)).max(100) }).strict();
 export const saveNetworkingBaseline = onCall({

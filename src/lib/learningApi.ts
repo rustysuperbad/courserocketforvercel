@@ -32,10 +32,12 @@ export type SourceChunk = {
   id: string;
   citation: number;
   text: string;
-  source: { id: string; title: string; url: string; license: string; attribution: string };
+  source: { id: string; title: string; url: string; publisher?: string; license: string; attribution: string };
   authorityScore: number;
   level: number;
   score: number;
+  conceptTags?: string[];
+  isPrivate?: boolean;
 };
 
 function callable<TIn, TOut>(name: string, timeout = 30_000): HttpsCallable<TIn, TOut> {
@@ -45,7 +47,7 @@ function callable<TIn, TOut>(name: string, timeout = 30_000): HttpsCallable<TIn,
 const startCourseJobCall = callable<{ goal: string; idempotencyKey: string; domain: JobDomain; targetConceptSlug?: string }, { runId: string; status: RunStatus }>("startCourseJob");
 const jobStatusCall = callable<{ runId: string }, RunView>("getCourseJobStatus", 15_000);
 const listRunsCall = callable<Record<string, never>, { runs: RunView[] }>("listLearningRuns", 15_000);
-const learningSourcesCall = callable<{ query: string; limit?: number }, { chunks: SourceChunk[]; retrievalStatus: "attributed" | "no_approved_sources" | "unavailable"; provider: string; model: string; inputTokens: number; estimatedCostUsd: number }>("searchLearningSources");
+const learningSourcesCall = callable<{ query: string; limit?: number; targetLevel?: number; conceptSlugs?: string[] }, { chunks: SourceChunk[]; retrievalStatus: "attributed" | "no_approved_sources" | "unavailable"; provider: string; model: string; inputTokens: number; estimatedCostUsd: number }>("searchLearningSources");
 const saveBaselineCall = callable<{ knownConceptSlugs: string[] }, { saved: number }>("saveNetworkingBaseline", 20_000);
 const diagnosticAnswerCall = callable<{ conceptSlug: string; isCorrect: boolean }, { pKnown: number; attempts: number; correctAttempts: number }>("submitDiagnosticAnswer", 20_000);
 const networkingPathCall = callable<{ targetConceptSlug: string }, { targetConceptSlug: string; steps: PathStep[]; totalEstimatedMinutes: number; contentStatus: ContentStatus }>("generateNetworkingPath", 20_000);
@@ -88,10 +90,13 @@ export async function listLearningRuns(): Promise<RunView[]> {
   return data.runs;
 }
 
-export async function searchLearningSources(query: string, limit = 8) {
+export async function searchLearningSources(query: string, options: { limit?: number; targetLevel?: number; conceptSlugs?: string[] } = {}) {
   const value = query.trim();
   if (value.length < 2 || value.length > 500) throw new Error("Enter a topic between 2 and 500 characters.");
-  const { data } = await learningSourcesCall({ query: value, limit });
+  const payload: { query: string; limit?: number; targetLevel?: number; conceptSlugs?: string[] } = { query: value, limit: options.limit ?? 8 };
+  if (options.targetLevel) payload.targetLevel = options.targetLevel;
+  if (options.conceptSlugs?.length) payload.conceptSlugs = options.conceptSlugs;
+  const { data } = await learningSourcesCall(payload);
   return data;
 }
 

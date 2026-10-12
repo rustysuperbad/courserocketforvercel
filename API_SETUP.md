@@ -21,7 +21,7 @@ Check each provider's current pricing and usage limits before enabling paid call
 
 1. Create a Supabase project and copy its project URL, anon/publishable key, and service-role key. The service-role key bypasses RLS and must never be exposed to the browser.
 2. In Supabase Auth, enable **Third-Party Auth → Firebase** and enter Firebase project ID `courserocket03` (or the ID for your deployment). Supabase verifies Firebase's asymmetric ID tokens and can apply RLS policies to them. See [Supabase's Firebase Auth guide](https://supabase.com/docs/guides/auth/third-party/firebase-auth).
-3. Apply [`supabase/migrations/20261008120000_learning_foundation.sql`](./supabase/migrations/20261008120000_learning_foundation.sql) in the Supabase SQL editor or with the Supabase CLI. This creates pgvector, the tables, indexes, RLS policies, cycle guard, hybrid retrieval RPC, and quota/spend RPCs.
+3. Apply the SQL in [`supabase/migrations/`](./supabase/migrations/) in timestamp order (or `supabase db push`). `20261008120000_learning_foundation.sql` creates pgvector, tables, indexes, RLS, the cycle guard, the first hybrid retrieval RPC, and quota/spend RPCs. `20261012120000_retrieval_upgrade.sql` adds source kinds, concept tags, content hashes, private-source ownership, link-check columns, and replaces hybrid retrieval with level-fit, concept-boost, and per-source diversity ranking.
 4. Put only the URL and anon key in the local frontend environment:
 
    ```sh
@@ -104,4 +104,6 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 - FSRS scheduling logic is implemented and covered by unit tests; the daily review UI/worker connection is still pending.
 - Langfuse and Sentry are optional until their credentials are set. Trace metadata excludes learner goal text, prompts, and model content.
 
-The job worker is currently a foundation rather than a replacement for legacy course generation. Do not mark content verified just because a job run completed; claim-level evidence checks and quiz verification still need to run before a module can be labelled `ai_verified`.
+`searchLearningSources` embeds the query with OpenAI, calls the hybrid RPC, then applies a second per-source diversity cap in TypeScript. Retrieved chunks always include title, URL, license, and attribution. A miss is returned as `no_approved_sources` or `unavailable`; the UI must not invent a fallback passage.
+
+The job worker writes lessons from retrieved passages when sources exist. Do not mark content verified just because a job run completed; claim-level evidence checks and quiz verification still need to pass before a module can be labelled `ai_verified`.
