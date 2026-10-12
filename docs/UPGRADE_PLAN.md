@@ -66,11 +66,11 @@ mounted beside them under `/learn`.
 5. **Practice and mastery loop** — server-graded quizzes update mastery, insert
    remediation, and schedule FSRS reviews; `/learn/review`, `/learn/practice`
    (subnetting, protocol order, Pyodide), and a rubric-scored capstone.
-6. **Evaluation and trust** — 50+ prompt eval harness with a report, per-lesson
-   feedback and review queue, export/delete flows and privacy placeholder,
-   pre/post/delayed outcome tracking and an analytics summary.
-7. **Learner uploads (optional)** — private sources from notes/PDF text, used in
-   retrieval, with flashcards and a concept map.
+6. **Evaluation and trust** — 52-prompt mocked eval harness, per-lesson
+   feedback and review queue, export/delete on `/privacy`, pre/post/delayed
+   checks, and `/learn/analytics`.
+7. **Learner uploads** — private notes as owner-scoped sources, flashcards from
+   chunk text, and a catalog concept map. Binary PDF parsing is an explicit gap.
 
 Nothing in this environment can reach Supabase, Inngest, OpenAI, Gemini,
 YouTube, Langfuse or Sentry; the final report lists exactly what was and was not

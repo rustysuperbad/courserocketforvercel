@@ -76,6 +76,8 @@
 .lr-order li > span { flex: 1; }
 .lr-order button { font-size: 12px; padding: 4px 8px; }
 .lr-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.lr-map { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-2); }
+.lr-map span[data-related="true"] { color: var(--text); font-weight: 600; }
 
 @media (min-width: 760px) {
   .lr-page { padding: 36px 24px 80px; }

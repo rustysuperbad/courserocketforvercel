@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import { ContentStatusBadge } from "../../components/learn/StatusBadge";
-import { describeCallableError, getLearningCourse, submitCourseProject, submitQuizAttempt, type LearningCourse } from "../../lib/learningApi";
+import { describeCallableError, getLearningCourse, recordLearningOutcome, submitCourseProject, submitLessonFeedback, submitQuizAttempt, type FeedbackCategory, type LearningCourse } from "../../lib/learningApi";
 import "../../styles/learn.css";
 
 export default function LearnCourse() {
@@ -51,7 +51,8 @@ export default function LearnCourse() {
                 </button>
               ))}
             </div>
-            {module && <ModuleView module={module} />}
+            {module && <ModuleView module={module} courseId={data.course.id} />}
+            <OutcomeBlock />
             <ProjectBlock courseId={data.course.id} />
             <p className="lr-muted" style={{ marginTop: 18 }}><Link className="cr-link" to="/learn">Back to Learn</Link></p>
           </>
@@ -61,7 +62,7 @@ export default function LearnCourse() {
   );
 }
 
-function ModuleView({ module }: { module: LearningCourse["modules"][number] }) {
+function ModuleView({ module, courseId }: { module: LearningCourse["modules"][number]; courseId: string }) {
   const body = module.body ?? {};
   if (body.learningStatus === "skipped_mastered") {
     return (
@@ -131,10 +132,76 @@ function ModuleView({ module }: { module: LearningCourse["modules"][number] }) {
           </ul>
         </>
       )}
+      <FeedbackBar moduleId={module.id} courseId={courseId} />
       <h3>Practice</h3>
       <p className="lr-muted">Unverified quiz items are labelled and do not count as a checked answer key. A miss updates mastery, can insert a remedial module, and schedules a review.</p>
       {(module.quizItems ?? []).map((item) => <QuizBlock key={item.item_key} moduleId={module.id} item={item} />)}
     </article>
+  );
+}
+
+const FEEDBACK: Array<{ id: FeedbackCategory; label: string }> = [
+  { id: "confusing", label: "Confusing" },
+  { id: "incorrect", label: "Incorrect" },
+  { id: "too_easy", label: "Too easy" },
+  { id: "too_hard", label: "Too hard" },
+  { id: "useful", label: "Useful" },
+];
+
+function FeedbackBar({ moduleId, courseId }: { moduleId: string; courseId: string }) {
+  const [sent, setSent] = useState<FeedbackCategory | null>(null);
+  const [message, setMessage] = useState("");
+  async function send(category: FeedbackCategory) {
+    try {
+      await submitLessonFeedback(moduleId, category, courseId);
+      setSent(category);
+      setMessage("Thanks. This goes to the review queue.");
+    } catch (err) {
+      setMessage(describeCallableError(err));
+    }
+  }
+  return (
+    <div className="lr-feedback" role="group" aria-label="Lesson feedback">
+      {FEEDBACK.map((item) => (
+        <button key={item.id} type="button" aria-pressed={sent === item.id} onClick={() => void send(item.id)}>{item.label}</button>
+      ))}
+      {message && <span className="lr-muted">{message}</span>}
+    </div>
+  );
+}
+
+function OutcomeBlock() {
+  const [slug, setSlug] = useState("packet-journey");
+  const [stage, setStage] = useState<"pre" | "post" | "delayed">("post");
+  const [score, setScore] = useState(70);
+  const [message, setMessage] = useState("");
+  return (
+    <section className="cr-card lr-card" style={{ marginTop: 18 }} aria-labelledby="outcome-heading">
+      <h2 id="outcome-heading">Learning check</h2>
+      <p className="lr-muted">Record a pre, post, or delayed self-score for a catalog concept. This is not a verified exam.</p>
+      <label className="lr-field">
+        <span>Concept slug</span>
+        <input className="cr-input" value={slug} onChange={(event) => setSlug(event.target.value)} />
+      </label>
+      <label className="lr-field">
+        <span>Stage</span>
+        <select className="cr-input" value={stage} onChange={(event) => setStage(event.target.value as "pre" | "post" | "delayed")}>
+          <option value="pre">Pre</option>
+          <option value="post">Post</option>
+          <option value="delayed">Delayed</option>
+        </select>
+      </label>
+      <label className="lr-field">
+        <span>Score {score}%</span>
+        <input type="range" min={0} max={100} value={score} onChange={(event) => setScore(Number(event.target.value))} />
+      </label>
+      <div className="lr-actions">
+        <button type="button" className="cr-btn cr-btn-soft" onClick={() => {
+          void recordLearningOutcome(slug, stage, score / 100).then(() => setMessage("Check saved.")).catch((err) => setMessage(describeCallableError(err)));
+        }}>Save check</button>
+      </div>
+      {message && <div className="lr-notice" role="status">{message}</div>}
+    </section>
   );
 }
 

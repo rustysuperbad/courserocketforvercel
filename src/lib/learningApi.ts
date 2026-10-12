@@ -226,4 +226,58 @@ export async function submitCourseProject(courseId: string, writeup: string) {
   return data;
 }
 
+export type FeedbackCategory = "confusing" | "incorrect" | "too_easy" | "too_hard" | "useful";
+export type OutcomeStage = "pre" | "post" | "delayed";
+export type AnalyticsStats = { activation: number; completion: number; sevenDayReturn: number; costPerCompletionUsd: number };
+export type ConceptMap = { nodes: Array<{ id: string; title: string; related: boolean }>; edges: Array<{ from: string; to: string }> };
+export type Flashcard = { prompt: string; answer: string };
+
+const feedbackCall = callable<{ courseId?: string; moduleId: string; category: FeedbackCategory; note?: string }, { saved: boolean }>("submitLessonFeedback", 20_000);
+const outcomeCall = callable<{ conceptSlug: string; stage: OutcomeStage; score: number }, { saved: boolean }>("recordLearningOutcome", 20_000);
+const exportCall = callable<Record<string, never>, { exportedAt: string; profile: unknown[]; mastery: unknown[]; courses: unknown[]; feedback: unknown[]; reviews: unknown[]; generationRuns: unknown[] }>("exportLearningData", 30_000);
+const deleteCall = callable<{ confirm: "DELETE" }, { deleted: boolean }>("deleteLearningData", 30_000);
+const analyticsCall = callable<Record<string, never>, { scope: "project" | "personal"; stats: AnalyticsStats; feedbackQueue: Array<{ id: string; category: string; note: string | null; review_status: string; created_at: string; module_id: string | null; course_id: string | null }> }>("getLearningAnalytics", 20_000);
+const uploadNotesCall = callable<{ title: string; text: string; courseId?: string }, { sourceId: string; chunkCount: number; estimatedCostUsd: number; flashcards: Flashcard[]; conceptMap: ConceptMap; retrievalNote: string }>("uploadLearnerNotes", 60_000);
+const conceptMapCall = callable<Record<string, never>, ConceptMap>("getNetworkingConceptMap", 15_000);
+
+export async function submitLessonFeedback(moduleId: string, category: FeedbackCategory, courseId?: string, note?: string) {
+  const payload: { moduleId: string; category: FeedbackCategory; courseId?: string; note?: string } = { moduleId, category };
+  if (courseId) payload.courseId = courseId;
+  if (note) payload.note = note;
+  const { data } = await feedbackCall(payload);
+  return data;
+}
+
+export async function recordLearningOutcome(conceptSlug: string, stage: OutcomeStage, score: number) {
+  const { data } = await outcomeCall({ conceptSlug, stage, score });
+  return data;
+}
+
+export async function exportLearningData() {
+  const { data } = await exportCall({});
+  return data;
+}
+
+export async function deleteLearningData() {
+  const { data } = await deleteCall({ confirm: "DELETE" });
+  return data;
+}
+
+export async function getLearningAnalytics() {
+  const { data } = await analyticsCall({});
+  return data;
+}
+
+export async function uploadLearnerNotes(title: string, text: string, courseId?: string) {
+  const payload: { title: string; text: string; courseId?: string } = { title: title.trim(), text: text.trim() };
+  if (courseId) payload.courseId = courseId;
+  const { data } = await uploadNotesCall(payload);
+  return data;
+}
+
+export async function getNetworkingConceptMap() {
+  const { data } = await conceptMapCall({});
+  return data;
+}
+
 export { describeCallableError };

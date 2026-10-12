@@ -14,7 +14,7 @@ import { checkUrls } from "./linkCheck";
 import { fetchOpenAlexItems, fetchYoutubeItems, resourceCacheKey, type ResourceItem } from "./resources";
 import {
   REGION, allowNonCommercialSources, booleanParam, dailyUserLimit, embeddingCostPerMillion, geminiApiKey, inngestEventKey,
-  inngestSigningKey, langfusePublicKey, langfuseSecretKey, numberParam, openAiApiKey, projectDailySpendLimit, sentryDsn,
+  inngestSigningKey, isAdminUid, langfusePublicKey, langfuseSecretKey, numberParam, openAiApiKey, projectDailySpendLimit, sentryDsn,
   supabaseSecrets, supabaseServiceRoleKey, supabaseUrl, youtubeApiKey,
 } from "./config";
 import { guarded, parseInput, verifiedUid } from "./auth";
@@ -24,6 +24,13 @@ import {
   publicNetworkingCatalog, saveLearnerOnboarding, submitDiagnosticChoice as recordDiagnosticChoice,
 } from "./onboarding";
 import { gradeReviewCard, listDueReviews as loadDueReviews, quizAttemptSchema, reviewGradeSchema, scoreNetworkingProject, submitQuizAttempt as persistQuizAttempt } from "./masteryLoop";
+import { loadNetworkingCatalog, withNetworkingPrefix } from "./catalog";
+import { openAiEmbedder } from "./ingestion";
+import {
+  conceptMapFromCatalog, deleteLearnerData, exportLearnerData, feedbackSchema, flashcardsFromChunks, listFeedbackQueue,
+  notesToPrivateSource, outcomeSchema, persistPrivateNotes, projectAnalytics, recordOutcome, relatedConceptIds,
+  submitFeedback, uploadNotesSchema,
+} from "./trust";
 
 const legacy = require("../index.js") as Record<string, unknown>;
 if (!getApps().length) initializeApp();
@@ -628,4 +635,135 @@ export const submitCourseProject = onCall({
   }).select("id, score, rubric, created_at").single();
   if (error || !data) throw new HttpsError("internal", "Could not save your project.");
   return data;
+}));
+
+export const submitLessonFeedback = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("submit-lesson-feedback", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(feedbackSchema, request.data, "Choose a feedback category.");
+  return submitFeedback(serviceClient(), uid, input);
+}));
+
+export const recordLearningOutcome = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("record-learning-outcome", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(outcomeSchema, request.data, "Choose a pre, post, or delayed check score.");
+  const slug = withNetworkingPrefix(input.conceptSlug);
+  const { data: concept } = await serviceClient().from("concepts").select("id").eq("slug", slug).maybeSingle();
+  if (!concept) throw new HttpsError("not-found", "That concept is not in the launch catalog.");
+  return recordOutcome(serviceClient(), uid, { ...input, conceptId: concept.id });
+}));
+
+export const exportLearningData = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 30,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("export-learning-data", async (request) => {
+  const uid = await verifiedUid(request);
+  return exportLearnerData(serviceClient(), uid);
+}));
+
+export const deleteLearningData = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 30,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("delete-learning-data", async (request) => {
+  const uid = await verifiedUid(request);
+  const confirm = z.object({ confirm: z.literal("DELETE") }).strict().safeParse(request.data);
+  if (!confirm.success) throw new HttpsError("invalid-argument", "Type DELETE to confirm account learning-data removal.");
+  return deleteLearnerData(serviceClient(), uid);
+}));
+
+export const getLearningAnalytics = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 20,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("get-learning-analytics", async (request) => {
+  const uid = await verifiedUid(request);
+  const admin = isAdminUid(uid);
+  const supabase = serviceClient();
+  const stats = await projectAnalytics(supabase, admin ? undefined : uid);
+  const queue = admin ? await listFeedbackQueue(supabase) : [];
+  return { scope: admin ? "project" as const : "personal" as const, stats, feedbackQueue: queue };
+}));
+
+export const uploadLearnerNotes = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 60,
+  secrets: [...supabaseSecrets, openAiApiKey, sentryDsn],
+  memory: "512MiB",
+}, guarded("upload-learner-notes", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(uploadNotesSchema, request.data, "Paste at least a short excerpt from your notes.");
+  const supabase = serviceClient();
+  const packed = notesToPrivateSource(uid, input.title, input.text, input.courseId);
+  if (!packed.chunks.length) throw new HttpsError("invalid-argument", "Those notes did not contain enough text to store.");
+  const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
+  const reservedUsd = Math.max(0.0001, (packed.chunks.length * 400 * costPerMillion) / 1_000_000);
+  const { data: usageDay, error: reserveError } = await supabase.rpc("reserve_source_search", {
+    p_firebase_uid: uid,
+    p_estimate_usd: reservedUsd,
+    p_daily_search_limit: 100,
+    p_project_daily_limit_usd: Math.max(1, numberParam(projectDailySpendLimit.value(), 25, 1)),
+  });
+  if (reserveError || !usageDay) {
+    if (reserveError?.message.includes("source_search_quota_exceeded")) throw new HttpsError("resource-exhausted", "You have reached today's private-source upload limit.");
+    if (reserveError?.message.includes("project_spend_limit_exceeded")) throw new HttpsError("resource-exhausted", "Uploads are paused because today's project budget has been reached.");
+    throw new HttpsError("internal", "Could not reserve an embedding request.");
+  }
+  let actualUsd = 0;
+  try {
+    const openai = new OpenAI({ apiKey: openAiApiKey.value() });
+    const embed = openAiEmbedder(openai);
+    const embeddings = await traceOperation("courserocket-private-notes", {
+      provider: "openai", model: "text-embedding-3-small", fallbackUsed: false,
+    }, async () => {
+      const vectors: number[][] = [];
+      for (let offset = 0; offset < packed.chunks.length; offset += 50) {
+        const batch = packed.chunks.slice(offset, offset + 50);
+        vectors.push(...await embed(batch));
+      }
+      actualUsd = (packed.chunks.join(" ").length / 4 * costPerMillion) / 1_000_000;
+      return vectors;
+    }, () => ({ inputTokens: packed.chunks.length, outputTokens: 0, costEstimateUsd: actualUsd }));
+    const saved = await persistPrivateNotes(supabase, packed, embeddings);
+    const catalog = await loadNetworkingCatalog();
+    const related = relatedConceptIds(input.text, catalog);
+    return {
+      sourceId: saved.sourceId,
+      chunkCount: saved.chunkCount,
+      estimatedCostUsd: actualUsd,
+      flashcards: flashcardsFromChunks(packed.chunks),
+      conceptMap: conceptMapFromCatalog(catalog, related),
+      retrievalNote: "Private notes are retrieved only for your account and are never labelled as verified sources.",
+    };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new Error("Could not embed private notes.");
+  } finally {
+    await supabase.rpc("settle_source_search", { p_firebase_uid: uid, p_usage_day: usageDay, p_reserved_usd: reservedUsd, p_actual_usd: actualUsd });
+  }
+}));
+
+export const getNetworkingConceptMap = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 15,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("get-networking-concept-map", async (request) => {
+  await verifiedUid(request);
+  const catalog = await loadNetworkingCatalog();
+  return conceptMapFromCatalog(catalog);
 }));

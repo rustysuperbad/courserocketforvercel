@@ -159,6 +159,8 @@ export default function LearnHome() {
                 </button>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/review">Daily review</Link>
                 <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
+                <Link className="cr-btn cr-btn-ghost" to="/learn/analytics">Analytics</Link>
+                <Link className="cr-btn cr-btn-ghost" to="/privacy">Privacy</Link>
               </div>
               {sourceError && <div className="lr-error" role="alert">{sourceError}</div>}
               {sourceStatus && !sourceError && <div className="lr-notice" role="status">{sourceStatus}</div>}

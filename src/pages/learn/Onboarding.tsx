@@ -245,6 +245,21 @@ export default function Onboarding() {
                 </li>
               ))}
             </ol>
+            <h3>Prerequisite map for this goal</h3>
+            <ul className="lr-map">
+              {catalog.flatMap((concept) => concept.prerequisiteIds.flatMap((fromId) => {
+                const from = catalog.find((item) => item.id === fromId);
+                if (!from) return [];
+                const onPath = path.some((step) => step.conceptId === concept.id || step.conceptId === from.id);
+                return [(
+                  <li key={`${from.id}->${concept.id}`}>
+                    <span data-related={onPath}>{from.title}</span>
+                    <span aria-hidden="true"> → </span>
+                    <span data-related={onPath}>{concept.title}</span>
+                  </li>
+                )];
+              }))}
+            </ul>
             <div className="lr-actions">
               <button type="button" className="cr-btn cr-btn-primary" onClick={() => void handleStartCourse()} disabled={busy} aria-busy={busy}>
                 {busy ? "Starting…" : "Generate this verified course"}

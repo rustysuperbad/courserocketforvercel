@@ -21,7 +21,7 @@ Check each provider's current pricing and usage limits before enabling paid call
 
 1. Create a Supabase project and copy its project URL, anon/publishable key, and service-role key. The service-role key bypasses RLS and must never be exposed to the browser.
 2. In Supabase Auth, enable **Third-Party Auth → Firebase** and enter Firebase project ID `courserocket03` (or the ID for your deployment). Supabase verifies Firebase's asymmetric ID tokens and can apply RLS policies to them. See [Supabase's Firebase Auth guide](https://supabase.com/docs/guides/auth/third-party/firebase-auth).
-3. Apply the SQL in [`supabase/migrations/`](./supabase/migrations/) in timestamp order (or `supabase db push`). `20261008120000_learning_foundation.sql` creates pgvector, tables, indexes, RLS, the cycle guard, the first hybrid retrieval RPC, and quota/spend RPCs. `20261012120000_retrieval_upgrade.sql` adds source kinds, concept tags, content hashes, private-source ownership, link-check columns, and replaces hybrid retrieval with level-fit, concept-boost, and per-source diversity ranking.
+3. Apply the SQL in [`supabase/migrations/`](./supabase/migrations/) in timestamp order (or `supabase db push`). `20261008120000_learning_foundation.sql` creates pgvector, tables, indexes, RLS, the cycle guard, the first hybrid retrieval RPC, and quota/spend RPCs. Later files add retrieval ranking, learner profiles, the verified-module cache, project submissions, and `learning_outcomes` for pre/post/delayed checks.
 4. Put only the URL and anon key in the local frontend environment:
 
    ```sh
@@ -70,7 +70,7 @@ cd ..
 firebase deploy --only functions
 ```
 
-The endpoint is normally `https://us-central1-courserocket03.cloudfunctions.net/inngestEndpoint` (use the exact URL printed by Firebase for your project). In the Inngest dashboard, add that URL as the app's sync endpoint. The callable `startCourseJob` verifies the Firebase token, reserves an idempotent database run, then sends only the opaque run ID to Inngest. The current worker is a queue/progress/trace skeleton; course writing remains on the existing callable pipeline until the verified-generation worker is connected.
+The endpoint is normally `https://us-central1-courserocket03.cloudfunctions.net/inngestEndpoint` (use the exact URL printed by Firebase for your project). In the Inngest dashboard, add that URL as the app's sync endpoint. The callable `startCourseJob` verifies the Firebase token, reserves an idempotent database run, then sends only the opaque run ID to Inngest. The worker loads the learner path, retrieves attributed chunks, writes and critiques lessons, and persists modules incrementally.
 
 ## 4. Source ingestion and retrieval
 
@@ -101,8 +101,11 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 - Supabase schema includes source storage, hybrid vector/full-text retrieval, per-user search/course quotas, and a UTC project-spend limit.
 - Source retrieval callable returns attributed chunks.
 - Networking concept seed, learner profile, server-graded adaptive diagnostic, and adaptive path endpoints are available. Apply `20261012130000_learner_profiles.sql` after the retrieval migration. Two learners with different known topics receive different topological paths for the same goal.
-- FSRS scheduling logic is implemented and covered by unit tests; the daily review UI/worker connection is still pending.
+- FSRS scheduling is implemented, covered by unit tests, and connected to `/learn/review`.
 - Langfuse and Sentry are optional until their credentials are set. Trace metadata excludes learner goal text, prompts, and model content.
+- `npm run eval:networking` in `functions/` runs a 52-prompt launch-domain harness with mocked providers and writes `functions/eval/output/networking-report.md` (gitignored). It does not prove live OpenAI/Gemini quality.
+- Signed-in learners can submit per-lesson feedback, record pre/post/delayed checks, export or delete learning-model data from `/privacy`, and view activation/completion/7-day return/cost-per-completion on `/learn/analytics`. Admins listed in `ADMIN_FIREBASE_UIDS` see project-wide stats and the feedback queue.
+- `/learn/notes` stores private text as owner-scoped sources (embeddings use OpenAI). Binary PDF parsing is not enabled; paste extracted text. Private notes are never labelled verified.
 
 `searchLearningSources` embeds the query with OpenAI, calls the hybrid RPC, then applies a second per-source diversity cap in TypeScript. Retrieved chunks always include title, URL, license, and attribution. A miss is returned as `no_approved_sources` or `unavailable`; the UI must not invent a fallback passage.
 

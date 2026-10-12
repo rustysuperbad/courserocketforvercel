@@ -48,5 +48,8 @@ firebase deploy --only functions
 - `functions/data/networking-concepts.json` is the reviewed launch-domain concept graph.
 - `npm run seed:networking` validates and seeds that graph.
 - `npm run ingest:networking -- --approve-cc-by-sa` ingests approved share-alike text only after you have accepted the attribution and share-alike requirements. Non-commercial sources are skipped unless `--allow-noncommercial` is also passed.
+- `npm run eval:networking` runs the mocked launch-domain eval and writes a local report under `eval/output/`.
+
+Learner-model screens: `/learn`, `/learn/onboarding`, `/learn/course/:id`, `/learn/review`, `/learn/practice`, `/learn/notes`, `/learn/analytics`, and `/privacy`.
 
 The app must label generated, verified, and human-reviewed content distinctly. A retrieval miss or unverified claim is not a finished lesson.
