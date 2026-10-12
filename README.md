@@ -11,15 +11,20 @@ CourseRocket turns a learner's goal into a guided course with modules, lessons, 
 
 See [API_SETUP.md](./API_SETUP.md) for service configuration and the upgrade plan.
 
-## Run the existing frontend
+## Run the frontend
 
 ```sh
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev        # Vite dev server
+npm run lint       # ESLint + strict TypeScript check of src/**/*.ts(x)
+npm test           # Vitest unit tests (src/**/*.test.ts)
+npm run build
 ```
 
-The current Firebase app configuration is in `src/lib/firebase.js`. Supabase-backed screens stay inactive until the two browser-safe Supabase variables are set and Firebase is configured as a Supabase third-party auth provider.
+The Firebase web app configuration is in `src/lib/firebase.js`. The learner-model screens live under `/learn` and talk only to Firebase callables, so they work before Supabase third-party auth is configured; the optional Supabase browser client in `src/lib/supabase.ts` is used only when the two `VITE_SUPABASE_*` variables are set.
+
+All AI, search and database calls happen in Cloud Functions. The earlier browser-side Groq integration was removed; no provider key is read in the browser. See [docs/UPGRADE_PLAN.md](./docs/UPGRADE_PLAN.md) for the architecture summary and phase plan.
 
 ## Functions
 

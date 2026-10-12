@@ -24,6 +24,7 @@ export default function Navbar({ minimal = false }) {
           {!minimal && (
             <div className="cr-nav-links" aria-label="Main navigation">
               {user && <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Dashboard</NavLink>}
+              {user && <NavLink active={location.pathname.startsWith("/learn")} onClick={() => navigate("/learn")}>Learn</NavLink>}
               <NavLink active={location.pathname === "/"} onClick={() => navigate("/")}>Home</NavLink>
             </div>
           )}

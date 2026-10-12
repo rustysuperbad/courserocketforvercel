@@ -2078,8 +2078,6 @@ const s = {
     fontWeight: 650,
     color: "var(--text)",
     marginRight: 8,
-    fontSize: 13,
-    letterSpacing: "0.02em",
     textTransform: "uppercase",
     fontSize: 11,
     letterSpacing: "0.1em",

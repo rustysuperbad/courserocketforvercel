@@ -36,20 +36,41 @@ function parseJsonText(value: string): unknown {
   try { return JSON.parse(value); } catch { throw new Error("A content provider returned unreadable structured output."); }
 }
 
-const generatedLessonJsonSchema = {
+const stringArray = { type: "array", items: { type: "string" } } as const;
+const paragraphJsonSchema = {
+  type: "object", additionalProperties: false,
+  properties: { text: { type: "string" }, claimIds: stringArray },
+  required: ["text", "claimIds"],
+} as const;
+const sectionJsonSchema = {
+  type: "object", additionalProperties: false,
+  properties: { heading: { type: "string" }, paragraphs: { type: "array", items: paragraphJsonSchema } },
+  required: ["heading", "paragraphs"],
+} as const;
+const claimJsonSchema = {
+  type: "object", additionalProperties: false,
+  properties: { id: { type: "string" }, text: { type: "string" }, sourceChunkIds: stringArray },
+  required: ["id", "text", "sourceChunkIds"],
+} as const;
+const quizItemJsonSchema = {
+  type: "object", additionalProperties: false,
+  properties: {
+    id: { type: "string" }, question: { type: "string" }, options: stringArray, correctAnswer: { type: "string" },
+    explanation: { type: "string" }, conceptSlug: { type: "string" },
+    questionType: { type: "string", enum: ["recall", "explain", "apply"] }, sourceChunkIds: stringArray,
+  },
+  required: ["id", "question", "options", "correctAnswer", "explanation", "conceptSlug", "questionType", "sourceChunkIds"],
+} as const;
+export const generatedLessonJsonSchema = {
   type: "object", additionalProperties: false,
   properties: {
     title: { type: "string" },
-    sections: { type: "array", items: { type: "object", additionalProperties: false, properties: {
-      heading: { type: "string" }, paragraphs: { type: "array", items: { type: "object", additionalProperties: false, properties: { text: { type: "string" }, claimIds: { type: "array", items: { type: "string" } } }, required: ["text", "claimIds"] },
-    }, required: ["heading", "paragraphs"] } },
-    claims: { type: "array", items: { type: "object", additionalProperties: false, properties: { id: { type: "string" }, text: { type: "string" }, sourceChunkIds: { type: "array", items: { type: "string" } } }, required: ["id", "text", "sourceChunkIds"] } },
-    quizItems: { type: "array", items: { type: "object", additionalProperties: false, properties: {
-      id: { type: "string" }, question: { type: "string" }, options: { type: "array", items: { type: "string" } }, correctAnswer: { type: "string" },
-      explanation: { type: "string" }, conceptSlug: { type: "string" }, questionType: { type: "string", enum: ["recall", "explain", "apply"] }, sourceChunkIds: { type: "array", items: { type: "string" } },
-    }, required: ["id", "question", "options", "correctAnswer", "explanation", "conceptSlug", "questionType", "sourceChunkIds"] } },
-  }, required: ["title", "sections", "claims", "quizItems"],
-};
+    sections: { type: "array", items: sectionJsonSchema },
+    claims: { type: "array", items: claimJsonSchema },
+    quizItems: { type: "array", items: quizItemJsonSchema },
+  },
+  required: ["title", "sections", "claims", "quizItems"],
+} as const;
 
 export function createVerifiedLessonProvider(config: ProviderConfig): { provider: LessonProvider; usage: Usage } {
   const usage: Usage = { inputTokens: 0, outputTokens: 0, costUsd: 0, openAiModel: config.openAiModel, criticModel: config.geminiModel };
@@ -105,12 +126,12 @@ export function createVerifiedLessonProvider(config: ProviderConfig): { provider
             generationConfig: { responseMimeType: "application/json", temperature: 0, maxOutputTokens: 4000 },
           }),
         });
-        const candidate = Array.isArray(response.candidates) ? response.candidates[0] as Record<string, unknown> | undefined : undefined;
+        const candidate = Array.isArray(payload.candidates) ? payload.candidates[0] as Record<string, unknown> | undefined : undefined;
         const content = candidate?.content as Record<string, unknown> | undefined;
         const parts = Array.isArray(content?.parts) ? content.parts : [];
         const text = parts.map((part) => part && typeof part === "object" && typeof (part as Record<string, unknown>).text === "string" ? (part as Record<string, unknown>).text as string : "").join("\n");
         const result = critiqueSchema.parse(parseJsonText(text));
-        const metadata = response.usageMetadata as Record<string, unknown> | undefined;
+        const metadata = payload.usageMetadata as Record<string, unknown> | undefined;
         const inputTokens = Number(metadata?.promptTokenCount ?? 0);
         const outputTokens = Number(metadata?.candidatesTokenCount ?? 0);
         usage.inputTokens += Number.isFinite(inputTokens) ? inputTokens : 0;

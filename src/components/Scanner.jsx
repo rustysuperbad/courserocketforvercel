@@ -319,7 +319,9 @@ const Scanner = ({
       ctxMap.delete(container);
       try {
         container.removeChild(canvas);
-      } catch {}
+      } catch {
+        /* canvas already detached */
+      }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
   }, []);

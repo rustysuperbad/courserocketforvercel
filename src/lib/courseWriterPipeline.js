@@ -127,7 +127,7 @@ export async function writeModuleLessons(module, topic, level, moduleIndex, tota
 
 export async function generateModuleLessons(module, topic, level, moduleIndex, totalModules) {
   const fingerprints = buildLeakFingerprints(topic);
-  try {
+  {
     const data = await writeModuleLessons(module, topic, level, moduleIndex, totalModules);
     const lessons = (data.lessons || []).slice(0, 2).map((l) => ({
       heading: String(l?.heading || "").trim(),
@@ -161,8 +161,6 @@ export async function generateModuleLessons(module, topic, level, moduleIndex, t
       sources: Array.isArray(data2.sources) ? data2.sources : [],
       groundingStatus: data2.groundingStatus || "unavailable",
     };
-  } catch (e) {
-    throw e;
   }
 }
 

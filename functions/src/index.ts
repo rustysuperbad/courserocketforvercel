@@ -1,32 +1,21 @@
 import { Inngest, eventType } from "inngest";
 import { serve } from "inngest/express";
-import { onCall, onRequest, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
-import { defineSecret, defineString } from "firebase-functions/params";
-import { getAuth } from "firebase-admin/auth";
+import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 import { getApps, initializeApp } from "firebase-admin/app";
 import OpenAI from "openai";
 import { z } from "zod";
-import { getServiceSupabase, type RunRow } from "./supabase";
+import { getServiceSupabase } from "./supabase";
 import { buildLearningPath } from "./learning";
 import { flushObservability, reportWorkflowError, traceOperation, traceWorkflow } from "./observability";
 import { createVerifiedLessonProvider } from "./providers";
 import { generateVerifiedLesson, type EvidenceChunk } from "./verifiedLesson";
-
-const REGION = "us-central1";
-const supabaseUrl = defineSecret("SUPABASE_URL");
-const supabaseServiceRoleKey = defineSecret("SUPABASE_SERVICE_ROLE_KEY");
-const inngestEventKey = defineSecret("INNGEST_EVENT_KEY");
-const inngestSigningKey = defineSecret("INNGEST_SIGNING_KEY");
-const langfusePublicKey = defineSecret("LANGFUSE_PUBLIC_KEY");
-const langfuseSecretKey = defineSecret("LANGFUSE_SECRET_KEY");
-defineString("LANGFUSE_BASE_URL", { default: "https://cloud.langfuse.com" });
-const sentryDsn = defineSecret("SENTRY_DSN");
-const openAiApiKey = defineSecret("OPENAI_API_KEY");
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
-const dailyUserLimit = defineString("DAILY_COURSE_RUN_LIMIT", { default: "3" });
-const projectDailySpendLimit = defineString("PROJECT_DAILY_SPEND_LIMIT_USD", { default: "25" });
-const embeddingCostPerMillion = defineString("OPENAI_EMBEDDING_COST_PER_MILLION_USD", { default: "0.02" });
-const allowNonCommercialSources = defineString("ALLOW_NONCOMMERCIAL_SOURCES", { default: "false" });
+import {
+  REGION, allowNonCommercialSources, booleanParam, dailyUserLimit, embeddingCostPerMillion, geminiApiKey, inngestEventKey,
+  inngestSigningKey, langfusePublicKey, langfuseSecretKey, numberParam, openAiApiKey, projectDailySpendLimit, sentryDsn,
+  supabaseSecrets, supabaseServiceRoleKey, supabaseUrl,
+} from "./config";
+import { guarded, parseInput, verifiedUid } from "./auth";
+import { estimateRunCostUsd, publicRunView, reservationFailure, startJobSchema } from "./jobs";
 
 const legacy = require("../index.js") as Record<string, unknown>;
 if (!getApps().length) initializeApp();
@@ -43,31 +32,9 @@ const courseGenerationRequested = eventType("course/generation.requested", {
   schema: z.object({ runId: z.string().uuid() }),
 });
 const runIdSchema = z.string().uuid();
-const startJobSchema = z.object({
-  goal: z.string().trim().min(1).max(500),
-  idempotencyKey: z.string().trim().min(8).max(128),
-  domain: z.enum(["general", "networking"]).default("general"),
-  targetConceptSlug: z.string().trim().min(1).max(160).optional(),
-}).strict();
 
 function serviceClient() {
   return getServiceSupabase(supabaseUrl.value(), supabaseServiceRoleKey.value());
-}
-
-async function verifiedUid(request: CallableRequest<unknown>): Promise<string> {
-  const callableUid = request.auth?.uid;
-  if (!callableUid) throw new HttpsError("unauthenticated", "Sign in to start a learning job.");
-  const header = request.rawRequest.headers.authorization;
-  const authorization = Array.isArray(header) ? header[0] : header;
-  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) throw new HttpsError("unauthenticated", "A Firebase ID token is required.");
-  try {
-    const decoded = await getAuth().verifyIdToken(token, true);
-    if (decoded.uid !== callableUid) throw new Error("token subject mismatch");
-    return decoded.uid;
-  } catch {
-    throw new HttpsError("unauthenticated", "Your sign-in has expired. Please sign in again.");
-  }
 }
 
 async function persistProgress(runId: string, stage: string, percent: number, note?: string) {
@@ -102,7 +69,7 @@ type JobStep = { conceptId: string; title: string; action: "learn" | "shorten" |
 
 async function retrieveForGeneration(query: string): Promise<{ chunks: EvidenceChunk[]; inputTokens: number; costUsd: number }> {
   const openai = new OpenAI({ apiKey: openAiApiKey.value() });
-  const costPerMillion = Math.max(0, Number(embeddingCostPerMillion.value()) || 0.02);
+  const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
   const embedded = await traceOperation("courserocket-course-retrieval", {
     provider: "openai", model: "text-embedding-3-small", fallbackUsed: false,
   }, async () => {
@@ -117,7 +84,7 @@ async function retrieveForGeneration(query: string): Promise<{ chunks: EvidenceC
     p_query: query,
     p_query_embedding: `[${embedded.vector.join(",")}]`,
     p_limit: 8,
-    p_allow_noncommercial: allowNonCommercialSources.value().toLowerCase() === "true",
+    p_allow_noncommercial: booleanParam(allowNonCommercialSources.value()),
   });
   if (error) throw new Error("Approved source retrieval failed.");
   const chunks: EvidenceChunk[] = (data ?? []).map((row: Record<string, unknown>) => ({
@@ -347,27 +314,33 @@ export const startCourseJob = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 30,
-  secrets: [supabaseUrl, supabaseServiceRoleKey, inngestEventKey],
+  secrets: [...supabaseSecrets, inngestEventKey, sentryDsn],
   memory: "512MiB",
-}, async (request) => {
+}, guarded("start-course-job", async (request) => {
   const uid = await verifiedUid(request);
-  const input = startJobSchema.safeParse(request.data);
-  if (!input.success) throw new HttpsError("invalid-argument", "Check the learning goal and try again.");
+  const input = parseInput(startJobSchema, request.data, "Check the learning goal and try again.");
+  const targetSlug = input.targetConceptSlug
+    ? (input.targetConceptSlug.startsWith("networking-") ? input.targetConceptSlug : `networking-${input.targetConceptSlug}`)
+    : null;
 
   const { error: reservationError, data: runId } = await serviceClient().rpc("reserve_generation_run", {
     p_firebase_uid: uid,
-    p_idempotency_key: input.data.idempotencyKey,
-    p_goal: input.data.goal,
-    p_estimate_usd: 0.05,
-    p_daily_user_limit: Math.max(1, Number(dailyUserLimit.value()) || 3),
-    p_project_daily_limit_usd: Math.max(1, Number(projectDailySpendLimit.value()) || 25),
+    p_idempotency_key: input.idempotencyKey,
+    p_goal: input.goal,
+    p_estimate_usd: estimateRunCostUsd(input.domain),
+    p_daily_user_limit: Math.max(1, Math.floor(numberParam(dailyUserLimit.value(), 3, 1))),
+    p_project_daily_limit_usd: Math.max(1, numberParam(projectDailySpendLimit.value(), 25, 1)),
+    p_domain: input.domain,
+    p_target_concept_slug: input.domain === "networking" ? targetSlug : null,
   });
   if (reservationError || !runId) {
-    const message = reservationError?.message ?? "Run reservation failed.";
-    if (message.includes("quota_exceeded")) throw new HttpsError("resource-exhausted", "You have reached today's course-generation limit.");
-    if (message.includes("spend_limit_exceeded")) throw new HttpsError("resource-exhausted", "Course generation is paused because today's project budget has been reached.");
-    throw new HttpsError("internal", "Could not reserve a course-generation run.");
+    const failure = reservationFailure(reservationError?.message);
+    throw new HttpsError(failure.code, failure.message);
   }
+
+  // Idempotent re-dispatch: a run that already finished or is running is returned as-is.
+  const { data: existing } = await serviceClient().from("generation_runs").select("status").eq("id", runId).maybeSingle();
+  if (existing && existing.status !== "queued") return { runId, status: existing.status };
 
   try {
     const client = new Inngest({ id: "courserocket", eventKey: inngestEventKey.value() });
@@ -377,26 +350,58 @@ export const startCourseJob = onCall({
     throw new HttpsError("unavailable", "The course job queue is not connected yet. Please try again later.");
   }
   return { runId, status: "queued" };
-});
+}));
+
+const runLookupSchema = z.object({ runId: z.string().uuid() }).strict();
+/** Token-only job status: works even before Supabase third-party auth is configured. */
+export const getCourseJobStatus = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 15,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("course-job-status", async (request) => {
+  const uid = await verifiedUid(request);
+  const input = parseInput(runLookupSchema, request.data, "A valid run id is required.");
+  const { data, error } = await serviceClient().from("generation_runs")
+    .select("id,status,progress,course_id,domain,actual_cost_usd,cost_estimate_usd,error_code,fallback_used,created_at,updated_at")
+    .eq("id", input.runId).eq("firebase_uid", uid).maybeSingle();
+  if (error) throw new HttpsError("internal", "Could not load this run.");
+  if (!data) throw new HttpsError("not-found", "That run does not exist or is not yours.");
+  return publicRunView(data);
+}));
+
+export const listLearningRuns = onCall({
+  region: REGION,
+  cors: true,
+  timeoutSeconds: 15,
+  secrets: [...supabaseSecrets, sentryDsn],
+}, guarded("list-learning-runs", async (request) => {
+  const uid = await verifiedUid(request);
+  const { data, error } = await serviceClient().from("generation_runs")
+    .select("id,status,progress,course_id,domain,goal,actual_cost_usd,cost_estimate_usd,error_code,fallback_used,created_at,updated_at")
+    .eq("firebase_uid", uid).order("created_at", { ascending: false }).limit(20);
+  if (error) throw new HttpsError("internal", "Could not load your learning runs.");
+  return { runs: (data ?? []).map((row) => ({ ...publicRunView(row), goal: row.goal })) };
+}));
 
 const sourceSearchSchema = z.object({ query: z.string().trim().min(2).max(500), limit: z.number().int().min(1).max(20).default(8) }).strict();
 export const searchLearningSources = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 30,
-  secrets: [supabaseUrl, supabaseServiceRoleKey, openAiApiKey],
+  secrets: [...supabaseSecrets, openAiApiKey, sentryDsn],
 }, async (request) => {
   const uid = await verifiedUid(request);
   const input = sourceSearchSchema.safeParse(request.data);
   if (!input.success) throw new HttpsError("invalid-argument", "Enter a short topic to search learning sources.");
   const supabase = serviceClient();
-  const costPerMillion = Math.max(0, Number(embeddingCostPerMillion.value()) || 0.02);
+  const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
   const reservedUsd = 0.00005;
   const { data: usageDay, error: reserveError } = await supabase.rpc("reserve_source_search", {
     p_firebase_uid: uid,
     p_estimate_usd: reservedUsd,
     p_daily_search_limit: 100,
-    p_project_daily_limit_usd: Math.max(1, Number(projectDailySpendLimit.value()) || 25),
+    p_project_daily_limit_usd: Math.max(1, numberParam(projectDailySpendLimit.value(), 25, 1)),
   });
   if (reserveError || !usageDay) {
     if (reserveError?.message.includes("source_search_quota_exceeded")) throw new HttpsError("resource-exhausted", "You have reached today's source-search limit.");
@@ -421,7 +426,7 @@ export const searchLearningSources = onCall({
       p_query: input.data.query,
       p_query_embedding: `[${embedding.vector.join(",")}]`,
       p_limit: input.data.limit,
-      p_allow_noncommercial: allowNonCommercialSources.value().toLowerCase() === "true",
+      p_allow_noncommercial: booleanParam(allowNonCommercialSources.value()),
     });
     if (error) throw new Error("Hybrid source search failed.");
     const chunks = (data ?? []).map((chunk: Record<string, unknown>, index: number) => ({
@@ -446,7 +451,7 @@ export const saveNetworkingBaseline = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 20,
-  secrets: [supabaseUrl, supabaseServiceRoleKey],
+  secrets: [...supabaseSecrets, sentryDsn],
 }, async (request) => {
   const uid = await verifiedUid(request);
   const input = baselineSchema.safeParse(request.data);
@@ -469,7 +474,7 @@ export const submitDiagnosticAnswer = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 20,
-  secrets: [supabaseUrl, supabaseServiceRoleKey],
+  secrets: [...supabaseSecrets, sentryDsn],
 }, async (request) => {
   const uid = await verifiedUid(request);
   const input = diagnosticAnswerSchema.safeParse(request.data);
@@ -488,7 +493,7 @@ export const generateNetworkingPath = onCall({
   region: REGION,
   cors: true,
   timeoutSeconds: 20,
-  secrets: [supabaseUrl, supabaseServiceRoleKey],
+  secrets: [...supabaseSecrets, sentryDsn],
 }, async (request) => {
   const uid = await verifiedUid(request);
   const input = pathSchema.safeParse(request.data);

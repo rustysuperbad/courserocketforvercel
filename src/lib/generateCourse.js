@@ -32,7 +32,7 @@ function buildStructureUserMessage(topic) {
 
 /** Strip accidental scaffolding / leaky JSON-ish lines models rarely emit. */
 const LEAK_LINE_RE =
-  /^\s*[\[{]?\s*"(quiz|lessons|options|correctIndex)"\s*:/i;
+  /^\s*[[{]?\s*"(quiz|lessons|options|correctIndex)"\s*:/i;
 
 function sanitizeLessonHeading(h) {
   return String(h || "")
@@ -47,6 +47,7 @@ function sanitizeLessonHeading(h) {
 function scrubLessonMarkdownText(text) {
   let t = String(text ?? "")
     .replace(/\uFEFF/g, "")
+    // eslint-disable-next-line no-control-regex -- strip NUL bytes from model output
     .replace(/\u0000/g, "")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
@@ -329,13 +330,6 @@ export async function generateCourseStructure(topic, onProgress) {
 //
 // All modules run in parallel too. Wall time ≈ slowest single module.
 // Every fetch has a timeout and a fallback — output is GUARANTEED populated.
-
-function summarizeQualityFailuresForModel(lessonFails, quizFailSet) {
-  const parts = [];
-  if (lessonFails.length) parts.push(`Lesson gates: ${[...new Set(lessonFails)].join(", ")}`);
-  if (quizFailSet.size) parts.push(`Quiz gates: ${[...quizFailSet].join(", ")}`);
-  return parts.join(" | ");
-}
 
 function assessModuleContentGate(lessons, quiz, fingerprints) {
   const lessonFails = [];

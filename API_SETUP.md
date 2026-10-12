@@ -96,7 +96,8 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 ## 5. What is connected today
 
 - Existing Firebase callable content/resource functions remain available.
-- `startCourseJob` and the Inngest endpoint persist idempotent run records and progress.
+- `startCourseJob` reserves an idempotent run (with the domain and target concept), enforces the per-user daily limit and the project spend guard, then dispatches to Inngest. `getCourseJobStatus` and `listLearningRuns` return the owner's run records using only the Firebase ID token, so the `/learn` page works without Supabase third-party auth.
+- Unexpected callable errors are reported to Sentry (when `SENTRY_DSN` is set) with an area tag and no request payload.
 - Supabase schema includes source storage, hybrid vector/full-text retrieval, per-user search/course quotas, and a UTC project-spend limit.
 - Source retrieval callable returns attributed chunks.
 - Networking concept seed, baseline mastery, diagnostic answer update, and adaptive path endpoints are available.

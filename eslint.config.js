@@ -5,7 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `functions/` has its own TypeScript lint/build; `dist` and `functions/lib` are build output.
+  globalIgnores(['dist', 'functions/**', 'supabase/**', 'coverage']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
