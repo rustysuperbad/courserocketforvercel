@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { contentHash, EMBEDDING_DIMENSIONS, splitIntoChunks } from "./ingestion";
+import { EMBEDDING_DIMENSIONS } from "./embeddings";
+import { contentHash, splitIntoChunks } from "./chunking";
 import { stripNetworkingPrefix } from "./catalog";
 
 export const feedbackSchema = z.object({

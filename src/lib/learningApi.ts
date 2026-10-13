@@ -1,5 +1,4 @@
-import { httpsCallable, type HttpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
+import { invokeBackend } from "./backend";
 import { describeCallableError, idempotencyScope, type ContentStatus } from "./learningUtils";
 
 /**
@@ -40,14 +39,6 @@ export type SourceChunk = {
   isPrivate?: boolean;
 };
 
-function callable<TIn, TOut>(name: string, timeout = 30_000): HttpsCallable<TIn, TOut> {
-  return httpsCallable<TIn, TOut>(functions, name, { timeout });
-}
-
-const startCourseJobCall = callable<{ goal: string; idempotencyKey: string; domain: JobDomain; targetConceptSlug?: string }, { runId: string; status: RunStatus }>("startCourseJob");
-const jobStatusCall = callable<{ runId: string }, RunView>("getCourseJobStatus", 15_000);
-const listRunsCall = callable<Record<string, never>, { runs: RunView[] }>("listLearningRuns", 15_000);
-const learningSourcesCall = callable<{ query: string; limit?: number; targetLevel?: number; conceptSlugs?: string[] }, { chunks: SourceChunk[]; retrievalStatus: "attributed" | "no_approved_sources" | "unavailable"; provider: string; model: string; inputTokens: number; estimatedCostUsd: number }>("searchLearningSources");
 export type PublicConcept = {
   id: string;
   title: string;
@@ -78,14 +69,6 @@ export type DiagnosticState = {
   pKnown?: number;
 };
 
-const saveBaselineCall = callable<{ knownConceptSlugs: string[] }, { saved: number }>("saveNetworkingBaseline", 20_000);
-const diagnosticAnswerCall = callable<{ conceptSlug: string; isCorrect: boolean }, { pKnown: number; attempts: number; correctAttempts: number }>("submitDiagnosticAnswer", 20_000);
-const networkingPathCall = callable<{ targetConceptSlug: string }, { targetConceptSlug: string; steps: PathStep[]; totalEstimatedMinutes: number; contentStatus: ContentStatus; interests?: string[]; goal?: string }>("generateNetworkingPath", 20_000);
-const catalogCall = callable<Record<string, never>, { concepts: PublicConcept[]; interestSuggestions: string[] }>("listNetworkingCatalog", 15_000);
-const saveProfileCall = callable<{ goal: string; targetConceptSlug: string; knownConceptSlugs: string[]; interests: string[] }, { savedKnown: number; targetConceptSlug: string }>("saveLearnerProfile", 20_000);
-const nextDiagnosticCall = callable<{ targetConceptSlug?: string }, DiagnosticState>("getNextDiagnosticQuestion", 20_000);
-const diagnosticChoiceCall = callable<{ conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string }, DiagnosticState>("submitDiagnosticChoice", 20_000);
-
 /** Stable per-browser idempotency key so a retry after a network blip reuses the same run. */
 export function idempotencyKeyFor(uid: string, goal: string, domain: JobDomain, targetConceptSlug?: string): string {
   const storageKey = idempotencyScope(uid, goal, domain, targetConceptSlug);
@@ -110,17 +93,15 @@ export async function startCourseJob(input: { goal: string; idempotencyKey: stri
   if (input.idempotencyKey.trim().length < 8 || input.idempotencyKey.length > 128) throw new Error("A valid request key is required.");
   const payload: { goal: string; idempotencyKey: string; domain: JobDomain; targetConceptSlug?: string } = { goal, idempotencyKey: input.idempotencyKey.trim(), domain: input.domain };
   if (input.targetConceptSlug) payload.targetConceptSlug = input.targetConceptSlug;
-  const { data } = await startCourseJobCall(payload);
-  return data;
+  return invokeBackend<{ runId: string; status: RunStatus }>("startCourseJob", payload);
 }
 
 export async function getCourseJobStatus(runId: string): Promise<RunView> {
-  const { data } = await jobStatusCall({ runId });
-  return data;
+  return invokeBackend<RunView>("getCourseJobStatus", { runId }, 15_000);
 }
 
 export async function listLearningRuns(): Promise<RunView[]> {
-  const { data } = await listRunsCall({});
+  const data = await invokeBackend<{ runs: RunView[] }>("listLearningRuns", {}, 15_000);
   return data.runs;
 }
 
@@ -130,38 +111,31 @@ export async function searchLearningSources(query: string, options: { limit?: nu
   const payload: { query: string; limit?: number; targetLevel?: number; conceptSlugs?: string[] } = { query: value, limit: options.limit ?? 8 };
   if (options.targetLevel) payload.targetLevel = options.targetLevel;
   if (options.conceptSlugs?.length) payload.conceptSlugs = options.conceptSlugs;
-  const { data } = await learningSourcesCall(payload);
-  return data;
+  return invokeBackend<{ chunks: SourceChunk[]; retrievalStatus: "attributed" | "no_approved_sources" | "unavailable"; provider: string; model: string; inputTokens: number; estimatedCostUsd: number }>("searchLearningSources", payload);
 }
 
 export async function saveNetworkingBaseline(knownConceptSlugs: string[]) {
-  const { data } = await saveBaselineCall({ knownConceptSlugs });
-  return data;
+  return invokeBackend<{ saved: number }>("saveNetworkingBaseline", { knownConceptSlugs }, 20_000);
 }
 
 export async function submitDiagnosticAnswer(conceptSlug: string, isCorrect: boolean) {
-  const { data } = await diagnosticAnswerCall({ conceptSlug, isCorrect });
-  return data;
+  return invokeBackend<{ pKnown: number; attempts: number; correctAttempts: number }>("submitDiagnosticAnswer", { conceptSlug, isCorrect }, 20_000);
 }
 
 export async function generateNetworkingPath(targetConceptSlug: string) {
-  const { data } = await networkingPathCall({ targetConceptSlug });
-  return data;
+  return invokeBackend<{ targetConceptSlug: string; steps: PathStep[]; totalEstimatedMinutes: number; contentStatus: ContentStatus; interests?: string[]; goal?: string }>("generateNetworkingPath", { targetConceptSlug }, 20_000);
 }
 
 export async function listNetworkingCatalog() {
-  const { data } = await catalogCall({});
-  return data;
+  return invokeBackend<{ concepts: PublicConcept[]; interestSuggestions: string[] }>("listNetworkingCatalog", {}, 15_000);
 }
 
 export async function saveLearnerProfile(input: { goal: string; targetConceptSlug: string; knownConceptSlugs: string[]; interests: string[] }) {
-  const { data } = await saveProfileCall(input);
-  return data;
+  return invokeBackend<{ savedKnown: number; targetConceptSlug: string }>("saveLearnerProfile", input, 20_000);
 }
 
 export async function getNextDiagnosticQuestion(targetConceptSlug?: string) {
-  const { data } = await nextDiagnosticCall(targetConceptSlug ? { targetConceptSlug } : {});
-  return data;
+  return invokeBackend<DiagnosticState>("getNextDiagnosticQuestion", targetConceptSlug ? { targetConceptSlug } : {}, 20_000);
 }
 
 export type LearningCourse = {
@@ -184,46 +158,34 @@ export type LearningCourse = {
   }>;
 };
 
-const learningCourseCall = callable<{ courseId: string }, LearningCourse>("getLearningCourse", 20_000);
-
 export async function getLearningCourse(courseId: string) {
-  const { data } = await learningCourseCall({ courseId });
-  return data;
+  return invokeBackend<LearningCourse>("getLearningCourse", { courseId }, 20_000);
 }
 
 export async function submitDiagnosticChoice(conceptSlug: string, selectedAnswer: string, targetConceptSlug?: string) {
   const payload: { conceptSlug: string; selectedAnswer: string; targetConceptSlug?: string } = { conceptSlug, selectedAnswer };
   if (targetConceptSlug) payload.targetConceptSlug = targetConceptSlug;
-  const { data } = await diagnosticChoiceCall(payload);
-  return data;
+  return invokeBackend<DiagnosticState>("submitDiagnosticChoice", payload, 20_000);
 }
 
 export type QuizAttemptResult = { isCorrect: boolean; duplicate: boolean; pKnown: number | null; remediationInserted: boolean; reviewDueAt?: string | null; verifiedKey: boolean };
 export type DueReview = { cardId: string; conceptSlug: string; title: string; description: string; dueAt: string; question: { question: string; options: string[]; questionType: string } | null };
 
-const quizAttemptCall = callable<{ moduleId: string; itemKey: string; selectedAnswer: string; responseKey: string }, QuizAttemptResult>("submitQuizAttempt", 20_000);
-const dueReviewsCall = callable<Record<string, never>, { reviews: DueReview[] }>("listDueReviews", 20_000);
-const reviewGradeCall = callable<{ conceptSlug: string; rating: "again" | "hard" | "good" | "easy" }, { dueAt: string; pKnown: number }>("submitReviewGrade", 20_000);
-const projectCall = callable<{ courseId: string; writeup: string }, { id: string; score: number; rubric: { score: number; passed: string[]; missed: string[]; feedback: string }; created_at: string }>("submitCourseProject", 20_000);
-
 export async function submitQuizAttempt(moduleId: string, itemKey: string, selectedAnswer: string) {
-  const { data } = await quizAttemptCall({ moduleId, itemKey, selectedAnswer, responseKey: crypto.randomUUID() });
-  return data;
+  return invokeBackend<QuizAttemptResult>("submitQuizAttempt", { moduleId, itemKey, selectedAnswer, responseKey: crypto.randomUUID() }, 20_000);
 }
 
 export async function listDueReviews() {
-  const { data } = await dueReviewsCall({});
+  const data = await invokeBackend<{ reviews: DueReview[] }>("listDueReviews", {}, 20_000);
   return data.reviews;
 }
 
 export async function submitReviewGrade(conceptSlug: string, rating: "again" | "hard" | "good" | "easy") {
-  const { data } = await reviewGradeCall({ conceptSlug, rating });
-  return data;
+  return invokeBackend<{ dueAt: string; pKnown: number }>("submitReviewGrade", { conceptSlug, rating }, 20_000);
 }
 
 export async function submitCourseProject(courseId: string, writeup: string) {
-  const { data } = await projectCall({ courseId, writeup });
-  return data;
+  return invokeBackend<{ id: string; score: number; rubric: { score: number; passed: string[]; missed: string[]; feedback: string }; created_at: string }>("submitCourseProject", { courseId, writeup }, 20_000);
 }
 
 export type FeedbackCategory = "confusing" | "incorrect" | "too_easy" | "too_hard" | "useful";
@@ -232,52 +194,37 @@ export type AnalyticsStats = { activation: number; completion: number; sevenDayR
 export type ConceptMap = { nodes: Array<{ id: string; title: string; related: boolean }>; edges: Array<{ from: string; to: string }> };
 export type Flashcard = { prompt: string; answer: string };
 
-const feedbackCall = callable<{ courseId?: string; moduleId: string; category: FeedbackCategory; note?: string }, { saved: boolean }>("submitLessonFeedback", 20_000);
-const outcomeCall = callable<{ conceptSlug: string; stage: OutcomeStage; score: number }, { saved: boolean }>("recordLearningOutcome", 20_000);
-const exportCall = callable<Record<string, never>, { exportedAt: string; profile: unknown[]; mastery: unknown[]; courses: unknown[]; feedback: unknown[]; reviews: unknown[]; generationRuns: unknown[] }>("exportLearningData", 30_000);
-const deleteCall = callable<{ confirm: "DELETE" }, { deleted: boolean }>("deleteLearningData", 30_000);
-const analyticsCall = callable<Record<string, never>, { scope: "project" | "personal"; stats: AnalyticsStats; feedbackQueue: Array<{ id: string; category: string; note: string | null; review_status: string; created_at: string; module_id: string | null; course_id: string | null }> }>("getLearningAnalytics", 20_000);
-const uploadNotesCall = callable<{ title: string; text: string; courseId?: string }, { sourceId: string; chunkCount: number; estimatedCostUsd: number; flashcards: Flashcard[]; conceptMap: ConceptMap; retrievalNote: string }>("uploadLearnerNotes", 60_000);
-const conceptMapCall = callable<Record<string, never>, ConceptMap>("getNetworkingConceptMap", 15_000);
-
 export async function submitLessonFeedback(moduleId: string, category: FeedbackCategory, courseId?: string, note?: string) {
   const payload: { moduleId: string; category: FeedbackCategory; courseId?: string; note?: string } = { moduleId, category };
   if (courseId) payload.courseId = courseId;
   if (note) payload.note = note;
-  const { data } = await feedbackCall(payload);
-  return data;
+  return invokeBackend<{ saved: boolean }>("submitLessonFeedback", payload, 20_000);
 }
 
 export async function recordLearningOutcome(conceptSlug: string, stage: OutcomeStage, score: number) {
-  const { data } = await outcomeCall({ conceptSlug, stage, score });
-  return data;
+  return invokeBackend<{ saved: boolean }>("recordLearningOutcome", { conceptSlug, stage, score }, 20_000);
 }
 
 export async function exportLearningData() {
-  const { data } = await exportCall({});
-  return data;
+  return invokeBackend<{ exportedAt: string; profile: unknown[]; mastery: unknown[]; courses: unknown[]; feedback: unknown[]; reviews: unknown[]; generationRuns: unknown[] }>("exportLearningData", {}, 30_000);
 }
 
 export async function deleteLearningData() {
-  const { data } = await deleteCall({ confirm: "DELETE" });
-  return data;
+  return invokeBackend<{ deleted: boolean }>("deleteLearningData", { confirm: "DELETE" }, 30_000);
 }
 
 export async function getLearningAnalytics() {
-  const { data } = await analyticsCall({});
-  return data;
+  return invokeBackend<{ scope: "project" | "personal"; stats: AnalyticsStats; feedbackQueue: Array<{ id: string; category: string; note: string | null; review_status: string; created_at: string; module_id: string | null; course_id: string | null }> }>("getLearningAnalytics", {}, 20_000);
 }
 
 export async function uploadLearnerNotes(title: string, text: string, courseId?: string) {
   const payload: { title: string; text: string; courseId?: string } = { title: title.trim(), text: text.trim() };
   if (courseId) payload.courseId = courseId;
-  const { data } = await uploadNotesCall(payload);
-  return data;
+  return invokeBackend<{ sourceId: string; chunkCount: number; estimatedCostUsd: number; flashcards: Flashcard[]; conceptMap: ConceptMap; retrievalNote: string }>("uploadLearnerNotes", payload, 60_000);
 }
 
 export async function getNetworkingConceptMap() {
-  const { data } = await conceptMapCall({});
-  return data;
+  return invokeBackend<ConceptMap>("getNetworkingConceptMap", {}, 15_000);
 }
 
 export { describeCallableError };

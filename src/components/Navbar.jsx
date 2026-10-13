@@ -25,13 +25,14 @@ export default function Navbar({ minimal = false }) {
             <div className="cr-nav-links" aria-label="Main navigation">
               <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Courses</NavLink>
               <NavLink active={location.pathname === "/profile"} onClick={() => navigate("/profile")}>Stats</NavLink>
+              <NavLink active={location.pathname === "/sandbox"} onClick={() => navigate("/sandbox")}>Sandbox</NavLink>
             </div>
           )}
         </div>
         <div className="cr-nav-actions">
           {user ? (
             <>
-              <button type="button" className="cr-user-pill" onClick={() => navigate("/profile")} aria-label="Open profile">
+              <button type="button" className="cr-user-pill" onClick={() => navigate("/profile")} aria-label="Account">
                 <span className="cr-user-avatar">{(user.displayName || user.email || "U").charAt(0).toUpperCase()}</span>
                 <span className="cr-user-name">{user.displayName || user.email}</span>
               </button>

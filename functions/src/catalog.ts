@@ -1,7 +1,6 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 import { conceptInputSchema, validateConceptDag, type Concept } from "./learning";
+import catalogJson from "./networking-concepts.json";
 
 export const diagnosticItemSchema = z.object({
   question: z.string().min(8).max(600),
@@ -36,8 +35,8 @@ export const INTEREST_SUGGESTIONS = [
   "self-hosting",
 ] as const;
 
-export function catalogFilePath(fromDir = __dirname): string {
-  return path.join(fromDir, "../data/networking-concepts.json");
+export function catalogFilePath(_fromDir = ""): string {
+  return "networking-concepts.json";
 }
 
 export function parseNetworkingCatalog(raw: unknown): NetworkingConcept[] {
@@ -68,9 +67,8 @@ export function publicConceptView(concept: NetworkingConcept): PublicConcept {
   };
 }
 
-export async function loadNetworkingCatalog(file = catalogFilePath()): Promise<NetworkingConcept[]> {
-  const raw = JSON.parse(await readFile(file, "utf8")) as unknown;
-  return parseNetworkingCatalog(raw);
+export async function loadNetworkingCatalog(_file = catalogFilePath()): Promise<NetworkingConcept[]> {
+  return parseNetworkingCatalog(catalogJson);
 }
 
 export function withNetworkingPrefix(slug: string): string {

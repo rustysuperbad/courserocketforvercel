@@ -41,6 +41,7 @@ export default function CommandPalette() {
               {user && <Command.Item onSelect={() => go("/dashboard")}>Courses</Command.Item>}
               {user && <Command.Item onSelect={() => go("/profile")}>Stats</Command.Item>}
               {user && <Command.Item onSelect={() => go("/sandbox")}>Sandbox</Command.Item>}
+              {user && <Command.Item onSelect={() => go("/profile")}>Account</Command.Item>}
               <Command.Item onSelect={() => go("/privacy")}>Privacy</Command.Item>
             </Command.Group>
             {user && (

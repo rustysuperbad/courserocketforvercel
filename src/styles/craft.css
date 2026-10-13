@@ -55,7 +55,7 @@
   display: flex;
   align-items: center;
 }
-.cr-nav-left { gap: var(--space-36); min-width: 0; }
+.cr-nav-left { gap: var(--space-24); min-width: 0; flex: 1; }
 .cr-brand {
   display: inline-flex;
   align-items: center;
