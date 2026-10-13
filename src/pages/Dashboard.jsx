@@ -356,18 +356,18 @@ export default function Dashboard() {
 
       <div className="cr-page cr-dashboard-body" style={s.body}>
         <div className="cr-bento cr-dashboard-heading cr-scroll-rise">
-          <div className="cr-cell cr-span-6">
+          <div className="cr-cell cr-span-12">
             <div className="cr-page-kicker">Courses</div>
             <h1 style={s.h1}>What are you learning?</h1>
             <p style={s.sub}>Make a course, pick one up, or see how far you have got. That is the whole app.</p>
           </div>
-          <div className="cr-stat cr-span-2">
+          <div className="cr-stat cr-span-4">
             <Stat label="Courses" value={stats.total} />
           </div>
-          <div className="cr-stat cr-span-2">
+          <div className="cr-stat cr-span-4">
             <Stat label="Modules done" value={`${stats.completedModules}/${stats.totalModules}`} />
           </div>
-          <div className="cr-stat cr-span-2">
+          <div className="cr-stat cr-span-4">
             <Stat label="Avg progress" value={`${stats.avg}%`} />
           </div>
         </div>

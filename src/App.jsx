@@ -23,7 +23,7 @@ function DeferredPage({ children }) {
 function AuthGate() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(99,102,241,0.25)", borderTopColor: "var(--primary-2)", animation: "spin 0.9s linear infinite" }} />
+      <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid var(--border)", borderTopColor: "var(--ink)", animation: "spin 0.9s linear infinite" }} />
     </div>
   );
 }

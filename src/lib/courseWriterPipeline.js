@@ -30,6 +30,7 @@ export const WRITING_RULES = [
   "Write like a sharp instructor sitting next to one person. No textbook voice. No eLearning filler.",
   "Every sentence must teach a move the learner can use. If a paragraph could fit any course, delete it.",
   "Never copy, quote, or lightly rephrase the learner's request. Invent specific titles and examples.",
+  "Every module is the same shape: exactly 2 lessons and 2 quiz questions with 4 options each.",
   "Do not use a fixed section template. Choose headings that fit THIS lesson only.",
   "Banned: Foundations of X, Introduction to X, Tools & Ecosystem, Core Concepts as a title,",
   "why this matters, let's dive in, in today's world, unlock, journey, robust, seamless, leverage.",
@@ -84,8 +85,8 @@ function buildModuleWritePrompt(module, topic, level, moduleIndex, totalModules,
     concepts ? `Concepts: ${concepts}` : "",
     "",
     "Write 2 lessons on this module. Each covers a distinct angle — no overlap.",
+    "Every module uses the same shape: 2 lessons, 2 quiz questions, 4 options each. Do not return 1 or 3 of either.",
     "Headings must be specific to the skill, not the learner's original sentence.",
-    "Include one worked example, one thing that usually goes wrong, and one tiny exercise.",
     "",
     'OUTPUT JSON: {"lessons":[{"heading":"...","text":"markdown with ## sections"},{"heading":"...","text":"..."}],',
     '"quiz":[{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},',
@@ -133,13 +134,17 @@ export async function generateModuleLessons(module, topic, level, moduleIndex, t
       text: String(l?.text || "").trim(),
     }));
     const quiz = Array.isArray(data.quiz) ? data.quiz.slice(0, 2) : [];
+    const quizOk =
+      quiz.length === 2 &&
+      quiz.every((q) => String(q?.question || "").trim() && Array.isArray(q?.options) && q.options.length >= 4);
 
     const ok =
       lessons.length === 2 &&
       lessons.every((l) => l.heading && l.text) &&
       lessons.every((l) => lessonMeetsSimpleBar(l.text)) &&
       lessons.every((l) => assessLessonTextQuality(l.text, fingerprints).ok) &&
-      lessons.every((l) => !proseContainsBannedPatterns(l.text));
+      lessons.every((l) => !proseContainsBannedPatterns(l.text)) &&
+      quizOk;
 
     if (ok) return {
       lessons,
