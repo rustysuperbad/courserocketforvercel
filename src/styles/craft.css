@@ -560,26 +560,7 @@
   transition: background var(--dur-1) var(--ease-in-out), border-color var(--dur-1) var(--ease-in-out);
 }
 .cr-lib-card:hover { transform: none; background: var(--surface-2); border-color: var(--border-strong); }
-.cr-lib-card.is-feature {
-  grid-column: span 8;
-  min-height: 280px;
-  background: var(--ink);
-  border-color: transparent;
-  --text: var(--canvas);
-  --text-1: var(--canvas);
-  --text-2: rgba(243, 245, 249, 0.78);
-  --text-3: rgba(243, 245, 249, 0.55);
-  --surface-3: rgba(243, 245, 249, 0.16);
-  --ink: var(--canvas);
-}
-.cr-lib-card.is-feature:hover {
-  background: #121826;
-  border-color: transparent;
-}
-.cr-lib-card.is-feature .cr-btn-soft {
-  background: rgba(243, 245, 249, 0.12);
-  color: var(--canvas);
-}
+.cr-lib-card.is-feature { grid-column: span 8; min-height: 280px; }
 .cr-lib-card.is-compact { min-height: 180px; }
 .cr-lib-progress {
   margin-top: auto;
