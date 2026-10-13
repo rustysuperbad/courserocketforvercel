@@ -30,7 +30,7 @@ export default function Landing() {
       <Navbar />
       <main id="main">
         <section className="cr-landing-hero">
-          <div>
+          <div className="cr-scroll-rise">
             <p className="cr-kicker">Start from what you already know</p>
             <h1 className="cr-landing-title">
               A course that<br />begins at <em>your</em> edge.
@@ -61,10 +61,12 @@ export default function Landing() {
               ))}
             </div>
           </div>
-          <HeroInstrument goal={topic} />
+          <div className="cr-scroll-shift">
+            <HeroInstrument goal={topic} />
+          </div>
         </section>
 
-        <section className="cr-proof" aria-label="How a path is built">
+        <section className="cr-proof cr-scroll-rise" aria-label="How a path is built">
           <span>Goal</span>
           <span>Prerequisite graph</span>
           <span>Cited lessons</span>
@@ -72,7 +74,7 @@ export default function Landing() {
         </section>
 
         <section className="cr-editorial">
-          <div>
+          <div className="cr-scroll-rise">
             <p className="cr-kicker">Not a chat dump</p>
             <h2>The wait is the product.</h2>
             <p className="cr-body">

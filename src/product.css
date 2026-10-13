@@ -16,11 +16,20 @@
   font-weight: 400;
   letter-spacing: var(--track-display);
 }
-.cr-stat { background: transparent; border: 0; border-radius: var(--radius); }
+.cr-stat-row {
+  display: flex;
+  gap: var(--space-36);
+  align-items: flex-end;
+}
+.cr-stat { background: transparent; border: 0; border-radius: 0; padding: 0; min-width: 0; }
 .cr-stat-value {
-  font-family: var(--font-display);
-  font-size: var(--text-heading-2xs);
+  font-family: var(--font-number);
+  font-size: var(--text-heading-sm);
   font-weight: 400;
+  letter-spacing: var(--track-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+  color: var(--text-1);
 }
 .cr-stat-label {
   color: var(--text-3);
@@ -28,6 +37,50 @@
   font-weight: var(--font-label);
   letter-spacing: var(--track-label);
   text-transform: uppercase;
+  margin-top: var(--space-6);
+}
+.cr-library-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-24);
+  margin-bottom: var(--space-36);
+  border-bottom: var(--hairline);
+}
+.cr-library-tabs {
+  display: flex;
+  gap: var(--space-24);
+}
+.cr-library-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: var(--space-12) 0;
+  margin-bottom: -1px;
+  font-size: var(--text-nav);
+  font-weight: var(--font-label);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.cr-library-tab span {
+  font-family: var(--font-number);
+  font-weight: 400;
+  margin-left: var(--space-6);
+  font-variant-numeric: tabular-nums;
+}
+.cr-empty-state, .cr-empty-search {
+  padding: var(--space-60) 0;
+  color: var(--text-2);
+  font-size: var(--text-body);
+}
+.cr-topic-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6) var(--space-18);
+  margin-top: var(--space-18);
 }
 .cr-generate-panel {
   padding: 0;
@@ -37,7 +90,7 @@
   box-shadow: none;
 }
 .cr-generator-icon { display: none; }
-.cr-library-tab.is-active { color: var(--text-1); }
+.cr-library-tab.is-active { color: var(--text-1); border-bottom-color: var(--ink); }
 .cr-course-search {
   display: flex;
   align-items: center;

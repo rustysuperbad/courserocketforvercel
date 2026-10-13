@@ -134,7 +134,6 @@ export default function Profile() {
                 {profile?.name || user?.displayName || user?.email || "You"}
               </div>
               <div style={s.email}>{user?.email}</div>
-              <div style={s.uid}>UID: {user?.uid?.slice(0, 12)}…</div>
             </div>
           </div>
           <div style={s.headerActions}>
@@ -147,10 +146,10 @@ export default function Profile() {
           </div>
         </div>
 
-        <div style={s.statsGrid}>
+        <div className="cr-stat-row" style={{ marginBottom: 30 }}>
           <StatCard label="Courses" value={stats.totalCourses} />
           <StatCard label="Modules completed" value={`${stats.completedModules}/${stats.totalModules}`} />
-          <StatCard label="Average progress" value={`${stats.avgProgress}%`} accent />
+          <StatCard label="Average progress" value={`${stats.avgProgress}%`} />
         </div>
 
         <div style={s.sectionHead}>
@@ -233,13 +232,11 @@ export default function Profile() {
   );
 }
 
-function StatCard({ label, value, accent }) {
+function StatCard({ label, value }) {
   return (
-    <div className="cr-card" style={s.statCard}>
-      <div style={{ ...s.statValue, color: accent ? "var(--primary-2)" : "var(--text)" }}>
-        {value}
-      </div>
-      <div style={s.statLabel}>{label}</div>
+    <div className="cr-stat">
+      <div className="cr-stat-value cr-num">{value}</div>
+      <div className="cr-stat-label">{label}</div>
     </div>
   );
 }
@@ -261,20 +258,20 @@ const s = {
   avatar: {
     width: 64,
     height: 64,
-    borderRadius: 16,
-    background: "linear-gradient(135deg, var(--primary), var(--accent))",
+    borderRadius: 2,
+    background: "var(--ink)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
-    fontWeight: 700,
+    color: "var(--canvas)",
+    fontWeight: 400,
     fontSize: 22,
     fontFamily: "var(--font-display)",
   },
   name: {
     fontFamily: "var(--font-display)",
     fontSize: 22,
-    fontWeight: 700,
+    fontWeight: 400,
     color: "var(--text)",
     marginBottom: 2,
   },
@@ -305,8 +302,8 @@ const s = {
   },
   h2: {
     fontFamily: "var(--font-display)",
-    fontSize: 22,
-    fontWeight: 700,
+    fontSize: 24,
+    fontWeight: 400,
     color: "var(--text)",
   },
   muted: { color: "var(--text-3)", fontSize: 13 },
@@ -326,18 +323,21 @@ const s = {
   cardTopRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
   levelPill: {
     fontSize: 11,
-    color: "var(--primary-2)",
-    background: "var(--primary-soft)",
-    border: "1px solid rgba(99,102,241,0.25)",
-    padding: "3px 10px",
-    borderRadius: 999,
+    color: "var(--text-3)",
+    background: "transparent",
+    border: 0,
+    padding: 0,
+    borderRadius: 0,
+    textTransform: "uppercase",
+    letterSpacing: "0.025em",
+    fontWeight: 600,
   },
   metaText: { fontSize: 12, color: "var(--text-3)" },
   courseTitle: {
     fontFamily: "var(--font-display)",
-    fontSize: 16,
+    fontSize: 20,
     color: "var(--text)",
-    fontWeight: 700,
+    fontWeight: 400,
     lineHeight: 1.3,
   },
   courseDesc: {
@@ -351,15 +351,15 @@ const s = {
   },
   progressBlock: { marginTop: "auto" },
   progressTrack: {
-    height: 4,
-    background: "rgba(255,255,255,0.06)",
-    borderRadius: 999,
+    height: 2,
+    background: "var(--surface-3)",
+    borderRadius: 0,
     overflow: "hidden",
     marginBottom: 6,
   },
   progressFill: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--primary), var(--accent))",
+    background: "var(--ink)",
     transition: "width 320ms ease",
   },
   progressMeta: {

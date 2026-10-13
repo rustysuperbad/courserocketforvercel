@@ -4,22 +4,22 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 @theme {
-  --color-canvas: #0a0e1a;
-  --color-canvas-2: #0f1525;
-  --color-text-1: #e6ebf5;
-  --color-text-2: #aab2c5;
-  --color-text-3: #8b94ad;
-  --color-accent: #6366f1;
-  --color-accent-2: #818cf8;
-  --color-emphasis: #22d3ee;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-canvas: #f3f5f9;
+  --color-canvas-2: #e7ebf3;
+  --color-text-1: #0a0e1a;
+  --color-text-2: #3a4156;
+  --color-text-3: #5c657c;
+  --color-accent: #4f46e5;
+  --color-accent-2: #6366f1;
+  --color-emphasis: #0e7490;
+  --color-success: #047857;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
   --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
   --font-display: "Syne Variable", Syne, Inter, sans-serif;
-  --radius-sm: 24px;
-  --radius-md: 24px;
-  --radius-lg: 24px;
-  --radius-xl: 24px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
   --spacing: 6px;
 }

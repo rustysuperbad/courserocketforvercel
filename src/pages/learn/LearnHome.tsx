@@ -105,19 +105,27 @@ export default function LearnHome() {
     <div style={{ minHeight: "100vh" }}>
       <Navbar />
       <main className="lr-page" id="main">
-        <header className="lr-head">
-          <div className="cr-page-kicker">VERIFIED PATHS</div>
+        <header className="lr-head cr-scroll-rise">
+          <div className="cr-page-kicker">Verified paths</div>
           <h1>Start at the first thing you cannot yet do.</h1>
           <p>
-            Tell CourseRocket what you want to be able to do. For networking, start with the onboarding diagnostic so the
-            path skips what you already know; every lesson is written from cited sources and labelled by how it was checked.
+            Networking uses a reviewed prerequisite graph. Lessons are written from cited sources and labelled by how they were checked.
           </p>
         </header>
+        <nav className="lr-tools" aria-label="Learn tools">
+          <Link to="/learn" aria-current="page">Jobs</Link>
+          <Link to="/learn/onboarding">Diagnostic</Link>
+          <Link to="/learn/studio">Studio</Link>
+          <Link to="/learn/practice">Practice</Link>
+          <Link to="/learn/review">Review</Link>
+          <Link to="/learn/notes">Notes</Link>
+          <Link to="/learn/analytics">Analytics</Link>
+        </nav>
 
         <div className="lr-grid">
-          <section className="cr-card lr-card" aria-labelledby="start-heading">
+          <section className="lr-card cr-scroll-rise" aria-labelledby="start-heading">
             <h2 id="start-heading">Start a verified course</h2>
-            <p>Networking is the launch domain with a reviewed prerequisite graph. Other goals run the general pipeline and only teach from approved sources.</p>
+            <p>One outcome. The launch domain skips what you already know; other goals still require approved sources.</p>
             <form onSubmit={handleSubmit} noValidate>
               <label className="lr-field">
                 <span>Goal</span>
@@ -137,7 +145,7 @@ export default function LearnHome() {
                 </button>
                 {domain === "networking" && (
                   <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/learn/onboarding")}>
-                    Do the diagnostic first
+                    Diagnostic first
                   </button>
                 )}
               </div>
@@ -146,9 +154,37 @@ export default function LearnHome() {
             </form>
           </section>
 
-          <section className="cr-card lr-card" aria-labelledby="sources-heading">
-            <h2 id="sources-heading">Query attributed sources</h2>
-            <p>Hybrid retrieval ranks vector similarity, keywords, source authority, and beginner level fit. Every hit includes license and attribution.</p>
+          <section className="lr-card cr-scroll-rise" aria-labelledby="runs-heading" aria-live="polite">
+            <h2 id="runs-heading">Recent jobs</h2>
+            {runsLoading ? (
+              <div className="lr-list" aria-busy="true">
+                {[0, 1].map((index) => <div key={index} className="cr-skeleton" style={{ height: 64 }} />)}
+              </div>
+            ) : runsError ? (
+              <div className="lr-notice" role="status">{runsError}</div>
+            ) : runs.length === 0 ? (
+              <p className="lr-muted">No jobs yet. Start one; progress and cost appear here.</p>
+            ) : (
+              <ul className="lr-list" style={{ listStyle: "none", padding: 0 }}>
+                {runs.map((run) => <RunRow key={run.runId} run={run} />)}
+              </ul>
+            )}
+          </section>
+
+          {activeRun && (
+            <div className="lr-span">
+              <GenerationTheatre
+                status={activeRun.status}
+                stage={typeof activeRun.progress?.stage === "string" ? activeRun.progress.stage : activeRun.status}
+                note={typeof activeRun.progress?.note === "string" ? activeRun.progress.note : ""}
+                percent={Number(activeRun.progress?.percent ?? 0)}
+              />
+            </div>
+          )}
+
+          <section className="lr-card lr-span" aria-labelledby="sources-heading">
+            <h2 id="sources-heading">Attributed sources</h2>
+            <p>Hybrid retrieval: vector, keyword, authority, beginner fit. Hits always include license and attribution.</p>
             <form onSubmit={handleSourceSearch} noValidate>
               <label className="lr-field">
                 <span>Concept or topic</span>
@@ -156,15 +192,9 @@ export default function LearnHome() {
                 <small id="source-help" className="lr-muted">Try “subnet mask”, “DNS resolver”, or “TCP handshake”.</small>
               </label>
               <div className="lr-actions">
-                <button type="submit" className="cr-btn cr-btn-soft" disabled={sourceSearching} aria-busy={sourceSearching}>
+                <button type="submit" className="cr-btn cr-btn-ghost" disabled={sourceSearching} aria-busy={sourceSearching}>
                   {sourceSearching ? "Searching…" : "Search sources"}
                 </button>
-                <Link className="cr-btn cr-btn-ghost" to="/learn/review">Daily review</Link>
-                <Link className="cr-btn cr-btn-ghost" to="/learn/practice">Practice tools</Link>
-                <Link className="cr-btn cr-btn-ghost" to="/learn/studio">Studio</Link>
-                <Link className="cr-btn cr-btn-ghost" to="/learn/notes">Private notes</Link>
-                <Link className="cr-btn cr-btn-ghost" to="/learn/analytics">Analytics</Link>
-                <Link className="cr-btn cr-btn-ghost" to="/privacy">Privacy</Link>
               </div>
               {sourceError && <div className="lr-error" role="alert">{sourceError}</div>}
               {sourceStatus && !sourceError && <div className="lr-notice" role="status">{sourceStatus}</div>}
@@ -181,33 +211,6 @@ export default function LearnHome() {
                   </li>
                 ))}
               </ol>
-            )}
-          </section>
-
-          {activeRun && (
-            <div className="lr-span">
-              <GenerationTheatre
-                status={activeRun.status}
-                stage={typeof activeRun.progress?.stage === "string" ? activeRun.progress.stage : activeRun.status}
-                note={typeof activeRun.progress?.note === "string" ? activeRun.progress.note : ""}
-                percent={Number(activeRun.progress?.percent ?? 0)}
-              />
-            </div>
-          )}
-          <section className="cr-card lr-card lr-span" aria-labelledby="runs-heading" aria-live="polite">
-            <h2 id="runs-heading">Recent course jobs</h2>
-            {runsLoading ? (
-              <div className="lr-list" aria-busy="true">
-                {[0, 1].map((index) => <div key={index} className="cr-skeleton" style={{ height: 64 }} />)}
-              </div>
-            ) : runsError ? (
-              <div className="lr-notice" role="status">{runsError}</div>
-            ) : runs.length === 0 ? (
-              <p className="lr-muted">No jobs yet. Start one above; the run record, progress, and cost estimate appear here.</p>
-            ) : (
-              <ul className="lr-list" style={{ listStyle: "none", padding: 0 }}>
-                {runs.map((run) => <RunRow key={run.runId} run={run} />)}
-              </ul>
             )}
           </section>
         </div>

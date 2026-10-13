@@ -335,26 +335,25 @@ export default function Dashboard() {
       <Navbar />
 
       <div className="cr-page cr-dashboard-body" style={s.body}>
-        <div style={s.heading} className="cr-fade cr-dashboard-heading">
+        <div style={s.heading} className="cr-dashboard-heading cr-scroll-rise">
           <div>
-            <div className="cr-page-kicker">LIBRARY</div>
+            <div className="cr-page-kicker">Library</div>
             <h1 style={s.h1}>Courses you can actually continue.</h1>
-            <p style={s.sub}>Pick up a path, or type a goal. Generation stays visible — it is not a spinner over an empty page.</p>
+            <p style={s.sub}>Pick up a path, or type a goal. Generation stays on the page — not a spinner over an empty shelf.</p>
           </div>
-          <div style={s.statRow} className="cr-stat-row">
+          <div className="cr-stat-row">
             <Stat label="Courses" value={stats.total} />
             <Stat label="Modules done" value={`${stats.completedModules}/${stats.totalModules}`} />
             <Stat label="Avg progress" value={`${stats.avg}%`} />
           </div>
         </div>
 
-        <div className="cr-card cr-generate-panel" style={s.generateBox}>
+        <div className="cr-generate-panel cr-scroll-rise">
           <div style={s.generateHead} className="cr-generator-header">
             <div>
               <div style={s.generateLabel}>What should you be able to do?</div>
-              <div style={s.generateHint}>One outcome. The library stores the path; verified lessons live under Learn.</div>
+              <div style={s.generateHint}>One outcome. The shelf stores the path; verified lessons live under Learn.</div>
             </div>
-            <div className="cr-generator-note"><strong>YOUR GOAL</strong><br />BECOMES A COURSE</div>
           </div>
 
           <div style={s.inputRow} className="cr-generator-input-row">
@@ -386,8 +385,8 @@ export default function Dashboard() {
             {PROMPT_IDEAS.map((p) => (
               <button
                 key={p}
-                className="cr-topic-chip"
-                style={s.chip}
+                type="button"
+                className="cr-goal-chip"
                 onClick={() => setTopic(p)}
               >
                 {p}
@@ -482,14 +481,8 @@ export default function Dashboard() {
             ))}
           </div>
         ) : displayCourses.length === 0 ? (
-          <div className="cr-card cr-empty-state" style={s.empty}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>◇</div>
-            <div style={{ color: "var(--text)", fontWeight: 600, marginBottom: 4 }}>
-              Empty shelf
-            </div>
-            <div style={{ color: "var(--text-2)", fontSize: 14 }}>
-              Type a goal above. The first card appears as soon as the run is reserved.
-            </div>
+          <div className="cr-empty-state">
+            <p>Empty shelf. Type a goal above — the first path appears as soon as the run is reserved.</p>
           </div>
         ) : filteredCourses.length === 0 ? (
           <div className="cr-empty-search">No courses match that search. Try another topic or choose a different filter.</div>
@@ -514,9 +507,9 @@ export default function Dashboard() {
 
 function Stat({ label, value }) {
   return (
-    <div className="cr-card cr-stat" style={s.stat}>
-      <div style={s.statValue} className="cr-stat-value">{value}</div>
-      <div style={s.statLabel} className="cr-stat-label">{label}</div>
+    <div className="cr-stat">
+      <div className="cr-stat-value cr-num">{value}</div>
+      <div className="cr-stat-label">{label}</div>
     </div>
   );
 }
@@ -540,7 +533,7 @@ const s = {
     letterSpacing: "var(--track-display)",
     marginBottom: 6,
   },
-  sub: { color: "var(--text-2)", fontSize: 16, lineHeight: 1.65 },
+  sub: { color: "var(--text-2)", fontSize: "var(--text-body)", fontWeight: 300, lineHeight: 1.5, maxWidth: "34em" },
   statRow: { display: "flex", gap: 12 },
   stat: {
     background: "rgba(255,255,255,0.03)",
@@ -561,9 +554,9 @@ const s = {
   generateHead: { marginBottom: 16 },
   generateLabel: {
     fontFamily: "var(--font-display)",
-    fontSize: 18,
+    fontSize: "var(--text-heading-2xs)",
     color: "var(--text)",
-    fontWeight: 700,
+    fontWeight: 400,
     marginBottom: 4,
   },
   generateHint: { color: "var(--text-2)", fontSize: 15, lineHeight: 1.6 },
@@ -617,10 +610,10 @@ const s = {
   },
   h2: {
     fontFamily: "var(--font-display)",
-    fontSize: 22,
-    fontWeight: 700,
+    fontSize: "var(--text-heading-2xs)",
+    fontWeight: 400,
     color: "var(--text)",
-    letterSpacing: "-0.3px",
+    letterSpacing: 0,
   },
   muted: { color: "var(--text-3)", fontSize: 13 },
 

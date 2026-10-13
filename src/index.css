@@ -7,6 +7,7 @@
 }
 
 html, body {
+  color-scheme: light;
   background: var(--canvas);
   color: var(--text-1);
   font-family: var(--font-sans);
@@ -123,6 +124,7 @@ input, textarea, select {
   font-weight: var(--font-label);
   letter-spacing: var(--track-label);
   text-transform: uppercase;
+  font-family: var(--font-sans);
   transition:
     background var(--dur-1) var(--ease-in-out),
     color var(--dur-1) var(--ease-in-out),
@@ -135,10 +137,10 @@ input, textarea, select {
 .cr-btn:active:not(:disabled) { transform: scale(0.97); }
 
 .cr-btn-primary {
-  background: var(--accent);
-  color: var(--white);
+  background: var(--ink);
+  color: var(--canvas);
 }
-.cr-btn-primary:hover:not(:disabled) { background: var(--accent-2); }
+.cr-btn-primary:hover:not(:disabled) { background: #131a2c; color: var(--canvas); }
 
 .cr-btn-ghost {
   background: transparent;
@@ -153,14 +155,23 @@ input, textarea, select {
 }
 
 .cr-btn-soft {
-  background: var(--accent-soft);
-  color: var(--accent-2);
+  background: var(--surface-2);
+  color: var(--text-1);
 }
-.cr-btn-soft:hover:not(:disabled) { color: var(--text-1); }
+.cr-btn-soft:hover:not(:disabled) { background: var(--surface-3); }
+
+.cr-num {
+  font-family: var(--font-number);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--track-display);
+}
 
 .cr-link {
-  color: var(--emphasis);
+  color: var(--text-1);
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .cr-link:hover { color: var(--text-1); }
 

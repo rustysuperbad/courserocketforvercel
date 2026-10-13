@@ -85,7 +85,7 @@ Also: 4-up identical proof labels; `product.css` still contains blob/screenshot/
 
 Skimmed [Refero Styles](https://styles.refero.design/) (Dala, Linear, Perplexity, Raycast listed) and [Devouring Details](https://devouringdetails.com/). Hues ignored.
 
-1. **Dala (logic only).** Scale over weight; ultra-light body; floating type on a void; one filled action; signature = generative field. Do **not** copy the triangle-brain, violet/amber, or copy. Our canvas stays midnight `#0a0e1a`, not forced black.
+1. **Dala (logic only).** Scale over weight; ultra-light body; floating type on a void; one filled action; signature = generative field. Do **not** copy the triangle-brain, violet/amber, or copy. Canvas is now a **tint of midnight** (`#f3f5f9` paper); ink is `#0a0e1a`. Same hues, inverted roles — not a new palette.
 2. **Linear.** Display at a lighter weight than you expect; left-aligned hero; two-tone sentence (bright lead, quiet rest); one chromatic accent; chapters as 2-col split then a visual. We will not use product screenshots as the visual.
 3. **Perplexity.** The query **is** the product. Surrounding chrome is satellite. Real input in the hero, not a picture of one. Narrow type scale. Our goal field stays live and scripted.
 4. **Raycast.** Chrome feels like the tool: hairline + surface ladder, command palette as a first-class object, keycap hints, almost no drop shadow. Depth from nested surfaces, not glow blobs.
@@ -209,3 +209,13 @@ Vite + Tailwind v4 (`@tailwindcss/vite`), **no preflight** (our reset stays). `c
 Hero is a floating skeleton, not the living knowledge graph. That is the next chat.
 
 After shots: `docs/redesign/after/{landing,login,privacy,intro}-*.png`. Lint and production build pass.
+
+## Paper field (taste pass)
+
+User asked to leave midnight chrome: canvas `#f3f5f9` (tint of `#0a0e1a`), ink `#0a0e1a` as text and as the **only filled button**. Indigo stays the action *hue* for links/focus, not button fills. Cyan emphasis darkened to `#0e7490` so kickers pass AA on paper.
+
+Radius dropped from 24px to **2px** — same token, sharper. User override: too many pills.
+
+Numbers use Syne 400 + `tabular-nums` (`--font-number`). Studio lede is 14px / `text-3`, not body-18 competing with the display title.
+
+Python sandbox is a shared component (`src/components/learn/PythonSandbox.tsx`): Pyodide singleton, stdout capture, wired into Studio (run the sketch) and Practice. No paid APIs.

@@ -1,4 +1,35 @@
-/* Dala logic on CourseRocket surfaces: floating type, one action, 24px radius. */
+/* Dala logic on CourseRocket paper: floating type, one dark action, sharp edges. */
+
+@supports (animation-timeline: view()) {
+  .cr-scroll-rise {
+    animation: cr-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 28%;
+  }
+  .cr-scroll-shift {
+    animation: cr-shift linear both;
+    animation-timeline: scroll();
+    animation-range: 0 50vh;
+  }
+  .cr-split-row {
+    animation: cr-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 32%;
+  }
+}
+@keyframes cr-rise {
+  from { transform: translateY(36px); opacity: 0.35; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes cr-shift {
+  from { transform: translateY(0); }
+  to { transform: translateY(-56px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-scroll-rise,
+  .cr-scroll-shift,
+  .cr-split-row { animation: none !important; transform: none !important; }
+}
 
 .cr-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .cr-shell > main { flex: 1; }
@@ -78,9 +109,9 @@
   place-items: center;
   width: 30px;
   height: 30px;
-  border-radius: var(--radius-pill);
-  color: var(--text-1);
-  background: var(--surface-3);
+  border-radius: var(--radius);
+  color: var(--canvas);
+  background: var(--ink);
   font-size: var(--text-caption);
   font-weight: var(--font-label);
 }
@@ -357,7 +388,7 @@
   gap: var(--space-12);
   min-height: 40px;
   padding: var(--space-6) var(--space-18) var(--space-6) var(--space-12);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   background: var(--surface-2);
   font-size: var(--text-nav);
 }
@@ -397,7 +428,7 @@
   border-radius: var(--radius);
   transition: transform var(--dur-1) var(--ease-out);
 }
-.cr-lib-card:hover { transform: translateY(-2px); }
+.cr-lib-card:hover { transform: none; background: var(--surface); }
 .cr-lib-card.is-feature { grid-column: span 8; min-height: 280px; }
 .cr-lib-card.is-compact { min-height: 180px; }
 .cr-lib-progress {
@@ -406,7 +437,7 @@
   background: var(--surface-3);
   overflow: hidden;
 }
-.cr-lib-progress > i { display: block; height: 100%; background: var(--accent); }
+.cr-lib-progress > i { display: block; height: 100%; background: var(--ink); }
 
 /* Citations / mastery / quiz */
 .cr-cite-chip {
@@ -415,7 +446,7 @@
   min-height: 28px;
   margin-left: 4px;
   padding: 0 7px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   font-size: 11px;
   color: var(--emphasis);
   vertical-align: super;
@@ -439,7 +470,7 @@
 .cr-mastery span {
   min-height: 32px;
   padding: var(--space-6) var(--space-12);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   font-size: var(--text-caption);
   color: var(--text-2);
 }
@@ -451,13 +482,45 @@
   margin: 0 auto;
   padding: var(--space-36) var(--space-page-x) var(--space-96);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: var(--space-36);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: var(--space-48, 48px);
+  align-items: start;
 }
-.cr-studio-pane { min-height: 480px; padding: 0; }
+.cr-studio-pane { min-height: 0; padding: 0; }
+.cr-studio-pane h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-heading-sm);
+  font-weight: 400;
+  letter-spacing: var(--track-display);
+  line-height: var(--leading-display);
+  margin: var(--space-12) 0 var(--space-12);
+}
+.cr-studio-lede {
+  font-size: var(--text-nav);
+  font-weight: var(--font-body);
+  line-height: 1.45;
+  color: var(--text-3);
+  max-width: 36em;
+  margin: 0 0 var(--space-24);
+}
+.cr-studio-turns {
+  margin-top: var(--space-30);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18);
+  list-style: none;
+  padding: 0;
+}
+.cr-studio-turns li p {
+  font-size: var(--text-body);
+  font-weight: var(--font-body);
+  line-height: var(--leading-body);
+  color: var(--text-2);
+  margin: var(--space-6) 0 0;
+}
 .cr-code {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.55;
   white-space: pre-wrap;
   background: var(--canvas-2);

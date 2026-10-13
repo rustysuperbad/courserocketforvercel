@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";
+import PythonSandbox from "../../components/learn/PythonSandbox";
 import { generateSubnetProblem, gradeProtocolOrder, gradeSubnetAnswer, PROTOCOL_STEPS } from "../../lib/subnetting";
 import "../../styles/learn.css";
 
@@ -11,10 +12,16 @@ export default function Practice() {
       <Navbar />
       <main className="lr-page" id="main">
         <header className="lr-head">
-          <div className="cr-page-kicker">IN-BROWSER PRACTICE</div>
+          <div className="cr-page-kicker">In-browser practice</div>
           <h1>Networking drills</h1>
-          <p>These tools run on your device. Subnetting and protocol order never leave the browser; Python uses Pyodide in WebAssembly.</p>
+          <p>Subnetting and packet order never leave this tab. Python uses Pyodide in WebAssembly.</p>
         </header>
+        <nav className="lr-tools" aria-label="Learn tools">
+          <Link to="/learn">Jobs</Link>
+          <Link to="/learn/studio">Studio</Link>
+          <Link to="/learn/practice" aria-current="page">Practice</Link>
+          <Link to="/learn/review">Review</Link>
+        </nav>
         <div className="lr-tabs" role="tablist" aria-label="Practice tools">
           <button type="button" role="tab" aria-selected={tab === "subnet"} onClick={() => setTab("subnet")}>Subnetting</button>
           <button type="button" role="tab" aria-selected={tab === "protocol"} onClick={() => setTab("protocol")}>Packet order</button>
@@ -22,7 +29,7 @@ export default function Practice() {
         </div>
         {tab === "subnet" && <SubnetTool />}
         {tab === "protocol" && <ProtocolTool />}
-        {tab === "python" && <PythonSandbox />}
+        {tab === "python" && <PracticePython />}
         <p className="lr-muted" style={{ marginTop: 16 }}><Link className="cr-link" to="/learn">Back to Learn</Link></p>
       </main>
     </div>
@@ -95,36 +102,14 @@ function ProtocolTool() {
   );
 }
 
-function PythonSandbox() {
+function PracticePython() {
   const [code, setCode] = useState("print('CIDR /24 has', 2 ** 8 - 2, 'usable hosts')");
-  const [output, setOutput] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function run() {
-    setBusy(true);
-    setOutput("Loading Pyodide…");
-    try {
-      const mod = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.mjs");
-      const pyodide = await mod.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
-      const result = await pyodide.runPythonAsync(code);
-      setOutput(String(result ?? "done"));
-    } catch (err) {
-      setOutput(err instanceof Error ? err.message : "The in-browser Python runtime could not start.");
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
-    <section className="cr-card lr-card lr-sandbox" aria-labelledby="py-heading">
-      <h2 id="py-heading">Python sandbox</h2>
-      <p>Pyodide runs in your browser. Use it for binary/CIDR experiments; it cannot reach your local network.</p>
-      <label className="lr-field">
-        <span>Python</span>
-        <textarea className="cr-input" value={code} onChange={(event) => setCode(event.target.value)} spellCheck={false} />
-      </label>
-      <div className="lr-actions">
-        <button type="button" className="cr-btn cr-btn-primary" onClick={() => void run()} disabled={busy}>{busy ? "Running…" : "Run"}</button>
-      </div>
-      <pre aria-live="polite">{output}</pre>
-    </section>
+    <PythonSandbox
+      heading="Python sandbox"
+      code={code}
+      onCodeChange={setCode}
+      note="Use it for binary and CIDR experiments. The runtime stays in this tab."
+    />
   );
 }

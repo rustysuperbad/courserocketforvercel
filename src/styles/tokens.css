@@ -1,29 +1,30 @@
 /* CourseRocket tokens. Hues locked to the existing midnight / indigo / cyan / status set.
-   Roles follow Dala logic on our surfaces — not Dala's black/violet/amber. */
+   Paper-white canvas is a tint of midnight #0a0e1a; ink is that same hue. No new hues. */
 
 :root {
-  /* Roles */
-  --canvas: #0a0e1a;
-  --canvas-2: #0f1525;
-  --text-1: #e6ebf5;
-  --text-2: #aab2c5;
-  --text-3: #8b94ad;
-  --accent: #6366f1;
-  --accent-2: #818cf8;
-  --accent-soft: rgba(99, 102, 241, 0.12);
-  --accent-ring: rgba(99, 102, 241, 0.28);
-  --emphasis: #22d3ee;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  /* Roles — paper field, midnight ink */
+  --canvas: #f3f5f9;
+  --canvas-2: #e7ebf3;
+  --text-1: #0a0e1a;
+  --text-2: #3a4156;
+  --text-3: #5c657c;
+  --ink: #0a0e1a;
+  --accent: #4f46e5;
+  --accent-2: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.1);
+  --accent-ring: rgba(79, 70, 229, 0.28);
+  --emphasis: #0e7490;
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #b91c1c;
   --white: #ffffff;
 
   /* Surfaces (forms, quizzes, focus — function beats floating type) */
-  --surface: #131a2c;
-  --surface-2: #1a2238;
-  --surface-3: #232c45;
-  --border: rgba(148, 163, 184, 0.16);
-  --border-strong: rgba(148, 163, 184, 0.28);
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --surface-3: #e2e7f0;
+  --border: rgba(10, 14, 26, 0.12);
+  --border-strong: rgba(10, 14, 26, 0.22);
 
   /* Backward-compat aliases (existing class names) */
   --bg: var(--canvas);
@@ -37,6 +38,7 @@
   /* Type */
   --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
   --font-display: "Syne Variable", Syne, Inter, sans-serif;
+  --font-number: "Syne Variable", Syne, Inter, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
   --font-body: 300;
   --font-display-weight: 400;
@@ -92,12 +94,12 @@
   --content-max: 1120px;
   --page-max: 1280px;
 
-  /* One radius token; pill only for small tags / compact buttons */
-  --radius: 24px;
-  --radius-sm: var(--radius);
-  --radius-lg: var(--radius);
-  --radius-nested: 18px;
-  --radius-pill: 9999px;
+  /* Sharp edges (paper instrument). Tiny tags may still use --radius-pill. */
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-lg: 2px;
+  --radius-nested: 2px;
+  --radius-pill: 2px;
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

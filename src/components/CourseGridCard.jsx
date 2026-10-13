@@ -19,21 +19,23 @@ const cardStyles = {
   },
   levelPill: {
     fontSize: 12,
-    color: "var(--text-2)",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid var(--border)",
-    padding: "5px 12px",
-    borderRadius: 999,
-    textTransform: "capitalize",
+    color: "var(--text-3)",
+    background: "transparent",
+    border: 0,
+    padding: 0,
+    borderRadius: 0,
+    textTransform: "uppercase",
+    letterSpacing: "0.025em",
+    fontWeight: 600,
   },
   metaText: { fontSize: 13, color: "var(--text-3)", lineHeight: 1.4 },
   courseTitle: {
     fontFamily: "var(--font-display)",
-    fontSize: 17,
+    fontSize: 24,
     color: "var(--text)",
-    fontWeight: 650,
-    lineHeight: 1.35,
-    letterSpacing: "-0.02em",
+    fontWeight: 400,
+    lineHeight: 1.2,
+    letterSpacing: "-0.03em",
   },
   conceptStrip: {
     display: "flex",
@@ -47,10 +49,10 @@ const cardStyles = {
     fontSize: 12,
     fontWeight: 500,
     color: "var(--text-2)",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: 999,
-    padding: "5px 11px",
-    border: "1px solid var(--border)",
+    background: "transparent",
+    borderRadius: 0,
+    padding: "0 0 0 0",
+    border: 0,
     maxWidth: "100%",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -67,15 +69,15 @@ const cardStyles = {
   },
   progressBlock: { marginTop: "auto" },
   progressTrackSmall: {
-    height: 4,
-    background: "rgba(255,255,255,0.06)",
-    borderRadius: 999,
+    height: 2,
+    background: "var(--surface-3)",
+    borderRadius: 0,
     overflow: "hidden",
     marginBottom: 6,
   },
   progressFill: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--primary), var(--accent))",
+    background: "var(--ink)",
     transition: "width 480ms ease",
   },
   progressMeta: {
@@ -130,7 +132,7 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration, fea
     leftMeta = "Generation paused";
     rightMeta = "";
     fillStyle = {
-      background: "linear-gradient(90deg, #ef4444, #f87171)",
+      background: "var(--danger)",
     };
   }
 
