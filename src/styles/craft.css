@@ -270,6 +270,7 @@
   gap: var(--space-18);
   margin-bottom: var(--space-24);
   padding-bottom: var(--space-18);
+  border-bottom: var(--hairline);
 }
 .cr-instrument-head strong {
   display: block;
@@ -295,6 +296,19 @@
   text-transform: uppercase;
   font-weight: var(--font-label);
   color: var(--text-3);
+}
+.cr-cell-ink .cr-kind {
+  color: rgba(243, 245, 249, 0.55);
+}
+.cr-cell-ink .cr-instrument-head {
+  border-bottom: 1px solid rgba(243, 245, 249, 0.12);
+}
+.cr-cell-ink .cr-instrument-head strong,
+.cr-cell-ink .cr-instrument-row b {
+  color: var(--canvas);
+}
+.cr-cell-ink .cr-instrument-row + .cr-instrument-row {
+  border-top-color: rgba(243, 245, 249, 0.12);
 }
 
 .cr-proof {

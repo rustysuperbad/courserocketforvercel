@@ -96,10 +96,35 @@
 .lr-kpi { padding: 0; border: 0; border-radius: 0; }
 .lr-kpi b { display: block; font-family: var(--font-number); font-size: var(--text-heading-sm); font-weight: 400; letter-spacing: var(--track-display); font-variant-numeric: tabular-nums; color: var(--text); }
 .lr-kpi span { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; }
-.lr-sandbox h2 { font-family: var(--font-display); font-size: var(--text-heading-2xs); font-weight: 400; margin: var(--space-6) 0 0; }
+.lr-sandbox h2 { font-family: var(--font-display); font-size: var(--text-heading-2xs); font-weight: 400; margin: var(--space-6) 0 0; color: var(--text-1); }
 .lr-sandbox-note { font-size: var(--text-nav); color: var(--text-3); margin: 0 0 var(--space-18); max-width: 42em; }
-.lr-sandbox textarea { width: 100%; min-height: 220px; font-family: var(--font-mono); font-size: 13px; line-height: 1.55; border-radius: var(--radius); }
-.lr-sandbox-out, .lr-sandbox pre { margin-top: 10px; padding: var(--space-18); border-radius: var(--radius); background: var(--canvas-2); color: var(--text); font-size: 13px; overflow: auto; max-height: 260px; white-space: pre-wrap; font-family: var(--font-mono); }
+.lr-sandbox textarea {
+  width: 100%;
+  min-height: 220px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  border-radius: var(--radius-nested);
+  background: var(--ink);
+  color: var(--canvas);
+  border: 0;
+  padding: var(--space-18);
+}
+.lr-sandbox textarea:focus {
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.lr-sandbox-out, .lr-sandbox pre {
+  margin-top: var(--space-12);
+  padding: var(--space-18);
+  border-radius: var(--radius-nested);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 13px;
+  overflow: auto;
+  max-height: 260px;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+}
 .lr-order { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0; margin-top: 10px; }
 .lr-order li { display: flex; gap: 8px; align-items: center; padding: 12px 0; border-bottom: var(--hairline); border-radius: 0; color: var(--text); font-size: var(--text-body); }
 .lr-order li > span { flex: 1; }
