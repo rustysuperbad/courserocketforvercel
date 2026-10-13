@@ -63,7 +63,7 @@ export default function Landing() {
             </div>
             <p className="cr-example-note">Any subject works. The marked chip is only a sample of a path assembling.</p>
           </div>
-          <div className="cr-cell cr-cell-ink cr-span-12 cr-scroll-rise">
+          <div className="cr-cell cr-span-12 cr-scroll-rise">
             <HeroInstrument goal={topic} />
           </div>
         </section>
