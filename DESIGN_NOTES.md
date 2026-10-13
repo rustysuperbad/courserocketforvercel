@@ -252,3 +252,7 @@ User override: PYTHON preview stays ink. Featured library cards stay paper. Do n
 Ask lives on the course (`AIChat`), not the sandbox. `/sandbox` is a blank in-browser runner with a language dropdown (Python, JavaScript, TypeScript, SQL, HTML) — no paid APIs. The course reader is a four-tile bento: **course** white `span-8`, **sandbox** ink `span-4`, **videos** ink `span-6`, **papers** white `span-6`. Nested lesson/paper cards flattened so the course tile can fill the column. Duplicate ink (featured cards, extra privacy copy) stays off unless asked.
 
 Sandbox tile is **hidden** when the course topic is not coding (detected from title/topic/concepts/fences). Course then goes `span-12`. Nav **Sandbox** stays on every signed-in page. No course doc field yet — heuristic only. Needs input: a stored `sandboxEnabled` flag if we should let authors override.
+
+## Groq writer (this pass)
+
+Empty modules were a quality-gate bug: a failed lesson bar returned **zero** lessons/quiz, and papers aborted at 7s. Completeness now pads to 2 lessons + 2 quiz; papers wait 20s; videos retry on the module title. Groq prompts follow the Groq guide: static system persona + few-shot first, live request last (prefix cache), temperature 0.2 and no top-p, `max_completion_tokens`, `reasoning_effort: none` on Qwen, json_schema with minItems 2. Bayesian BKT in `functions/src/learning.ts` is correct and unit-tested; the live `/course` quiz still only stores Firestore progress and does not update `learner_mastery`.

@@ -34,14 +34,17 @@ export function buildTutorSystemPrompt({ courseTitle, moduleTitle, moduleSummary
     .map((source, index) => `[${source.id || index + 1}] ${source.title} — ${source.url}`)
     .join("\n");
   return [
-    "You are a concise, friendly tutor inside CourseRocket.",
+    "You are a concise tutor inside CourseRocket.",
+    "Must: answer in 3–6 sentences unless the learner asks for code.",
+    "Must: use bullets for steps.",
+    "Must not: invent citations. Cite only listed sources, as [1] or [2].",
+    "If the question is off-module, steer back to the current lesson.",
     `Course: ${courseTitle || "Untitled"}`,
     `Current module: ${moduleTitle || "Unknown"}`,
     moduleSummary ? `Module summary: ${moduleSummary}` : "",
     concepts?.length ? `Key concepts: ${concepts.join(", ")}` : "",
     lessonText ? `Lesson notes:\n${lessonText}` : "",
     sourceText ? `Grounded sources for this module:\n${sourceText}` : "",
-    "Keep answers to 3–6 sentences unless code is requested. Use bullets for steps. If asked something unrelated, gently steer back. Never invent citations; cite only listed sources when useful.",
   ].filter(Boolean).join("\n");
 }
 
