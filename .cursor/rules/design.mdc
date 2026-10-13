@@ -1,0 +1,90 @@
+---
+description: CourseRocket art-directed frontend — locked palette, Dala logic, anti-template, craft
+alwaysApply: true
+---
+
+# CourseRocket design system
+
+Work on branch `redesign`, never `main`. Small, clearly named commits. Frontend only: `src/components`, `src/pages`, styles, `index.html`. Do not modify `src/lib` logic, `functions/`, `supabase/`, Firebase config, or `.env`.
+
+## CONSTRAINTS
+
+- Colour palette is locked: extract current colours into tokens and use only those plus tints, shades and alphas. No new hues. Map them onto roles: canvas, text-1/2/3, single accent, emphasis.
+- Frontend only: src/components, src/pages, styles, index.html. Do NOT modify src/lib logic, functions/, supabase/, firebase config or .env. You may read existing exports/state (e.g. job progress) to drive UI. Missing data -> build against a marked mock and list under "Needs input".
+- All routes and features keep working.
+- Fonts: Syne (display) + Inter (body), self-hosted via Fontsource. No Lenis/smooth-scroll libraries. Do not use PPNeueMontreal (commercial).
+- Demos/previews never trigger paid API calls; use scripted data.
+
+## THESIS
+
+A precision instrument for curious minds: calm, editorial, spacious. One or two ideas per viewport, huge confident type, a living generative visual, and motion that explains what the system is doing.
+
+## DALA PRINCIPLES
+
+- Hierarchy through scale, not weight: Syne at 400 for all headings, fluid display sizes (clamp, up to ~113px desktop), letter-spacing -0.04em from 42px upward.
+- Body in Inter weight 200-300, 18px, line-height 1.5. If a thin weight fails AA contrast, use 300 before touching colour.
+- Small labels and nav: 14px, uppercase, weight 600, tracking 0.025em.
+- Floating typography: no card chrome by default (no borders, shadows or panels). Separation comes from whitespace, scale and contrast.
+- Layout: two-column asymmetric zigzag (text/visual alternating), max width 1280px, 6px spacing base unit, 60-120px section gaps.
+- One filled primary action per view; one consistent 24px radius token (full pill only for small tags and buttons).
+- One accent colour, used for actions and emphasis only. UI components stay flat. Gradients only in the logo and the hero visual.
+- Signature = an ambient generative field, not photography or screenshots.
+- Exceptions where function beats style: forms, inputs, quizzes and focus states need visible affordances. Accessibility wins every conflict.
+- DO NOT copy: Dala's brain/triangle constellation, name, colours or copy. Create our own signature (see below).
+- Ignore malformed values in the reference file (e.g. "#15846", "60-120px" as a CSS value).
+- If our existing palette is light, apply the principles to our surfaces instead of forcing black.
+
+## ANTI-TEMPLATE
+
+Any of these = fail:
+
+- Purple-blue default gradients and glow blobs
+- Centred hero with pill badge + two buttons + screenshot
+- Rows of identical cards
+- Decorative emoji
+- Generic copy ("Unlock your potential") — rewrite microcopy to be specific without changing meaning
+- Opacity-only hover states
+- One fade-up on everything
+- Inconsistent spacing, radii or easing
+
+## CRAFT
+
+One motion language (small set of duration/spring tokens). Concentric radii, optical alignment, generous hit areas. Every interactive element has hover, focus-visible, active, disabled, loading and error states. Skeletons match real layouts, zero layout shift. WCAG 2.2 AA, full keyboard support, reduced-motion = calm but fully functional. If an existing colour pair fails AA, make the smallest same-hue lightness fix and log before/after ratios. Performance: route-level code splitting, lazy-load heavy libs, animate transform/opacity only, Lighthouse 95+, LCP < 2.0s, CLS < 0.05.
+
+## Our signature visual
+
+A living knowledge graph: concept nodes linked by source edges that assembles as the visitor types a learning goal, drifts ambiently, and responds to the cursor. Build with Canvas 2D or OGL (lazy-loaded). Cap devicePixelRatio, pause when off-screen, render a static frame for prefers-reduced-motion, provide a no-JS/low-power fallback.
+
+Do not copy Dala's brain/triangle constellation.
+
+## Skiper UI
+
+Skiper targets Next.js + shadcn + Tailwind + Motion. Set up shadcn and Tailwind in this Vite app, then install FREE components one at a time (`npx shadcn add @skiper-ui/skiperNN`), adapting each: remove "use client", replace next/image and next/link, fix aliases, restyle to our tokens. Never copy premium components without a licence; take inspiration only. Candidates: dynamic island (free), image reveal, hover members, tooltip, cursor trail. Use one only where it serves content.
+
+## Signature experiences (required)
+
+1. Landing hero as a live instrument: type a goal, watch the graph and a course skeleton assemble on scripted data.
+2. Generation theatre: the wait becomes the showpiece, visualising the pipeline stages (understanding level, finding sources, reading papers, picking videos, writing lessons, building quizzes) from the app's existing progress state.
+3. Course reader: sticky progress rail, sources as expanding citation chips, mastery map, quizzes with physical-feeling feedback.
+4. Dashboard as a library: varied card emphasis, borderless cards where progress is part of the form, rich hover reveals, Cmd/Ctrl+K palette (navigate, generate prefilled but not fired, sign out).
+5. Branded intro (mark + wordmark, ~1.2s, once per session, skippable).
+6. Login and profile designed to the same standard.
+
+## Critique loop
+
+Build → screenshot desktop + mobile → write 3 specific anti-template flaws → fix. Never call a page done after one pass.
+
+## Stages
+
+One stage per chat. Read files before editing.
+
+1. Tokens, type, primitives, motion
+2. Landing + signature visual
+3. Generation theatre
+4. Course reader + quizzes
+5. Dashboard, palette, auth, profile
+6. Global polish (transitions, loading, errors, empty, mobile)
+7. Perf/a11y/cross-browser audit with real numbers
+8. Taste pass: remove anything that doesn't earn its place
+
+Log non-trivial decisions in `DESIGN_NOTES.md`. Stop and ask only for destructive actions, anything costing money, or info only the user has.
