@@ -29,16 +29,18 @@ export default function Landing() {
       <Navbar />
       <main id="main">
         <section className="cr-landing-hero">
-          <div className="cr-scroll-rise">
+          <div className="cr-cell cr-span-8 cr-scroll-rise">
             <p className="cr-kicker">A course from a sentence</p>
             <h1 className="cr-landing-title">
-              Tell us what you want<br />to get good at.
+              Tell us what you want to get good at.
             </h1>
             <p className="cr-landing-subtitle">
               Type a goal, add what you already know, and we build a course you can actually continue — lessons, a quiz, something to watch.
             </p>
+          </div>
+          <div className="cr-cell cr-span-4 cr-scroll-rise">
+            <label className="cr-sr-only" htmlFor="landing-topic">What do you want to get good at?</label>
             <div className="cr-hero-form">
-              <label className="cr-sr-only" htmlFor="landing-topic">What do you want to get good at?</label>
               <input
                 id="landing-topic"
                 className="cr-input"
@@ -61,27 +63,27 @@ export default function Landing() {
             </div>
             <p className="cr-example-note">Any subject works. The marked chip is only a sample of a path assembling.</p>
           </div>
-          <div className="cr-scroll-shift">
+          <div className="cr-cell cr-cell-soft cr-span-12 cr-scroll-shift">
             <HeroInstrument goal={topic} />
           </div>
         </section>
 
         <section className="cr-proof cr-scroll-rise" aria-label="How a course is built">
-          <span>Your goal</span>
-          <span>What you already know</span>
-          <span>Lessons and a quiz</span>
-          <span>A place to try it</span>
+          <span className="cr-cell cr-span-3">Your goal</span>
+          <span className="cr-cell cr-span-3">What you already know</span>
+          <span className="cr-cell cr-span-3">Lessons and a quiz</span>
+          <span className="cr-cell cr-span-3">A place to try it</span>
         </section>
 
         <section className="cr-editorial">
-          <div className="cr-scroll-rise">
+          <div className="cr-cell cr-cell-ink cr-span-5 cr-scroll-rise">
             <p className="cr-kicker">Keep it light</p>
             <h2>Make a course. Keep going.</h2>
             <p className="cr-body">
               Make a course, keep going, glance at your stats. If you want to run a tiny program, there is a sandbox from Courses.
             </p>
           </div>
-          <div className="cr-split-list">
+          <div className="cr-split-list cr-span-7">
             {[
               ["01", "Say the goal", "One sentence is enough. Spanish, chess, guitar — whatever you are actually trying to learn."],
               ["02", "Mention what you know", "We skip the boring recap and start at your edge."],

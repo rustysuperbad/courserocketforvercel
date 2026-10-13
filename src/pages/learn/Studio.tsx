@@ -35,7 +35,7 @@ export default function Studio() {
     <div className="cr-shell">
       <Navbar />
       <main className="cr-studio" id="main">
-        <section className="cr-studio-pane cr-scroll-rise">
+        <section className="cr-studio-pane cr-span-5 cr-scroll-rise">
           <p className="cr-kicker">Sandbox</p>
           <h1>Try a tiny program.</h1>
           <p className="cr-studio-lede">
@@ -66,7 +66,7 @@ export default function Studio() {
             ))}
           </ol>
         </section>
-        <section className="cr-studio-pane cr-scroll-shift" aria-label="Python sandbox">
+        <section className="cr-studio-pane cr-span-7 cr-scroll-shift" aria-label="Python sandbox">
           <PythonSandbox
             heading="main.py"
             code={code}

@@ -90,7 +90,7 @@ export default function Login() {
       <Navbar minimal />
 
       <main id="main" className="cr-login-layout">
-        <div className="cr-login-copy">
+        <div className="cr-cell cr-cell-ink cr-span-7 cr-login-copy">
           <p className="cr-kicker">Your courses live here</p>
           <h1>{isSignUp ? "Create your account" : "Sign in"}</h1>
           <p className="cr-body">
@@ -105,6 +105,7 @@ export default function Login() {
           </ul>
         </div>
 
+        <div className="cr-cell cr-span-5 cr-login-panel">
         <div className="cr-login-form">
           <div className="cr-login-tabs" role="tablist" aria-label="Account">
             <button
@@ -181,6 +182,7 @@ export default function Login() {
               {loading ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}
             </button>
           </form>
+        </div>
         </div>
       </main>
     </div>

@@ -155,7 +155,8 @@ Demos already avoid paid APIs (`scriptedDemos.ts`, palette without `autostart=1`
 
 - Live courses were the **offline template** (`Introduction to {prompt}`, `Tools & Ecosystem — {prompt}`). The Edge writer defaulted to `gpt-6.1-sol` / `gemini-3.8-flash` (Cursor slugs, not API models), every call failed, and the client swallowed that into filler.
 - Defaults are now `gpt-4.1-mini` and `gemini-2.0-flash`. Outline failure **fails the run** instead of publishing a fake syllabus. Module write failure leaves the module empty with regenerate, never the echo template.
-- Generate click goes to a full **ink “Started”** overlay, then the course theatre. Course chrome is paper/ink (the gray rail was leftover midnight inline styles). Logo mark is ink, not indigo-cyan.
+- Generate click goes to a full **ink “Started”** overlay, then the course theatre. Logo mark is the original indigo–cyan gradient.
+- **Bento is locked site-wide:** 12-column grid, 24px cells, 12px gap, mixed spans (3/4/5/7/8). Ink cells for one emphasis tile per view. Nested surfaces use 18px. Pill radius only on tags and buttons. Lesson, quiz, notes, library, login, landing, sandbox, privacy, and stats all sit in cells.
 
 ## Decisions (this chat)
 
