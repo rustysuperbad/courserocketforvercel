@@ -79,17 +79,17 @@ export default function Login() {
 
       <main id="main" className="cr-login-layout">
         <div className="cr-login-copy">
-          <p className="cr-kicker">This account keeps the path</p>
-          <h1>{isSignUp ? "Create your account" : "Sign in to your path"}</h1>
+          <p className="cr-kicker">Your courses live here</p>
+          <h1>{isSignUp ? "Create your account" : "Sign in"}</h1>
           <p className="cr-body">
             {isSignUp
-              ? "Courses, progress, and cited sources stay on this account so you can resume on another device."
-              : "Pick up the last module, quiz, and sources — not a new path."}
+              ? "Save the courses you make and pick them up on another device."
+              : "Your courses and progress are waiting."}
           </p>
           <ul className="cr-login-points">
-            <li><span className="cr-kicker">01</span> Progress stays on this account</li>
-            <li><span className="cr-kicker">02</span> Videos and papers sit next to the lesson</li>
-            <li><span className="cr-kicker">03</span> Resume on another device without a new path</li>
+            <li><span className="cr-kicker">01</span> Courses stay on this account</li>
+            <li><span className="cr-kicker">02</span> Progress follows you</li>
+            <li><span className="cr-kicker">03</span> Open them on another device</li>
           </ul>
         </div>
 

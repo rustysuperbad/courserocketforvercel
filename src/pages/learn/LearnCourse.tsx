@@ -61,7 +61,7 @@ export default function LearnCourse() {
             {module && <ModuleView module={module} courseId={data.course.id} />}
             <OutcomeBlock />
             <ProjectBlock courseId={data.course.id} />
-            <p className="lr-muted" style={{ marginTop: 18 }}><Link className="cr-link" to="/learn">Back to Learn</Link></p>
+            <p className="lr-muted" style={{ marginTop: 18 }}><Link className="cr-link" to="/dashboard">Back to courses</Link></p>
           </>
         )}
       </main>
@@ -258,7 +258,7 @@ function ProjectBlock({ courseId }: { courseId: string }) {
   return (
     <section style={{ marginTop: 22 }} aria-labelledby="project-heading">
       <h3 id="project-heading">Final project</h3>
-      <p>Explain, in your own words, how a browser fetch of https://example.com travels across a network. The rubric looks for DNS, TCP, TLS, HTTP, and the default gateway.</p>
+      <p>In your own words, explain the main idea of this course as if you were teaching a friend.</p>
       <label className="lr-field">
         <span>Your explanation</span>
         <textarea className="cr-input" rows={6} maxLength={8000} value={writeup} onChange={(event) => setWriteup(event.target.value)} />

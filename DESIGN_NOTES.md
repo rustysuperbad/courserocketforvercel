@@ -218,4 +218,10 @@ Radius dropped from 24px to **2px** — same token, sharper. User override: too 
 
 Numbers use Syne 400 + `tabular-nums` (`--font-number`). Studio lede is 14px / `text-3`, not body-18 competing with the display title.
 
-Python sandbox is a shared component (`src/components/learn/PythonSandbox.tsx`): Pyodide singleton, stdout capture, wired into Studio (run the sketch) and Practice. No paid APIs.
+Python sandbox is a shared component (`src/components/learn/PythonSandbox.tsx`): Pyodide singleton, stdout capture, wired into Studio (run the sketch). No paid APIs.
+
+## Simple product (this pass)
+
+Networking is **not** the product. Landing default goal is chess. One chip is labelled **example**; the instrument marks that path “Example only”. Networking copy is gone from nav, dashboard, stats, login, privacy, and the sandbox starter. It only appears if the visitor types it (scripted landing preview, or a course they generate).
+
+Jargon dropped: jobs, diagnostics, launch domain, approved sources, library. Signed-in IA is **Courses** + **Stats**. What you already know is a field on the generate form (appended into the existing topic string — no `src/lib` change). Sandbox lives at `/sandbox`, linked from Courses, not a third nav item. Old `/learn*` routes redirect.

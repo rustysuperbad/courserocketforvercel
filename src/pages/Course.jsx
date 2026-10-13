@@ -408,7 +408,7 @@ export default function Course() {
             <div style={s.errorBody}>{loadError}</div>
             <div style={{ display: "flex", gap: 10, marginTop: 18, justifyContent: "center" }}>
               <button className="cr-btn cr-btn-ghost" onClick={() => navigate("/dashboard")}>
-                Back to Dashboard
+                Back to courses
               </button>
               <button className="cr-btn cr-btn-primary" onClick={() => window.location.reload()}>
                 Retry
@@ -430,7 +430,7 @@ export default function Course() {
             <div style={s.errorBody}>This course may have been deleted or you don't have access.</div>
             <div style={{ display: "flex", gap: 10, marginTop: 18, justifyContent: "center" }}>
               <button className="cr-btn cr-btn-primary" onClick={() => navigate("/dashboard")}>
-                Back to Dashboard
+                Back to courses
               </button>
             </div>
           </div>
@@ -458,7 +458,7 @@ export default function Course() {
             <div style={s.genWaitTitle}>Designing your course</div>
             <div style={s.genWaitBody}>{displayCourse.generationMessage || "This usually takes less than a minute."}</div>
             <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/dashboard")} style={{ marginTop: 8 }}>
-              ← Dashboard
+              ← Courses
             </button>
           </div>
         </div>
@@ -479,7 +479,7 @@ export default function Course() {
                 Retry generation
               </button>
               <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/dashboard")}>
-                Back to Dashboard
+                Back to courses
               </button>
             </div>
           </div>
@@ -503,7 +503,7 @@ export default function Course() {
             <div style={s.errorTitle}>Nothing to display yet</div>
             <div style={s.errorBody}>This course has no modules.</div>
             <button type="button" className="cr-btn cr-btn-primary" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
+              Back to courses
             </button>
           </div>
         </div>
@@ -612,7 +612,7 @@ export default function Course() {
                 </button>
               )}
               <button type="button" className="cr-btn cr-btn-ghost cr-sub-btn" onClick={() => navigate("/dashboard")}>
-                Dashboard
+                Courses
               </button>
             </div>
           </div>

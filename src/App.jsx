@@ -6,13 +6,6 @@ const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Course = lazy(() => import("./pages/Course"));
 const Profile = lazy(() => import("./pages/Profile"));
-const LearnHome = lazy(() => import("./pages/learn/LearnHome"));
-const Onboarding = lazy(() => import("./pages/learn/Onboarding"));
-const LearnCourse = lazy(() => import("./pages/learn/LearnCourse"));
-const Review = lazy(() => import("./pages/learn/Review"));
-const Practice = lazy(() => import("./pages/learn/Practice"));
-const Analytics = lazy(() => import("./pages/learn/Analytics"));
-const Notes = lazy(() => import("./pages/learn/Notes"));
 const Studio = lazy(() => import("./pages/learn/Studio"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 import { useAuth } from "./context/AuthContext";
@@ -59,14 +52,15 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><DeferredPage><Dashboard /></DeferredPage></ProtectedRoute>} />
         <Route path="/course/:id" element={<ProtectedRoute><DeferredPage><Course /></DeferredPage></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><DeferredPage><Profile /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn" element={<ProtectedRoute><DeferredPage><LearnHome /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/onboarding" element={<ProtectedRoute><DeferredPage><Onboarding /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/course/:courseId" element={<ProtectedRoute><DeferredPage><LearnCourse /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/review" element={<ProtectedRoute><DeferredPage><Review /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/practice" element={<ProtectedRoute><DeferredPage><Practice /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/analytics" element={<ProtectedRoute><DeferredPage><Analytics /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/notes" element={<ProtectedRoute><DeferredPage><Notes /></DeferredPage></ProtectedRoute>} />
-        <Route path="/learn/studio" element={<ProtectedRoute><DeferredPage><Studio /></DeferredPage></ProtectedRoute>} />
+        <Route path="/sandbox" element={<ProtectedRoute><DeferredPage><Studio /></DeferredPage></ProtectedRoute>} />
+        <Route path="/learn" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/learn/onboarding" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/learn/review" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/learn/practice" element={<Navigate to="/sandbox" replace />} />
+        <Route path="/learn/notes" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/learn/studio" element={<Navigate to="/sandbox" replace />} />
+        <Route path="/learn/analytics" element={<Navigate to="/profile" replace />} />
+        <Route path="/learn/course/:courseId" element={<Navigate to="/dashboard" replace />} />
         <Route path="/privacy" element={<DeferredPage><Privacy /></DeferredPage>} />
       </Routes>
     </BrowserRouter>

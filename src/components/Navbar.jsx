@@ -21,12 +21,10 @@ export default function Navbar({ minimal = false }) {
             <img src="/logo-mark.png" alt="" className="cr-brand-mark" draggable={false} />
             <span className="cr-brand-word">course<span>rocket</span></span>
           </button>
-          {!minimal && (
+          {!minimal && user && (
             <div className="cr-nav-links" aria-label="Main navigation">
-              {user && <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Library</NavLink>}
-              {user && <NavLink active={location.pathname.startsWith("/learn") && !location.pathname.includes("studio")} onClick={() => navigate("/learn")}>Learn</NavLink>}
-              {user && <NavLink active={location.pathname === "/learn/studio"} onClick={() => navigate("/learn/studio")}>Studio</NavLink>}
-              <NavLink active={location.pathname === "/"} onClick={() => navigate("/")}>Home</NavLink>
+              <NavLink active={location.pathname === "/dashboard"} onClick={() => navigate("/dashboard")}>Courses</NavLink>
+              <NavLink active={location.pathname === "/profile"} onClick={() => navigate("/profile")}>Stats</NavLink>
             </div>
           )}
         </div>

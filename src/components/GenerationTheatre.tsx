@@ -18,7 +18,7 @@ export default function GenerationTheatre({ stage, note, percent = 0, status }: 
     <section className="cr-theatre" aria-label="Course generation">
       <div className="cr-theatre-island">
         <span className="cr-theatre-dot" aria-hidden="true" />
-        <span>{status === "failed" ? "Stopped" : status === "blocked" ? "Waiting on sources" : label}</span>
+        <span>{status === "failed" ? "Stopped" : status === "blocked" ? "Still gathering material" : label}</span>
         <span className="cr-kind">{Math.round(percent)}%</span>
       </div>
       <ol className="cr-theatre-steps">
