@@ -66,7 +66,7 @@ export default function Studio() {
             ))}
           </ol>
         </section>
-        <section className="cr-studio-pane cr-span-7 cr-scroll-shift" aria-label="Python sandbox">
+        <section className="cr-studio-pane cr-span-7 cr-scroll-rise" aria-label="Python sandbox">
           <PythonSandbox
             heading="main.py"
             code={code}
