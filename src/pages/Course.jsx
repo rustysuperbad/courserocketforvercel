@@ -704,7 +704,7 @@ export default function Course() {
         <main style={s.main} className="cr-course-main">
           {!showQuiz ? (
             <div className="cr-fade cr-course-content-column" style={s.contentColumn}>
-              <div style={s.moduleHeader}>
+              <div className="cr-cell" style={s.moduleHeader}>
                 <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
                 <h1 style={s.moduleTitle}>{module.title}</h1>
                 <p style={s.moduleSummary}>{module.summary}</p>
@@ -1697,9 +1697,10 @@ const s = {
   noteCard: {
     padding: "22px 24px",
     borderLeft: "none",
-    background: "linear-gradient(100deg, rgba(99,102,241,0.1), rgba(99,102,241,0.02))",
-    borderRadius: "var(--radius-lg)",
-    boxShadow: "inset 3px 0 0 rgba(129,140,248,0.5), 0 16px 40px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.04)",
+    background: "var(--surface)",
+    border: "var(--hairline)",
+    borderRadius: "var(--radius)",
+    boxShadow: "none",
   },
   userNotesText: {
     fontSize: 15.5,
@@ -1775,15 +1776,16 @@ const s = {
   layout: {
     display: "grid",
     gridTemplateColumns: `${SIDEBAR_W_PX}px 1fr`,
+    gap: 12,
     minHeight: `calc(100vh - ${COURSE_SCROLL_OFFSET_PX}px)`,
   },
 
   sidebar: {
-    borderRight: "var(--hairline)",
+    borderRight: "none",
     boxShadow: "none",
-    padding: "22px 12px",
+    padding: "22px 18px",
     overflowY: "auto",
-    background: "var(--canvas)",
+    background: "transparent",
     position: "sticky",
     top: COURSE_SCROLL_OFFSET_PX,
     height: `calc(100vh - ${COURSE_SCROLL_OFFSET_PX}px)`,
@@ -1921,13 +1923,13 @@ const s = {
 
   conceptsRow: { display: "flex", flexWrap: "wrap", gap: 10 },
   conceptTag: {
-    background: "linear-gradient(125deg, rgba(99,102,241,0.18), rgba(99,102,241,0.06))",
-    border: "none",
-    color: "var(--text-3)",
+    background: "var(--surface)",
+    border: "var(--hairline)",
+    color: "var(--text-2)",
     fontSize: 12.5,
     padding: "7px 14px",
-    borderRadius: 999,
-    boxShadow: "0 6px 22px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.06)",
+    borderRadius: "var(--radius-pill)",
+    boxShadow: "none",
     letterSpacing: "0.02em",
     fontWeight: 500,
   },
@@ -1936,9 +1938,9 @@ const s = {
   videoList: { display: "flex", flexDirection: "column", gap: 18 },
   lessonBlock: {
     padding: "36px 38px 40px",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid rgba(148,163,184,0.07)",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.03)",
+    borderRadius: "var(--radius)",
+    border: "var(--hairline)",
+    boxShadow: "none",
     background: "var(--surface)",
   },
   lessonHeading: {
@@ -1955,9 +1957,9 @@ const s = {
   lessonSectionWrap: {
     marginBottom: 26,
     padding: "20px 22px 22px",
-    borderRadius: 11,
-    background: "rgba(255,255,255,0.02)",
-    border: "1px solid rgba(148,163,184,0.06)",
+    borderRadius: "var(--radius-nested)",
+    background: "var(--surface-2)",
+    border: "var(--hairline)",
   },
   lessonSectionKind: {
     default: {},
@@ -2152,12 +2154,11 @@ const s = {
     cursor: "pointer",
     textDecoration: "none",
     color: "inherit",
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid rgba(148,163,184,0.07)",
-    boxShadow:
-      "0 12px 36px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)",
-    background: "linear-gradient(145deg, var(--surface) 0%, rgba(26,34,56,0.85) 100%)",
-    transition: "transform 160ms ease, box-shadow 160ms ease",
+    borderRadius: "var(--radius)",
+    border: "var(--hairline)",
+    boxShadow: "none",
+    background: "var(--surface)",
+    transition: "background 160ms ease, border-color 160ms ease",
   },
   paperIcon: {
     width: 32,
@@ -2199,10 +2200,10 @@ const s = {
     fontSize: 14,
     color: "var(--text-3)",
     padding: "16px 20px",
-    background: "rgba(255,255,255,0.035)",
+    background: "var(--surface)",
     borderRadius: "var(--radius)",
-    border: "none",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.12)",
+    border: "var(--hairline)",
+    boxShadow: "none",
     lineHeight: 1.6,
   },
 
@@ -2260,11 +2261,10 @@ const s = {
   questionCard: {
     padding: "26px 28px",
     marginBottom: 18,
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid rgba(148,163,184,0.08)",
-    boxShadow:
-      "0 16px 42px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)",
-    background: "linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%)",
+    borderRadius: "var(--radius)",
+    border: "var(--hairline)",
+    boxShadow: "none",
+    background: "var(--surface)",
   },
   questionNum: {
     fontSize: 11,
@@ -2288,14 +2288,14 @@ const s = {
     alignItems: "center",
     gap: 12,
     padding: "14px 16px",
-    background: "rgba(255,255,255,0.035)",
-    border: "none",
-    borderRadius: "var(--radius)",
+    background: "var(--surface-2)",
+    border: "var(--hairline)",
+    borderRadius: "var(--radius-nested)",
     cursor: "pointer",
     fontSize: 15,
     color: "var(--text-2)",
-    transition: "all 140ms ease",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.12)",
+    transition: "background 140ms ease, border-color 140ms ease",
+    boxShadow: "none",
     lineHeight: 1.55,
   },
   optSelected: {
@@ -2343,10 +2343,10 @@ const s = {
     padding: "38px 32px",
     textAlign: "center",
     marginTop: 16,
-    borderRadius: "var(--radius-lg)",
-    border: "1px solid rgba(148,163,184,0.08)",
-    boxShadow:
-      "0 20px 50px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)",
+    borderRadius: "var(--radius)",
+    border: "var(--hairline)",
+    background: "var(--surface)",
+    boxShadow: "none",
   },
   scoreNum: {
     fontFamily: "var(--font-display)",

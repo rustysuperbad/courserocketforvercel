@@ -94,12 +94,13 @@
   --content-max: 1120px;
   --page-max: 1280px;
 
-  /* Sharp edges (paper instrument). Tiny tags may still use --radius-pill. */
-  --radius: 2px;
-  --radius-sm: 2px;
-  --radius-lg: 2px;
-  --radius-nested: 2px;
-  --radius-pill: 2px;
+  /* One 24px radius for bento cells. Nested surfaces step in by 6px. Pill only for tags and buttons. */
+  --radius: 24px;
+  --radius-sm: 18px;
+  --radius-lg: 24px;
+  --radius-nested: 18px;
+  --radius-pill: 999px;
+  --bento-gap: var(--space-12);
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

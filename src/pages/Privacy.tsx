@@ -62,10 +62,10 @@ export default function Privacy() {
           This page is a short placeholder until a fuller policy is written.
         </p>
         <div className="cr-legal-grid">
-          <div>
+          <div className="cr-cell cr-cell-ink cr-span-5">
             <p className="cr-kicker">What we store</p>
           </div>
-          <div>
+          <div className="cr-cell cr-span-7">
             <ul>
               <li>Your sign-in (email or Google).</li>
               <li>Courses you generate and your progress on them.</li>

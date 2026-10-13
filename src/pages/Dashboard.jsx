@@ -355,15 +355,19 @@ export default function Dashboard() {
       <Navbar />
 
       <div className="cr-page cr-dashboard-body" style={s.body}>
-        <div style={s.heading} className="cr-dashboard-heading cr-scroll-rise">
-          <div>
+        <div className="cr-bento cr-dashboard-heading cr-scroll-rise">
+          <div className="cr-cell cr-span-6">
             <div className="cr-page-kicker">Courses</div>
             <h1 style={s.h1}>What are you learning?</h1>
             <p style={s.sub}>Make a course, pick one up, or see how far you have got. That is the whole app.</p>
           </div>
-          <div className="cr-stat-row">
+          <div className="cr-stat cr-span-2">
             <Stat label="Courses" value={stats.total} />
+          </div>
+          <div className="cr-stat cr-span-2">
             <Stat label="Modules done" value={`${stats.completedModules}/${stats.totalModules}`} />
+          </div>
+          <div className="cr-stat cr-span-2">
             <Stat label="Avg progress" value={`${stats.avg}%`} />
           </div>
         </div>
@@ -507,7 +511,7 @@ export default function Dashboard() {
         {coursesLoading && displayCourses.length === 0 ? (
           <div style={s.courseGrid}>
             {[0, 1, 2].map((i) => (
-              <div key={i} className="cr-card" style={{ ...s.courseCard, padding: 0 }}>
+              <div key={i} className="cr-card cr-lib-card" style={{ ...s.courseCard, padding: 0 }}>
                 <div className="cr-skeleton" style={{ height: 14, width: "40%", margin: "22px 22px 12px" }} />
                 <div className="cr-skeleton" style={{ height: 18, width: "75%", margin: "0 22px 8px" }} />
                 <div className="cr-skeleton" style={{ height: 12, width: "55%", margin: "0 22px 14px" }} />
@@ -516,7 +520,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : displayCourses.length === 0 ? (
-          <div className="cr-empty-state">
+          <div className="cr-empty-state cr-cell">
             <p>No courses yet. Type a goal above and the first one will show up here.</p>
           </div>
         ) : filteredCourses.length === 0 ? (
@@ -542,10 +546,10 @@ export default function Dashboard() {
 
 function Stat({ label, value }) {
   return (
-    <div className="cr-stat">
+    <>
       <div className="cr-stat-value cr-num">{value}</div>
       <div className="cr-stat-label">{label}</div>
-    </div>
+    </>
   );
 }
 

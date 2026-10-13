@@ -158,9 +158,9 @@ export default function Profile() {
         </div>
 
         {loading && courses.length === 0 ? (
-          <div style={s.grid}>
+          <div className="cr-library">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="cr-card" style={{ padding: 18 }}>
+              <div key={i} className="cr-card cr-lib-card" style={{ padding: 18 }}>
                 <div className="cr-skeleton" style={{ height: 16, width: "70%", marginBottom: 8 }} />
                 <div className="cr-skeleton" style={{ height: 12, width: "40%", marginBottom: 14 }} />
                 <div className="cr-skeleton" style={{ height: 6, width: "100%" }} />
@@ -180,7 +180,7 @@ export default function Profile() {
             </button>
           </div>
         ) : (
-          <div style={s.grid}>
+          <div className="cr-library">
             {courses.map((c) => {
               const totalModules = c.modules?.length || 0;
               const fromProgress = profile?.courseProgress?.[c.id];
@@ -199,7 +199,7 @@ export default function Profile() {
               return (
                 <div
                   key={c.id}
-                  className="cr-card"
+                  className="cr-card cr-lib-card"
                   style={s.courseCard}
                   onClick={() => navigate(`/course/${c.id}`)}
                 >
@@ -308,8 +308,8 @@ const s = {
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: 14,
+    gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+    gap: 12,
   },
   courseCard: {
     padding: 20,
@@ -317,6 +317,7 @@ const s = {
     display: "flex",
     flexDirection: "column",
     gap: 10,
+    gridColumn: "span 4",
   },
   cardTopRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
   levelPill: {
