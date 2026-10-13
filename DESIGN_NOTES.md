@@ -245,20 +245,10 @@ Auto-commit: project `stop` hook `.cursor/hooks/auto-commit-push.sh` commits saf
 
 The stored `YOUTUBE_API_KEY` is a valid Google key, but **every YouTube Data API v3 method is blocked** on it (`SearchService.List`, `VideoService.List`, … → 403 PERMISSION_DENIED). That is an API-restriction on the key, not missing wiring. Search now tries Data API first, then YouTube’s public web search if the key is blocked, and the client no longer caches empty 403s or drop an entire result set on the English-language gate. Enable YouTube Data API v3 on the `courserocket26` key (API restrictions must include it; no HTTP-referrer restriction for Edge) to use the official path.
 
-Landing PYTHON preview is the same ink cell as “Keep it light” (no gray slab, no scroll-shift under the nav). Sandbox editor/output uses the same ink code tiles as the course reader.
+User override: PYTHON preview stays ink. Featured library cards stay paper. Do not add more ink without asking.
 
-## Ink map (this pass)
+## Course bento (this pass)
 
-Ink is a **statement**, not a theme. One dark tile per view. Lists, forms, stats, and long reading stay paper.
+Ask lives on the course (`AIChat`), not the sandbox. `/sandbox` is a blank in-browser runner with a language dropdown (Python, JavaScript, TypeScript, SQL, HTML) — no paid APIs. The course reader is a four-tile bento: **course** white `span-8`, **sandbox** ink `span-4`, **videos** ink `span-6`, **papers** white `span-6`. Nested lesson/paper cards flattened so the course tile can fill the column. Duplicate ink (featured cards, extra privacy copy) stays off unless asked.
 
-| Surface | Ink | Paper |
-| --- | --- | --- |
-| Landing | “Keep it light” only | Hero, form, PYTHON preview, proof strip |
-| Login | Copy column | Form |
-| Privacy | “As little as we can.” | The list and export/delete |
-| Courses | Featured / in-progress library card | Heading, stats, generator, other cards |
-| Course reader | Code blocks only | Module, lessons, quiz, videos |
-| Sandbox | Editor + output | Brief and chrome |
-| Stats | — | Header and numbers |
-
-Full-width ink on the PYTHON preview was too much midnight. Featured library card is the signed-in equivalent of Keep it light.
+Sandbox tile is **hidden** when the course topic is not coding (detected from title/topic/concepts/fences). Course then goes `span-12`. Nav **Sandbox** stays on every signed-in page. No course doc field yet — heuristic only. Needs input: a stored `sandboxEnabled` flag if we should let authors override.

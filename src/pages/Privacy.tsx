@@ -64,10 +64,6 @@ export default function Privacy() {
         <div className="cr-legal-grid">
           <div className="cr-cell cr-cell-ink cr-span-5">
             <p className="cr-kicker">What we store</p>
-            <h2>As little as we can.</h2>
-            <p className="cr-body">
-              Sign-in, the courses you make, and how far you have got. Notes only if you write them.
-            </p>
           </div>
           <div className="cr-cell cr-span-7">
             <ul>

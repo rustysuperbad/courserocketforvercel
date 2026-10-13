@@ -18,16 +18,20 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import AIChat from "../components/AIChat";
+import PythonSandbox from "../components/learn/PythonSandbox";
+import {
+  SANDBOX_STARTERS,
+  courseNeedsSandbox,
+  detectSandboxLanguage,
+  moduleStarter,
+} from "../components/learn/sandboxLanguages";
 import GenerateStartOverlay from "../components/GenerateStartOverlay";
+import "../styles/learn.css";
 import GenerationTheatre from "../components/GenerationTheatre";
 import { splitLearnerRequest } from "../lib/lessonContentQuality";
 
 /** Total offset from viewport top where course chrome begins (sticky sub-bar under global nav). */
 const COURSE_SCROLL_OFFSET_PX = 118;
-
-/** Main column gutters + readable content measure. */
-const MAIN_PAD = { px: "32px", py: "32px", pb: "64px" };
-const CONTENT_MAX_W = "var(--content-max)";
 
 const SIDEBAR_W_PX = 300;
 
@@ -53,6 +57,10 @@ export default function Course() {
   const [editEmphasis, setEditEmphasis] = useState("");
   /** Enriched modules while generation runs (canonical course doc stays outline-only until commit). */
   const [draftModules, setDraftModules] = useState(null);
+  const [sandboxLang, setSandboxLang] = useState("python");
+  const [sandboxBuffers, setSandboxBuffers] = useState(() => ({ ...SANDBOX_STARTERS }));
+  const sandboxSeedRef = useRef("");
+  const sandboxLangSeedRef = useRef("");
 
   // Tracks whether we've EVER successfully loaded the course this session.
   // Once true, transient empty snapshots (from auth-token refresh / cross-tab
@@ -203,6 +211,29 @@ export default function Course() {
       modules: mergeCourseModulesForDisplay(course.modules, draftModules),
     };
   }, [course, draftModules]);
+
+  const showSandbox = useMemo(() => courseNeedsSandbox(displayCourse), [displayCourse]);
+
+  useEffect(() => {
+    if (!displayCourse || !showSandbox) return;
+    const courseKey = id || displayCourse.title || "course";
+    if (sandboxLangSeedRef.current === courseKey) return;
+    sandboxLangSeedRef.current = courseKey;
+    setSandboxLang(detectSandboxLanguage(displayCourse) || "python");
+  }, [displayCourse, showSandbox, id]);
+
+  useEffect(() => {
+    if (!showSandbox) return;
+    const list = displayCourse?.modules || [];
+    if (!list.length) return;
+    const idx = Math.min(activeModule, list.length - 1);
+    const m = list[idx];
+    const key = `${m?.id || `mod-${idx}`}:${sandboxLang}`;
+    if (sandboxSeedRef.current === key) return;
+    sandboxSeedRef.current = key;
+    const next = moduleStarter(sandboxLang, m.title || "module");
+    setSandboxBuffers((current) => ({ ...current, [sandboxLang]: next }));
+  }, [displayCourse, activeModule, sandboxLang, showSandbox]);
 
   useEffect(() => {
     if (authLoading || !user?.uid || !id || !course) return;
@@ -526,7 +557,6 @@ export default function Course() {
     <div className="cr-course-root" style={s.root}>
       <style>{`
         .cr-video-card:hover .cr-video-overlay { opacity: 1 !important; }
-        .cr-video-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md) !important; }
         .cr-video-card:hover .cr-video-thumb { opacity: 0.88; }
         .cr-mod-crumb {
           transition: background 160ms ease, box-shadow 200ms ease, transform 160ms ease;
@@ -537,14 +567,7 @@ export default function Course() {
           box-shadow: inset 2px 0 0 var(--ink);
         }
         .cr-paper-link {
-          transition: transform 170ms cubic-bezier(0.22,1,0.36,1), box-shadow 170ms ease;
-        }
-        .cr-paper-link:hover {
-          transform: translateY(-3px);
-          box-shadow:
-            0 20px 48px rgba(0,0,0,0.32),
-            0 0 0 1px rgba(255,255,255,0.06),
-            inset 0 1px 0 rgba(255,255,255,0.06) !important;
+          transition: background 160ms ease;
         }
         .cr-concept-scroll {
           display: flex;
@@ -703,28 +726,25 @@ export default function Course() {
 
         <main style={s.main} className="cr-course-main">
           {!showQuiz ? (
-            <div className="cr-fade cr-course-content-column" style={s.contentColumn}>
-              <div className="cr-cell" style={s.moduleHeader}>
+            <div className="cr-bento cr-course-bento cr-fade">
+              <div className={"cr-cell cr-course-tile " + (showSandbox ? "cr-span-8" : "cr-span-12")}>
+                <p className="cr-kicker">Course</p>
                 <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
                 <h1 style={s.moduleTitle}>{module.title}</h1>
                 <p style={s.moduleSummary}>{module.summary}</p>
-              </div>
 
-              {module.concepts?.length > 0 && (
-                <Section title="Key concepts">
-                  <div style={s.conceptsRow}>
+                {module.concepts?.length > 0 && (
+                  <div style={{ ...s.conceptsRow, margin: "18px 0 24px" }}>
                     {module.concepts.map((c) => (
                       <span key={c} style={s.conceptTag}>{c}</span>
                     ))}
                   </div>
-                </Section>
-              )}
+                )}
 
-              <Section title="Lesson">
                 {module.lessons?.length > 0 ? (
                   <div style={s.lessonsContainer}>
                     {module.lessons.map((lesson, i) => (
-                      <div key={i} className="cr-card cr-lesson-card" style={s.lessonBlock}>
+                      <div key={i} className="cr-lesson-card" style={s.lessonBlock}>
                         <h3 style={s.lessonHeading}>{renderLessonInlineMd(lesson.heading, `lh-${i}`)}</h3>
                         <LessonBody text={lesson.text} />
                       </div>
@@ -736,40 +756,23 @@ export default function Course() {
                     <span>Writing this module…</span>
                   </div>
                 ) : module.generationQuality === "failed" ? (
-                  <div style={s.lessonsContainer}>
-                    {[0, 1].map((i) => (
-                      <div key={i} className="cr-card cr-lesson-card" style={s.lessonBlock}>
-                        {i === 0 ? (
-                          <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
-                        ) : (
-                          <div style={s.empty}>Two lessons, same as every other module, after a rewrite.</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
                 ) : (
                   <div style={s.empty}>No lesson content available for this module.</div>
                 )}
-              </Section>
 
-              {course?.generationQuality === "template-fallback" ? (
-                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
-                  This outline is a starter structure because CourseRocket could not generate a tailored path. Try generating the course again.
-                </div>
-              ) : null}
-              {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
-                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
-                  This module needs another write. Use Edit course → Regenerate module.
-                </div>
-              ) : null}
-              {module.generationQuality !== "template-fallback" && module.groundingStatus === "unavailable" ? (
-                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
-                  Web sources were unavailable while this module was written. Check time-sensitive claims against a current reference.
-                </div>
-              ) : null}
-              {module.sources?.length > 0 ? (
-                <Section title="Sources used in these lessons">
-                  <div style={{ display: "grid", gap: 8 }}>
+                {course?.generationQuality === "template-fallback" ? (
+                  <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
+                    This outline is a starter structure. Try generating the course again.
+                  </p>
+                ) : null}
+                {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
+                  <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
+                    This module needs another write. Use Edit course → Regenerate module.
+                  </p>
+                ) : null}
+                {module.sources?.length > 0 ? (
+                  <div style={{ display: "grid", gap: 8, marginTop: 24 }}>
                     {module.sources.map((source, index) => (
                       <a
                         key={source.url || index}
@@ -784,18 +787,59 @@ export default function Course() {
                       </a>
                     ))}
                   </div>
-                </Section>
+                ) : null}
+
+                {typeof module.customSectionNotes === "string" && module.customSectionNotes.trim() ? (
+                  <div style={{ ...s.userNotesText, marginTop: 24 }}>{module.customSectionNotes.trim()}</div>
+                ) : null}
+
+                <div style={s.actions}>
+                  {module.quiz?.length > 0 && (
+                    <button
+                      className="cr-btn cr-btn-primary"
+                      onClick={() => setShowQuiz(true)}
+                    >
+                      Take module quiz →
+                    </button>
+                  )}
+                  {!isCompleted ? (
+                    <button className="cr-btn cr-btn-soft" onClick={markComplete}>
+                      Mark as complete
+                    </button>
+                  ) : (
+                    <div style={s.completedBadge}>
+                      ✓ Completed
+                      {quizScore !== undefined && module.quiz
+                        ? ` · Quiz ${quizScore}/${module.quiz.length}`
+                        : ""}
+                    </div>
+                  )}
+                  <button className="cr-btn cr-btn-ghost" onClick={() => setChatOpen(true)}>
+                    Ask about this module
+                  </button>
+                  {activeModule < mods.length - 1 && (
+                    <button className="cr-btn cr-btn-ghost" onClick={() => openModule(activeModule + 1)}>
+                      Next module →
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {showSandbox ? (
+                <div className="cr-cell cr-cell-ink cr-span-4 cr-course-sandbox">
+                  <PythonSandbox
+                    compact
+                    language={sandboxLang}
+                    onLanguageChange={setSandboxLang}
+                    code={sandboxBuffers[sandboxLang] || SANDBOX_STARTERS.python}
+                    onCodeChange={(value) => setSandboxBuffers((current) => ({ ...current, [sandboxLang]: value }))}
+                    note="Pick a language. It runs here."
+                  />
+                </div>
               ) : null}
 
-              {typeof module.customSectionNotes === "string" && module.customSectionNotes.trim() ? (
-                <Section title="Your notes">
-                  <div className="cr-card" style={s.noteCard}>
-                    <div style={s.userNotesText}>{module.customSectionNotes.trim()}</div>
-                  </div>
-                </Section>
-              ) : null}
-
-              <Section title="Videos">
+              <div className="cr-cell cr-cell-ink cr-span-6 cr-course-videos">
+                <p className="cr-kicker">Videos</p>
                 {module.videos?.length > 0 ? (
                   <div style={s.videoList}>
                     {module.videos.map((v) => (
@@ -817,11 +861,12 @@ export default function Course() {
                     <span>Finding curated videos…</span>
                   </div>
                 ) : (
-                  <div style={s.empty}>No videos available for this module.</div>
+                  <div style={s.empty}>No videos for this module yet.</div>
                 )}
-              </Section>
+              </div>
 
-              <Section title="Research and reading">
+              <div className="cr-cell cr-span-6 cr-course-papers">
+                <p className="cr-kicker">Papers</p>
                 {module.papers?.length > 0 ? (
                   <div style={s.paperList}>
                     {module.papers.map((p, i) => (
@@ -830,10 +875,9 @@ export default function Course() {
                         href={p.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="cr-card cr-paper-link"
+                        className="cr-paper-link"
                         style={s.paperCard}
                       >
-                        <div style={s.paperIcon}>◈</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={s.paperTitle}>{p.title}</div>
                           <div style={s.paperMeta}>
@@ -852,43 +896,12 @@ export default function Course() {
                     <span>Fetching related reading…</span>
                   </div>
                 ) : (
-                  <div style={s.empty}>No papers available for this module.</div>
-                )}
-              </Section>
-
-              <div style={s.actions}>
-                {module.quiz?.length > 0 && (
-                  <button
-                    className="cr-btn cr-btn-primary"
-                    onClick={() => setShowQuiz(true)}
-                  >
-                    Take module quiz →
-                  </button>
-                )}
-                {!isCompleted ? (
-                  <button className="cr-btn cr-btn-soft" onClick={markComplete}>
-                    Mark as complete
-                  </button>
-                ) : (
-                  <div style={s.completedBadge}>
-                    ✓ Completed
-                    {quizScore !== undefined && module.quiz
-                      ? ` · Quiz ${quizScore}/${module.quiz.length}`
-                      : ""}
-                  </div>
-                )}
-                <button className="cr-btn cr-btn-ghost" onClick={() => setChatOpen(true)}>
-                  Ask about this module
-                </button>
-                {activeModule < mods.length - 1 && (
-                  <button className="cr-btn cr-btn-ghost" onClick={() => openModule(activeModule + 1)}>
-                    Next module →
-                  </button>
+                  <div style={s.empty}>No papers for this module yet.</div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="cr-fade" style={{ maxWidth: "100%" }}>
+            <div className="cr-fade cr-course-quiz" style={{ maxWidth: "100%" }}>
               <button
                 style={s.backBtn}
                 onClick={() => {
@@ -1057,15 +1070,6 @@ export default function Course() {
         course={displayCourse}
         module={module}
       />
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <div style={s.section} className="cr-course-section">
-      <h2 style={s.sectionTitle} className="cr-section-title">{title}</h2>
-      {children}
     </div>
   );
 }
@@ -1472,7 +1476,7 @@ function VideoCard({ video }) {
       href={ytUrl}
       target="_blank"
       rel="noreferrer"
-      className="cr-card cr-video-card"
+      className="cr-video-card"
       style={vc.card}
     >
       <div style={vc.thumbWrap}>
@@ -1509,11 +1513,11 @@ const vc = {
     color: "inherit",
     overflow: "hidden",
     borderRadius: "var(--radius-lg)",
-    background: "var(--surface)",
+    background: "transparent",
     boxShadow: "none",
     transition: "border-color var(--dur-2) var(--ease-out)",
     marginBottom: 6,
-    border: "var(--hairline)",
+    border: 0,
   },
   thumbWrap: {
     position: "relative",
@@ -1860,13 +1864,10 @@ const s = {
   modMeta: { fontSize: 11.5, color: "var(--text-3)", marginTop: 3, letterSpacing: "0.02em", fontWeight: 500 },
 
   main: {
-    padding: `${MAIN_PAD.py} ${MAIN_PAD.px} ${MAIN_PAD.pb}`,
+    padding: 0,
     overflowY: "auto",
-    background: "var(--canvas)",
-  },
-  contentColumn: {
-    maxWidth: CONTENT_MAX_W,
-    width: "100%",
+    background: "transparent",
+    minWidth: 0,
   },
 
   enrichingBanner: {
@@ -1904,11 +1905,11 @@ const s = {
   },
   moduleTitle: {
     fontFamily: "var(--font-display)",
-    fontSize: 30,
-    fontWeight: 750,
+    fontSize: "clamp(28px, 3.2vw, 42px)",
+    fontWeight: 400,
     color: "var(--text)",
-    letterSpacing: "-0.5px",
-    lineHeight: 1.15,
+    letterSpacing: "-0.04em",
+    lineHeight: 1.12,
     marginBottom: 12,
   },
   moduleSummary: {
@@ -1946,11 +1947,12 @@ const s = {
   lessonsContainer: { display: "flex", flexDirection: "column", gap: 32 },
   videoList: { display: "flex", flexDirection: "column", gap: 18 },
   lessonBlock: {
-    padding: "36px 38px 40px",
-    borderRadius: "var(--radius)",
-    border: "var(--hairline)",
+    padding: "0 0 32px",
+    borderRadius: 0,
+    border: 0,
+    borderBottom: "var(--hairline)",
     boxShadow: "none",
-    background: "var(--surface)",
+    background: "transparent",
   },
   lessonHeading: {
     fontFamily: "var(--font-display)",
@@ -2159,15 +2161,16 @@ const s = {
     display: "flex",
     alignItems: "flex-start",
     gap: 14,
-    padding: "18px 20px",
+    padding: "16px 0",
     cursor: "pointer",
     textDecoration: "none",
     color: "inherit",
-    borderRadius: "var(--radius)",
-    border: "var(--hairline)",
+    borderRadius: 0,
+    border: 0,
+    borderBottom: "var(--hairline)",
     boxShadow: "none",
-    background: "var(--surface)",
-    transition: "background 160ms ease, border-color 160ms ease",
+    background: "transparent",
+    transition: "opacity 160ms ease",
   },
   paperIcon: {
     width: 32,
