@@ -19,6 +19,12 @@ import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import AIChat from "../components/AIChat";
 import PythonSandbox from "../components/learn/PythonSandbox";
+import {
+  SANDBOX_STARTERS,
+  courseNeedsSandbox,
+  detectSandboxLanguage,
+  moduleStarter,
+} from "../components/learn/sandboxLanguages";
 import GenerateStartOverlay from "../components/GenerateStartOverlay";
 import "../styles/learn.css";
 import GenerationTheatre from "../components/GenerationTheatre";
@@ -51,8 +57,10 @@ export default function Course() {
   const [editEmphasis, setEditEmphasis] = useState("");
   /** Enriched modules while generation runs (canonical course doc stays outline-only until commit). */
   const [draftModules, setDraftModules] = useState(null);
-  const [sandboxCode, setSandboxCode] = useState("# Try a small piece of this module.\nprint(\"hello\")\n");
+  const [sandboxLang, setSandboxLang] = useState("python");
+  const [sandboxBuffers, setSandboxBuffers] = useState(() => ({ ...SANDBOX_STARTERS }));
   const sandboxSeedRef = useRef("");
+  const sandboxLangSeedRef = useRef("");
 
   // Tracks whether we've EVER successfully loaded the course this session.
   // Once true, transient empty snapshots (from auth-token refresh / cross-tab
@@ -204,17 +212,28 @@ export default function Course() {
     };
   }, [course, draftModules]);
 
+  const showSandbox = useMemo(() => courseNeedsSandbox(displayCourse), [displayCourse]);
+
   useEffect(() => {
+    if (!displayCourse || !showSandbox) return;
+    const courseKey = id || displayCourse.title || "course";
+    if (sandboxLangSeedRef.current === courseKey) return;
+    sandboxLangSeedRef.current = courseKey;
+    setSandboxLang(detectSandboxLanguage(displayCourse) || "python");
+  }, [displayCourse, showSandbox, id]);
+
+  useEffect(() => {
+    if (!showSandbox) return;
     const list = displayCourse?.modules || [];
     if (!list.length) return;
     const idx = Math.min(activeModule, list.length - 1);
     const m = list[idx];
-    const key = m?.id || `mod-${idx}`;
+    const key = `${m?.id || `mod-${idx}`}:${sandboxLang}`;
     if (sandboxSeedRef.current === key) return;
     sandboxSeedRef.current = key;
-    const title = String(m.title || "module").replace(/\n/g, " ");
-    setSandboxCode(`# ${title}\nprint("Try a small piece of this module.")\n`);
-  }, [displayCourse, activeModule]);
+    const next = moduleStarter(sandboxLang, m.title || "module");
+    setSandboxBuffers((current) => ({ ...current, [sandboxLang]: next }));
+  }, [displayCourse, activeModule, sandboxLang, showSandbox]);
 
   useEffect(() => {
     if (authLoading || !user?.uid || !id || !course) return;
@@ -708,7 +727,7 @@ export default function Course() {
         <main style={s.main} className="cr-course-main">
           {!showQuiz ? (
             <div className="cr-bento cr-course-bento cr-fade">
-              <div className="cr-cell cr-span-8 cr-course-tile">
+              <div className={"cr-cell cr-course-tile " + (showSandbox ? "cr-span-8" : "cr-span-12")}>
                 <p className="cr-kicker">Course</p>
                 <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
                 <h1 style={s.moduleTitle}>{module.title}</h1>
@@ -806,15 +825,18 @@ export default function Course() {
                 </div>
               </div>
 
-              <div className="cr-cell cr-cell-ink cr-span-4 cr-course-sandbox">
-                <PythonSandbox
-                  compact
-                  heading="main.py"
-                  code={sandboxCode}
-                  onCodeChange={setSandboxCode}
-                  note="Runs here. Nothing is sent out."
-                />
-              </div>
+              {showSandbox ? (
+                <div className="cr-cell cr-cell-ink cr-span-4 cr-course-sandbox">
+                  <PythonSandbox
+                    compact
+                    language={sandboxLang}
+                    onLanguageChange={setSandboxLang}
+                    code={sandboxBuffers[sandboxLang] || SANDBOX_STARTERS.python}
+                    onCodeChange={(value) => setSandboxBuffers((current) => ({ ...current, [sandboxLang]: value }))}
+                    note="Pick a language. It runs here."
+                  />
+                </div>
+              ) : null}
 
               <div className="cr-cell cr-cell-ink cr-span-6 cr-course-videos">
                 <p className="cr-kicker">Videos</p>

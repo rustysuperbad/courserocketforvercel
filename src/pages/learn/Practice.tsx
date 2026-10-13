@@ -107,6 +107,8 @@ function PracticePython() {
   return (
     <PythonSandbox
       heading="Python sandbox"
+      language="python"
+      showLanguageSelect={false}
       code={code}
       onCodeChange={setCode}
       note="Use it for binary and CIDR experiments. The runtime stays in this tab."

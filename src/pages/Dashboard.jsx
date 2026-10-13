@@ -416,9 +416,9 @@ export default function Dashboard() {
             />
           </label>
           <p className="cr-sandbox-link">
-            The Python runner lives next to each lesson.{" "}
+            Coding courses put a runner next to the lesson.{" "}
             <button type="button" className="cr-link" onClick={() => navigate("/sandbox")}>Blank sandbox</button>
-            {" "}if you want a page with only the runtime.
+            {" "}is always in the nav if you just want the runtime.
           </p>
 
           <div style={s.chipRow} className="cr-topic-ideas">

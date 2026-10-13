@@ -266,7 +266,7 @@
 .cr-instrument-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-18);
   margin-bottom: var(--space-24);
   padding-bottom: var(--space-18);

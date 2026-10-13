@@ -262,6 +262,13 @@ input, textarea, select {
   color: var(--canvas);
   border-color: rgba(243, 245, 249, 0.16);
 }
+.cr-cell-ink .lr-sandbox-lang select option {
+  color: #0a0e1a;
+  background: #f3f5f9;
+}
+.cr-cell-ink .lr-sandbox-hint {
+  color: rgba(243, 245, 249, 0.55);
+}
 .cr-cell-ink .cr-btn-ghost {
   color: var(--canvas);
 }
