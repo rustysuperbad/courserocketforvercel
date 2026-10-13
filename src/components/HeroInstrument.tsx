@@ -23,7 +23,7 @@ export default function HeroInstrument({ goal }: { goal: string }) {
       <div className="cr-instrument-head">
         <div>
           <div className="cr-kicker">{course.domain}</div>
-          <strong className="cr-display" style={{ fontSize: 22 }}>{course.goal}</strong>
+          <strong>{course.goal}</strong>
         </div>
         <span className="cr-kind">Cached demo · no API</span>
       </div>
@@ -44,7 +44,7 @@ function InstrumentRow({ module, show }: { module: DemoModule; show: boolean }) 
     >
       <span className="cr-kind" aria-hidden="true">{kindMark(module.kind)}</span>
       <span>
-        <b style={{ display: "block", fontSize: 14 }}>{module.title}</b>
+        <b style={{ display: "block", fontWeight: 400 }}>{module.title}</b>
         <small className="cr-kind">{module.kind}</small>
       </span>
       <span className="cr-kind">{show ? "ready" : "…"}</span>

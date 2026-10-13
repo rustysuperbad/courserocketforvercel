@@ -40,10 +40,10 @@ export default function Navbar({ minimal = false }) {
               <span className="cr-kbd" aria-hidden="true">⌘K</span>
               <button type="button" className="cr-btn cr-btn-ghost cr-nav-signout" onClick={handleSignOut}>Sign out</button>
             </>
-          ) : (
+          ) : minimal ? null : (
             <>
               <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/login")}>Sign in</button>
-              <button type="button" className="cr-btn cr-btn-primary" onClick={() => navigate("/login?signup=1")}>Create account</button>
+              <button type="button" className="cr-btn cr-btn-ghost cr-nav-cta" onClick={() => navigate("/login?signup=1")}>Create account</button>
             </>
           )}
         </div>

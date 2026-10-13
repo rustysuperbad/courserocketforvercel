@@ -1,68 +1,126 @@
+/* CourseRocket tokens. Hues locked to the existing midnight / indigo / cyan / status set.
+   Roles follow Dala logic on our surfaces — not Dala's black/violet/amber. */
+
 :root {
-  --bg: #0a0e1a;
-  --bg-2: #0f1525;
-  --surface: #131a2c;
-  --surface-2: #1a2238;
-  --surface-3: #232c45;
-  --border: rgba(148, 163, 184, 0.12);
-  --border-strong: rgba(148, 163, 184, 0.22);
-  --text: #e6ebf5;
+  /* Roles */
+  --canvas: #0a0e1a;
+  --canvas-2: #0f1525;
+  --text-1: #e6ebf5;
   --text-2: #aab2c5;
   --text-3: #8b94ad;
-  --primary: #6366f1;
-  --primary-2: #818cf8;
-  --primary-soft: rgba(99, 102, 241, 0.12);
-  --primary-ring: rgba(99, 102, 241, 0.28);
-  --accent: #22d3ee;
+  --accent: #6366f1;
+  --accent-2: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --accent-ring: rgba(99, 102, 241, 0.28);
+  --emphasis: #22d3ee;
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
   --white: #ffffff;
+
+  /* Surfaces (forms, quizzes, focus — function beats floating type) */
+  --surface: #131a2c;
+  --surface-2: #1a2238;
+  --surface-3: #232c45;
+  --border: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(148, 163, 184, 0.28);
+
+  /* Backward-compat aliases (existing class names) */
+  --bg: var(--canvas);
+  --bg-2: var(--canvas-2);
+  --text: var(--text-1);
+  --primary: var(--accent);
+  --primary-2: var(--accent-2);
+  --primary-soft: var(--accent-soft);
+  --primary-ring: var(--accent-ring);
+
+  /* Type */
   --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
   --font-display: "Syne Variable", Syne, Inter, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --text-xs: 11px;
-  --text-sm: 13px;
-  --text-base: 15px;
-  --text-md: 16px;
-  --text-lg: 18px;
-  --leading-body: 1.65;
-  --leading-tight: 1.2;
+  --font-body: 300;
+  --font-display-weight: 400;
+  --font-label: 600;
+
+  --text-caption: 12px;
+  --text-nav: 14px;
+  --text-body: 18px;
+  --text-heading-2xs: 24px;
+  --text-heading-xs: 27px;
+  --text-subheading: 36px;
+  --text-heading-sm: 42px;
+  --text-heading: 48px;
+  --text-heading-lg: clamp(48px, 7vw, 78px);
+  --text-display: clamp(56px, 9.2vw, 113px);
+
+  --leading-body: 1.5;
+  --leading-display: 1.08;
   --track-display: -0.04em;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --space-9: 96px;
-  --space-page-x: 32px;
-  --space-page-y: 48px;
-  --space-section: 96px;
+  --track-label: 0.025em;
+
+  /* Compat type aliases */
+  --text-xs: var(--text-caption);
+  --text-sm: var(--text-nav);
+  --text-base: var(--text-body);
+  --text-md: var(--text-body);
+  --text-lg: var(--text-body);
+  --leading-tight: 1.2;
+
+  /* 6px spacing base */
+  --space-unit: 6px;
+  --space-6: 6px;
+  --space-12: 12px;
+  --space-18: 18px;
+  --space-24: 24px;
+  --space-30: 30px;
+  --space-36: 36px;
+  --space-60: 60px;
+  --space-96: 96px;
+  --space-120: 120px;
+  --space-1: var(--space-6);
+  --space-2: var(--space-12);
+  --space-3: var(--space-18);
+  --space-4: var(--space-24);
+  --space-5: var(--space-30);
+  --space-6-old: var(--space-36);
+  --space-7: var(--space-60);
+  --space-8: var(--space-96);
+  --space-9: var(--space-120);
+  --space-page-x: var(--space-36);
+  --space-page-y: var(--space-60);
+  --space-section: var(--space-96);
   --content-max: 1120px;
   --page-max: 1280px;
-  --radius-sm: 6px;
-  --radius: 12px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
-  --shadow-sm: inset 0 1px 0 rgba(230, 235, 245, 0.04);
-  --shadow-md: inset 0 1px 0 rgba(230, 235, 245, 0.05), 0 1px 0 rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.28);
+
+  /* One radius token; pill only for small tags / compact buttons */
+  --radius: 24px;
+  --radius-sm: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-nested: 18px;
+  --radius-pill: 9999px;
+
+  /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-1: 120ms;
   --dur-2: 200ms;
   --dur-3: 420ms;
+  --spring-stiffness: 380;
+  --spring-damping: 32;
+
   --hairline: 1px solid var(--border);
-  --key-surface: var(--shadow-md), 0 0 0 1px var(--border);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --key-surface: none;
 }
 
 @media (max-width: 680px) {
   :root {
-    --space-page-x: 16px;
-    --space-page-y: 28px;
-    --space-section: 64px;
+    --space-page-x: var(--space-18);
+    --space-page-y: var(--space-36);
+    --space-section: var(--space-60);
+    --text-display: clamp(42px, 12vw, 64px);
+    --text-heading-lg: clamp(36px, 9vw, 48px);
   }
 }

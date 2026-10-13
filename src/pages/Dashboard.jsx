@@ -534,10 +534,10 @@ const s = {
   },
   h1: {
     fontFamily: "var(--font-display)",
-    fontSize: 32,
-    fontWeight: 800,
+    fontSize: "var(--text-heading)",
+    fontWeight: 400,
     color: "var(--text)",
-    letterSpacing: "-0.6px",
+    letterSpacing: "var(--track-display)",
     marginBottom: 6,
   },
   sub: { color: "var(--text-2)", fontSize: 16, lineHeight: 1.65 },

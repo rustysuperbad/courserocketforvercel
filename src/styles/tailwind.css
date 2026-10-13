@@ -1,0 +1,25 @@
+/* Tailwind utilities only — our reset lives in index.css. Mapped to locked tokens. */
+@layer theme, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-canvas: #0a0e1a;
+  --color-canvas-2: #0f1525;
+  --color-text-1: #e6ebf5;
+  --color-text-2: #aab2c5;
+  --color-text-3: #8b94ad;
+  --color-accent: #6366f1;
+  --color-accent-2: #818cf8;
+  --color-emphasis: #22d3ee;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-display: "Syne Variable", Syne, Inter, sans-serif;
+  --radius-sm: 24px;
+  --radius-md: 24px;
+  --radius-lg: 24px;
+  --radius-xl: 24px;
+  --spacing: 6px;
+}

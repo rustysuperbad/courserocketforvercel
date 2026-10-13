@@ -74,40 +74,41 @@ export default function Login() {
   };
 
   return (
-    <div className="cr-login-root" style={s.root}>
+    <div className="cr-shell">
       <Navbar minimal />
 
-      <div style={s.wrap} className="cr-login-layout">
-        <div style={s.left}>
-          <div style={s.eyebrow}>
-            <span style={s.dot} /> Your paths stay with this account
-          </div>
-          <h1 style={s.h1}>
-            {isSignUp ? "Create your account" : "Sign in to continue"}
-          </h1>
-          <p style={s.sub}>
+      <main id="main" className="cr-login-layout">
+        <div className="cr-login-copy">
+          <p className="cr-kicker">This account keeps the path</p>
+          <h1>{isSignUp ? "Create your account" : "Sign in to your path"}</h1>
+          <p className="cr-body">
             {isSignUp
-              ? "Save courses, track progress, and pick up where you left off across devices."
-              : "Pick up exactly where you left off. All your courses, ready."}
+              ? "Courses, progress, and cited sources stay on this account so you can resume on another device."
+              : "Pick up the last module, quiz, and sources — not a new path."}
           </p>
-
-          <ul style={s.list}>
-            <li style={s.li}><span className="cr-kicker">01</span> Progress stays on this account</li>
-            <li style={s.li}><span className="cr-kicker">02</span> Videos and papers sit next to the lesson</li>
-            <li style={s.li}><span className="cr-kicker">03</span> Resume on another device without a new path</li>
+          <ul className="cr-login-points">
+            <li><span className="cr-kicker">01</span> Progress stays on this account</li>
+            <li><span className="cr-kicker">02</span> Videos and papers sit next to the lesson</li>
+            <li><span className="cr-kicker">03</span> Resume on another device without a new path</li>
           </ul>
         </div>
 
-        <div className="cr-card cr-fade cr-login-card" style={s.card}>
-          <div style={s.tabs}>
+        <div className="cr-login-form">
+          <div className="cr-login-tabs" role="tablist" aria-label="Account">
             <button
-              style={tabStyle(!isSignUp)}
+              type="button"
+              role="tab"
+              aria-selected={!isSignUp}
+              className={"cr-login-tab" + (!isSignUp ? " is-on" : "")}
               onClick={() => setIsSignUp(false)}
             >
               Sign in
             </button>
             <button
-              style={tabStyle(isSignUp)}
+              type="button"
+              role="tab"
+              aria-selected={isSignUp}
+              className={"cr-login-tab" + (isSignUp ? " is-on" : "")}
               onClick={() => setIsSignUp(true)}
             >
               Create account
@@ -115,22 +116,19 @@ export default function Login() {
           </div>
 
           <button
-            className="cr-btn cr-btn-ghost"
-            style={s.googleBtn}
+            type="button"
+            className="cr-btn cr-btn-ghost cr-btn-plain"
             onClick={handleGoogle}
             disabled={loading}
+            style={{ justifyContent: "flex-start", paddingInline: 0, minHeight: 44 }}
           >
             <GoogleMark />
             Continue with Google
           </button>
 
-          <div style={s.divider}>
-            <div style={s.line} />
-            <span style={s.orLabel}>or</span>
-            <div style={s.line} />
-          </div>
+          <div className="cr-login-or">or email</div>
 
-          <form onSubmit={handleEmailAuth} style={s.form}>
+          <form onSubmit={handleEmailAuth} className="cr-login-form">
             {isSignUp && (
               <input
                 className="cr-input"
@@ -138,6 +136,7 @@ export default function Login() {
                 placeholder="Full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
               />
             )}
             <input
@@ -160,26 +159,18 @@ export default function Login() {
               minLength={6}
             />
 
-            {err && <div style={s.error}>{err}</div>}
+            {err && <div className="cr-auth-error" role="alert">{err}</div>}
 
             <button
               type="submit"
               className="cr-btn cr-btn-primary"
-              style={{ width: "100%", padding: "12px" }}
               disabled={loading}
             >
               {loading ? "Please wait…" : isSignUp ? "Create account" : "Sign in"}
             </button>
           </form>
-
-          <div style={s.foot}>
-            {isSignUp ? "Already have an account? " : "New here? "}
-            <span className="cr-link" onClick={() => setIsSignUp((v) => !v)}>
-              {isSignUp ? "Sign in" : "Create one"}
-            </span>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -195,22 +186,6 @@ function GoogleMark() {
   );
 }
 
-function tabStyle(active) {
-  return {
-    flex: 1,
-    padding: "10px 12px",
-    background: active ? "rgba(99,102,241,0.12)" : "transparent",
-    color: active ? "var(--text)" : "var(--text-2)",
-    border: "1px solid",
-    borderColor: active ? "rgba(99,102,241,0.3)" : "var(--border)",
-    borderRadius: "8px",
-    fontSize: "13.5px",
-    fontWeight: 500,
-    cursor: "pointer",
-    transition: "all 120ms ease",
-  };
-}
-
 function prettyAuthError(code) {
   const map = {
     "auth/invalid-email": "That email looks invalid.",
@@ -223,97 +198,3 @@ function prettyAuthError(code) {
   };
   return map[code] || "Something went wrong. Please try again.";
 }
-
-const s = {
-  root: { minHeight: "100vh" },
-  wrap: {
-    maxWidth: "1100px",
-    margin: "0 auto",
-    padding: "60px 24px",
-    display: "grid",
-    gridTemplateColumns: "1fr 440px",
-    gap: "60px",
-    alignItems: "center",
-  },
-  left: {},
-  eyebrow: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "var(--primary-soft)",
-    border: "1px solid rgba(99,102,241,0.25)",
-    color: "var(--primary-2)",
-    padding: "6px 14px",
-    borderRadius: "999px",
-    fontSize: "12px",
-    fontWeight: 500,
-    marginBottom: "20px",
-  },
-  dot: {
-    width: "6px",
-    height: "6px",
-    background: "var(--primary)",
-    borderRadius: "999px",
-    boxShadow: "0 0 12px var(--primary)",
-  },
-  h1: {
-    fontFamily: "var(--font-display)",
-    fontSize: "44px",
-    fontWeight: 800,
-    lineHeight: 1.1,
-    letterSpacing: "-1px",
-    color: "var(--text)",
-    marginBottom: "14px",
-  },
-  sub: {
-    fontSize: "16px",
-    color: "var(--text-2)",
-    lineHeight: 1.6,
-    marginBottom: "26px",
-    maxWidth: "440px",
-  },
-  list: { listStyle: "none", display: "flex", flexDirection: "column", gap: "10px" },
-  li: { color: "var(--text-2)", fontSize: "14.5px", display: "flex", alignItems: "center", gap: "10px" },
-  tick: {
-    width: "20px", height: "20px", borderRadius: "50%",
-    background: "rgba(16,185,129,0.14)", color: "var(--success)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: "11px", fontWeight: 700,
-  },
-  card: {
-    padding: "26px",
-  },
-  tabs: { display: "flex", gap: "8px", marginBottom: "20px" },
-  googleBtn: {
-    width: "100%",
-    padding: "12px",
-    fontSize: "14px",
-  },
-  divider: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    margin: "18px 0",
-  },
-  line: { flex: 1, height: "1px", background: "var(--border)" },
-  orLabel: { color: "var(--text-3)", fontSize: "12px" },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  error: {
-    background: "rgba(239,68,68,0.1)",
-    border: "1px solid rgba(239,68,68,0.3)",
-    color: "#fca5a5",
-    fontSize: "13px",
-    padding: "10px 12px",
-    borderRadius: "8px",
-  },
-  foot: {
-    marginTop: "16px",
-    fontSize: "13.5px",
-    color: "var(--text-2)",
-    textAlign: "center",
-  },
-};

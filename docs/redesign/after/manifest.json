@@ -1,0 +1,288 @@
+[
+  {
+    "name": "landing",
+    "path": "/",
+    "viewport": "1440",
+    "file": "after/landing-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/",
+    "redirected": false
+  },
+  {
+    "name": "landing",
+    "path": "/",
+    "viewport": "390",
+    "file": "after/landing-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/",
+    "redirected": false
+  },
+  {
+    "name": "login",
+    "path": "/login",
+    "viewport": "1440",
+    "file": "after/login-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": false
+  },
+  {
+    "name": "login",
+    "path": "/login",
+    "viewport": "390",
+    "file": "after/login-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": false
+  },
+  {
+    "name": "login-signup",
+    "path": "/login?signup=1",
+    "viewport": "1440",
+    "file": "after/login-signup-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login?signup=1",
+    "redirected": false
+  },
+  {
+    "name": "login-signup",
+    "path": "/login?signup=1",
+    "viewport": "390",
+    "file": "after/login-signup-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login?signup=1",
+    "redirected": false
+  },
+  {
+    "name": "privacy",
+    "path": "/privacy",
+    "viewport": "1440",
+    "file": "after/privacy-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/privacy",
+    "redirected": false
+  },
+  {
+    "name": "privacy",
+    "path": "/privacy",
+    "viewport": "390",
+    "file": "after/privacy-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/privacy",
+    "redirected": false
+  },
+  {
+    "name": "dashboard",
+    "path": "/dashboard",
+    "viewport": "1440",
+    "file": "after/dashboard-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "dashboard",
+    "path": "/dashboard",
+    "viewport": "390",
+    "file": "after/dashboard-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "profile",
+    "path": "/profile",
+    "viewport": "1440",
+    "file": "after/profile-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "profile",
+    "path": "/profile",
+    "viewport": "390",
+    "file": "after/profile-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn",
+    "path": "/learn",
+    "viewport": "1440",
+    "file": "after/learn-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn",
+    "path": "/learn",
+    "viewport": "390",
+    "file": "after/learn-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-onboarding",
+    "path": "/learn/onboarding",
+    "viewport": "1440",
+    "file": "after/learn-onboarding-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-onboarding",
+    "path": "/learn/onboarding",
+    "viewport": "390",
+    "file": "after/learn-onboarding-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-review",
+    "path": "/learn/review",
+    "viewport": "1440",
+    "file": "after/learn-review-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-review",
+    "path": "/learn/review",
+    "viewport": "390",
+    "file": "after/learn-review-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-practice",
+    "path": "/learn/practice",
+    "viewport": "1440",
+    "file": "after/learn-practice-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-practice",
+    "path": "/learn/practice",
+    "viewport": "390",
+    "file": "after/learn-practice-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-analytics",
+    "path": "/learn/analytics",
+    "viewport": "1440",
+    "file": "after/learn-analytics-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-analytics",
+    "path": "/learn/analytics",
+    "viewport": "390",
+    "file": "after/learn-analytics-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-notes",
+    "path": "/learn/notes",
+    "viewport": "1440",
+    "file": "after/learn-notes-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-notes",
+    "path": "/learn/notes",
+    "viewport": "390",
+    "file": "after/learn-notes-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-studio",
+    "path": "/learn/studio",
+    "viewport": "1440",
+    "file": "after/learn-studio-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "learn-studio",
+    "path": "/learn/studio",
+    "viewport": "390",
+    "file": "after/learn-studio-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "course-missing",
+    "path": "/course/study-placeholder",
+    "viewport": "1440",
+    "file": "after/course-missing-1440.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "course-missing",
+    "path": "/course/study-placeholder",
+    "viewport": "390",
+    "file": "after/course-missing-390.png",
+    "status": 200,
+    "title": "CourseRocket — start from what you know",
+    "finalUrl": "https://localhost:5173/login",
+    "redirected": true
+  },
+  {
+    "name": "intro",
+    "path": "/",
+    "viewport": "1440",
+    "file": "after/intro-1440.png"
+  }
+]

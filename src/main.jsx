@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/syne";
 import "./styles/tokens.css";
+import "./styles/tailwind.css";
 import "./index.css";
 import "./product.css";
 import "./styles/craft.css";

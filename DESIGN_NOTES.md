@@ -2,7 +2,7 @@
 
 Branch: `redesign` (never `main`). Palette hues are locked to the existing midnight / indigo / cyan / status set; only tints, shades, and alphas.
 
-This chat: **setup + Step 0**. No design code yet. A previous pass already shipped tokens, a scripted hero list, theatre, Cmd+K, and a skippable intro. This brief is stricter; those artifacts are the baseline to art-direct, not the finish.
+Work so far: setup, Step 0, then **Stage 1 locked into the live CSS** so Dala’s logic is visible (Syne 400, Inter 300, 6px grid, 24px radius, floating type).
 
 ## Setup
 
@@ -176,6 +176,36 @@ Not a Lighthouse stage. Capture only.
 - Whether studio rate-card copy should name real prices (UI currently placeholders). Do not invent paid tiers.
 - Whether `/course/:id` (legacy tutor) and `/learn/course/:id` (verified reader) should share one chrome in Stage 4, or stay two products visually.
 
-## Next chat — Stage 1
+## Stage 1 — tokens, type, primitives, motion (locked in)
 
-Tokens, type, primitives, motion. Fix Syne 400 + tracking, 6px spacing, 24px radius, role-mapped colours, kill template leftovers in `product.css`, stand up Tailwind/shadcn, one motion language. Then landing in Stage 2.
+Dala was already read. This stage puts its **logic** on our midnight canvas. Not Dala’s black/violet/amber, not PPNeueMontreal, not the triangle brain.
+
+| Dala rule | CourseRocket lock |
+| --- | --- |
+| Scale not weight | Syne **400** for all headings; `--text-display` clamps to 113px |
+| Tracking −0.04em from 42px | `--track-display`; wordmark stays 24px with tracking 0 (no collision) |
+| Body 18 / 200–300 | Inter **300** at 18px / 1.5. 200 was too faint at 18px on `#0a0e1a`; did not touch colour |
+| Labels 14 / 600 / 0.025em / uppercase | Nav, kickers, primary buttons |
+| 6px base | `--space-6` … `--space-120` |
+| 24px radius | `--radius: 24px`; pill only on tags / compact chips |
+| One accent | `#6366f1` actions; `#22d3ee` emphasis (kickers, underline, theatre dot) |
+| Floating type | Default cards/shadows/gradients stripped from `product.css` |
+| One filled action | Landing: Continue. Nav Create account is ghost. Login: Sign in. |
+
+### Critique loop (landing)
+
+1. Syne 700 + tracking collided; two filled CTAs; instrument was a panel. **Fix:** 400 + tracking; strip panel; Continue is the only fill.
+2. Goal chips shouted in uppercase; 4-up proof strip looked like a logo bar; nav still had a filled Create account. **Fix:** sentence-case chips; flex proof labels; Create account → ghost.
+3. Chips too quiet (`text-3`); login title “Sign in to continue” was generic. **Fix:** chips `text-2`; title “Sign in to your path”.
+
+Intro now shows **mark + wordmark**. Privacy is a two-column editorial, no policy card.
+
+### Tailwind / shadcn
+
+Vite + Tailwind v4 (`@tailwindcss/vite`), **no preflight** (our reset stays). `components.json` aliases utils to `src/components/ui/utils.ts` so we do not touch `src/lib`. One Button primitive mapped to tokens. Skiper still Stage 3 (theatre island only).
+
+### Still open (Stage 2)
+
+Hero is a floating skeleton, not the living knowledge graph. That is the next chat.
+
+After shots: `docs/redesign/after/{landing,login,privacy,intro}-*.png`. Lint and production build pass.
