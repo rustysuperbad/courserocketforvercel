@@ -246,3 +246,19 @@ Auto-commit: project `stop` hook `.cursor/hooks/auto-commit-push.sh` commits saf
 The stored `YOUTUBE_API_KEY` is a valid Google key, but **every YouTube Data API v3 method is blocked** on it (`SearchService.List`, `VideoService.List`, … → 403 PERMISSION_DENIED). That is an API-restriction on the key, not missing wiring. Search now tries Data API first, then YouTube’s public web search if the key is blocked, and the client no longer caches empty 403s or drop an entire result set on the English-language gate. Enable YouTube Data API v3 on the `courserocket26` key (API restrictions must include it; no HTTP-referrer restriction for Edge) to use the official path.
 
 Landing PYTHON preview is the same ink cell as “Keep it light” (no gray slab, no scroll-shift under the nav). Sandbox editor/output uses the same ink code tiles as the course reader.
+
+## Ink map (this pass)
+
+Ink is a **statement**, not a theme. One dark tile per view. Lists, forms, stats, and long reading stay paper.
+
+| Surface | Ink | Paper |
+| --- | --- | --- |
+| Landing | “Keep it light” only | Hero, form, PYTHON preview, proof strip |
+| Login | Copy column | Form |
+| Privacy | “As little as we can.” | The list and export/delete |
+| Courses | Featured / in-progress library card | Heading, stats, generator, other cards |
+| Course reader | Code blocks only | Module, lessons, quiz, videos |
+| Sandbox | Editor + output | Brief and chrome |
+| Stats | — | Header and numbers |
+
+Full-width ink on the PYTHON preview was too much midnight. Featured library card is the signed-in equivalent of Keep it light.
