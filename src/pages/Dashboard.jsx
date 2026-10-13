@@ -416,8 +416,9 @@ export default function Dashboard() {
             />
           </label>
           <p className="cr-sandbox-link">
-            Want to try a tiny program first?{" "}
-            <button type="button" className="cr-link" onClick={() => navigate("/sandbox")}>Open the sandbox</button>
+            The Python runner lives next to each lesson.{" "}
+            <button type="button" className="cr-link" onClick={() => navigate("/sandbox")}>Blank sandbox</button>
+            {" "}if you want a page with only the runtime.
           </p>
 
           <div style={s.chipRow} className="cr-topic-ideas">

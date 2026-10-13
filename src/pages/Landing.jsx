@@ -80,14 +80,14 @@ export default function Landing() {
             <p className="cr-kicker">Keep it light</p>
             <h2>Make a course. Keep going.</h2>
             <p className="cr-body">
-              Make a course, keep going, glance at your stats. If you want to run a tiny program, there is a sandbox from Courses.
+              Make a course, keep going, glance at your stats. If you want to run a tiny program, it sits next to the lesson.
             </p>
           </div>
           <div className="cr-split-list cr-span-7">
             {[
               ["01", "Say the goal", "One sentence is enough. Spanish, chess, guitar — whatever you are actually trying to learn."],
               ["02", "Mention what you know", "We skip the boring recap and start at your edge."],
-              ["03", "Learn, then try", "Open the course. If you want to run a tiny program, the sandbox is right there."],
+              ["03", "Learn, then try", "Open the course. The Python runner sits next to the lesson; Ask is on the same page."],
             ].map(([n, title, copy]) => (
               <article key={n} className="cr-split-row">
                 <span className="cr-kicker">{n}</span>

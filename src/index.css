@@ -231,6 +231,14 @@ input, textarea, select {
   background: var(--ink);
   color: var(--canvas);
   border-color: transparent;
+  --text: var(--canvas);
+  --text-1: var(--canvas);
+  --text-2: rgba(243, 245, 249, 0.78);
+  --text-3: rgba(243, 245, 249, 0.55);
+  --surface: rgba(243, 245, 249, 0.08);
+  --surface-2: rgba(243, 245, 249, 0.12);
+  --border: rgba(243, 245, 249, 0.16);
+  --hairline: 1px solid rgba(243, 245, 249, 0.16);
 }
 .cr-cell-ink .cr-kicker,
 .cr-cell-ink .cr-body,
@@ -239,6 +247,28 @@ input, textarea, select {
 .cr-cell-ink h3 { color: inherit; }
 .cr-cell-ink .cr-kicker { color: rgba(243, 245, 249, 0.62); }
 .cr-cell-ink .cr-body { color: rgba(243, 245, 249, 0.78); }
+.cr-cell-ink .cr-btn-primary {
+  background: var(--canvas);
+  color: #0a0e1a;
+}
+.cr-cell-ink .cr-btn-primary:hover:not(:disabled) {
+  background: #e7ebf3;
+  color: #0a0e1a;
+}
+.cr-cell-ink .lr-sandbox textarea,
+.cr-cell-ink .lr-sandbox-out,
+.cr-cell-ink .cr-input {
+  background: rgba(243, 245, 249, 0.08);
+  color: var(--canvas);
+  border-color: rgba(243, 245, 249, 0.16);
+}
+.cr-cell-ink .cr-btn-ghost {
+  color: var(--canvas);
+}
+.cr-cell-ink .cr-btn-ghost:hover:not(:disabled) {
+  color: var(--canvas);
+  background: rgba(243, 245, 249, 0.08);
+}
 
 .cr-bento {
   display: grid;

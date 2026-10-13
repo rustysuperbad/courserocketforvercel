@@ -246,3 +246,7 @@ Auto-commit: project `stop` hook `.cursor/hooks/auto-commit-push.sh` commits saf
 The stored `YOUTUBE_API_KEY` is a valid Google key, but **every YouTube Data API v3 method is blocked** on it (`SearchService.List`, `VideoService.List`, … → 403 PERMISSION_DENIED). That is an API-restriction on the key, not missing wiring. Search now tries Data API first, then YouTube’s public web search if the key is blocked, and the client no longer caches empty 403s or drop an entire result set on the English-language gate. Enable YouTube Data API v3 on the `courserocket26` key (API restrictions must include it; no HTTP-referrer restriction for Edge) to use the official path.
 
 User override: PYTHON preview stays ink. Featured library cards stay paper. Do not add more ink without asking.
+
+## Course bento (this pass)
+
+Ask lives on the course (`AIChat`), not the sandbox. `/sandbox` is a blank Pyodide runner. The course reader is a four-tile bento: **course** white `span-8`, **sandbox** ink `span-4`, **videos** ink `span-6`, **papers** white `span-6`. Nested lesson/paper cards flattened so the course tile can fill the column. Duplicate ink (featured cards, extra privacy copy) stays off unless asked.

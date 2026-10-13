@@ -29,6 +29,7 @@ type Props = {
   heading?: string;
   note?: string;
   editable?: boolean;
+  compact?: boolean;
 };
 
 export default function PythonSandbox({
@@ -37,6 +38,7 @@ export default function PythonSandbox({
   heading = "Python",
   note = "Runs in this browser. Nothing is sent to a server.",
   editable = true,
+  compact = false,
 }: Props) {
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -65,7 +67,7 @@ export default function PythonSandbox({
   }
 
   return (
-    <section className="lr-sandbox" aria-labelledby="py-heading">
+    <section className={"lr-sandbox" + (compact ? " is-compact" : "")} aria-labelledby="py-heading">
       <div className="cr-instrument-head">
         <div>
           <p className="cr-kicker">Sandbox</p>
@@ -73,7 +75,7 @@ export default function PythonSandbox({
         </div>
         <span className="cr-kind">On this device</span>
       </div>
-      <p className="lr-sandbox-note">{note}</p>
+      {note ? <p className="lr-sandbox-note">{note}</p> : null}
       <label className="lr-field">
         <span>Program</span>
         <textarea
@@ -82,7 +84,7 @@ export default function PythonSandbox({
           onChange={(event) => onCodeChange?.(event.target.value)}
           spellCheck={false}
           readOnly={!editable}
-          rows={14}
+          rows={compact ? 8 : 14}
         />
       </label>
       <div className="lr-actions">
