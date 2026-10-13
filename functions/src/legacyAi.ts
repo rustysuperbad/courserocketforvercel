@@ -1,4 +1,4 @@
-import { geminiApiKey, openAiApiKey, youtubeApiKey } from "./config";
+import { groqApiKey, youtubeApiKey } from "./config";
 import { readEnv } from "./env";
 import { HttpsError } from "./errors";
 
@@ -88,6 +88,12 @@ async function fetchJson(url: string, options: RequestInit = {}, timeoutMs = 150
   const response = await fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) {
     const body = await response.text().catch(() => "");
+    if (/insufficient_quota|credit_balance_exhausted/i.test(body)) {
+      throw new HttpsError("resource-exhausted", "The writing account is out of credits.");
+    }
+    if (response.status === 429) {
+      throw new HttpsError("resource-exhausted", "The writer is rate-limited. Wait a moment and retry.");
+    }
     throw new Error(`Upstream API returned ${response.status}: ${body.slice(0, 240)}`);
   }
   return await response.json() as Record<string, unknown>;
@@ -128,29 +134,119 @@ function normalizedGroundingSources(candidate: Record<string, unknown> | undefin
   return sources;
 }
 
+function geminiModelList(): string[] {
+  const preferred = readEnv("GEMINI_MODEL", "gemini-3.5-flash");
+  const fallbacks = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.8-flash", "gemini-flash-latest"];
+  return [preferred, ...fallbacks.filter((model) => model !== preferred)];
+}
+
+function stripJsonPayload(text: string): string {
+  let t = String(text || "").trim().replace(/^\uFEFF/, "");
+  t = t.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const start = t.search(/[{[]/);
+  const end = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"));
+  if (start >= 0 && end > start) t = t.slice(start, end + 1);
+  return t;
+}
+
 async function groundedEvidence(query: string, apiKey: string) {
-  const model = readEnv("GEMINI_MODEL", "gemini-2.0-flash");
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const response = await fetchJson(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: `Find current, credible learning sources for this course module: ${query}. Prefer official documentation, universities, primary sources, and respected educational material. Summarize only facts supported by the sources and keep the source titles and links in grounding metadata.` }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 1600 },
-    }),
-  }, 25000);
-  const candidate = (response.candidates as Array<Record<string, unknown>> | undefined)?.[0];
-  return {
-    evidence: extractGeminiText(candidate).slice(0, 7000),
-    sources: normalizedGroundingSources(candidate),
-  };
+  let lastError: unknown;
+  for (const model of geminiModelList()) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    try {
+      const response = await fetchJson(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `Find current, credible learning sources for this course module: ${query}. Prefer official documentation, universities, primary sources, and respected educational material. Summarize only facts supported by the sources and keep the source titles and links in grounding metadata.` }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1600 },
+        }),
+      }, 25000);
+      const candidate = (response.candidates as Array<Record<string, unknown>> | undefined)?.[0];
+      return {
+        evidence: extractGeminiText(candidate).slice(0, 7000),
+        sources: normalizedGroundingSources(candidate),
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Gemini evidence search failed.");
 }
 
 function parseJsonObject(text: string): Record<string, unknown> {
-  try { return JSON.parse(String(text || "").trim()) as Record<string, unknown>; } catch {
+  try { return JSON.parse(stripJsonPayload(text)) as Record<string, unknown>; } catch {
     throw new HttpsError("internal", "The course writer returned content that could not be read. Please retry.");
   }
+}
+
+function finalizeWriterJson(
+  parsed: Record<string, unknown>,
+  kind: "outline" | "module",
+  evidence: string,
+  sources: Array<{ id: number; title: string; url: string }>,
+): Record<string, unknown> {
+  if (kind === "outline") {
+    if (!Array.isArray(parsed.modules) || !parsed.modules.length || parsed.modules.length > 12) {
+      throw new HttpsError("internal", "The course outline needs another attempt. Please retry.");
+    }
+    parsed.modules = (parsed.modules as Array<Record<string, unknown>>).map((mod, index) => ({
+      ...mod,
+      id: String(mod.id || `module_${index + 1}`),
+      concepts: Array.isArray(mod.concepts) ? mod.concepts : [],
+      youtubeQueries: Array.isArray(mod.youtubeQueries) ? mod.youtubeQueries : [],
+      paperTopics: Array.isArray(mod.paperTopics) ? mod.paperTopics : [],
+    }));
+    return parsed;
+  }
+  const lessons = parsed.lessons;
+  const quiz = parsed.quiz;
+  if (!Array.isArray(lessons) || lessons.length !== 2 || !Array.isArray(quiz) || quiz.length !== 2) {
+    throw new HttpsError("internal", "A complete module was not generated. Please retry this module.");
+  }
+  for (const question of quiz as Array<{ options?: unknown; correctIndex?: unknown }>) {
+    if (!Array.isArray(question.options) || question.options.length !== 4 ||
+        !Number.isInteger(question.correctIndex) || Number(question.correctIndex) < 0 || Number(question.correctIndex) > 3) {
+      throw new HttpsError("internal", "The module quiz needs another attempt. Please retry this module.");
+    }
+  }
+  const hasGroundedEvidence = Boolean(evidence.trim() && sources.length);
+  parsed.sources = hasGroundedEvidence ? sources : [];
+  parsed.groundingStatus = hasGroundedEvidence ? "grounded" : "unavailable";
+  return parsed;
+}
+
+async function geminiJson(input: { systemPrompt: string; userMessage: string; kind: "outline" | "module"; apiKey: string; evidence: string; sources: Array<{ id: number; title: string; url: string }> }) {
+  const prompt = [
+    input.systemPrompt,
+    "Return ONLY valid JSON. No markdown fences.",
+    input.userMessage,
+  ].filter(Boolean).join("\n\n");
+  let lastError: unknown;
+  for (const model of geminiModelList()) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    try {
+      const response = await fetchJson(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": input.apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: input.kind === "outline" ? 8192 : 8192,
+            responseMimeType: "application/json",
+          },
+        }),
+      }, 65000);
+      const candidate = (response.candidates as Array<Record<string, unknown>> | undefined)?.[0];
+      const parsed = parseJsonObject(extractGeminiText(candidate));
+      return finalizeWriterJson(parsed, input.kind, input.evidence, input.sources);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new HttpsError("internal", "Gemini could not write this course. Please retry.");
 }
 
 async function openAiJson(input: { systemPrompt: string; userMessage: string; kind: "outline" | "module"; apiKey: string; evidence: string; sources: Array<{ id: number; title: string; url: string }> }) {
@@ -208,26 +304,131 @@ async function openAiJson(input: { systemPrompt: string; userMessage: string; ki
   return parsed;
 }
 
+function writerPrompt(input: { systemPrompt: string; userMessage: string; kind: "outline" | "module"; evidence: string; sources: Array<{ id: number; title: string; url: string }> }) {
+  let instructions = input.systemPrompt;
+  let user = input.userMessage;
+  if (input.kind === "module") {
+    instructions += [
+      "Ground factual teaching in the evidence included by the application.",
+      "Do not invent URLs, organizations, paper titles, or citations.",
+      "Where an important factual explanation is directly supported by a listed source, cite it in the lesson as [1], [2], using that source's id.",
+      "Keep citations sparse and accurate. If evidence is insufficient, explain the stable concept without a citation rather than guessing.",
+    ].join("\n");
+    user += "\n\nResearch evidence retrieved for this module:\n" + (input.evidence || "No grounded web evidence was available for this module.");
+    if (input.sources.length) {
+      user += "\n\nUse only these source ids for inline citations:\n" +
+        input.sources.map((source) => `[${source.id}] ${source.title} — ${source.url}`).join("\n");
+    }
+  }
+  return { instructions, user };
+}
+
+function groqWriterUnavailable(): never {
+  throw new HttpsError(
+    "failed-precondition",
+    "Add a Groq API key from console.groq.com/keys. OpenAI is not used, and Gemini is not used for writing.",
+  );
+}
+
+function groqModelList(): string[] {
+  const preferred = readEnv("GROQ_MODEL", "qwen/qwen3.8-27b");
+  const fallbacks = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"];
+  return [preferred, ...fallbacks.filter((model) => model !== preferred)];
+}
+
+function extractGroqText(response: Record<string, unknown>): string {
+  const choice = ((response.choices as Array<{ message?: { content?: unknown } }> | undefined) || [])[0];
+  const content = choice?.message?.content;
+  if (typeof content === "string" && content.trim()) return content.trim();
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (typeof part === "string" ? part : String((part as { text?: string })?.text || "")))
+      .join("\n")
+      .trim();
+  }
+  return "";
+}
+
+function groqKeyRejected(error: unknown): boolean {
+  return /returned 401/i.test(error instanceof Error ? error.message : String(error || ""));
+}
+
+async function groqChat(input: {
+  apiKey: string;
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  maxTokens: number;
+  timeoutMs: number;
+  responseFormat?: Record<string, unknown>;
+}): Promise<Record<string, unknown>> {
+  const body: Record<string, unknown> = {
+    model: input.model,
+    temperature: 0.4,
+    max_tokens: input.maxTokens,
+    messages: input.messages,
+  };
+  if (input.responseFormat) body.response_format = input.responseFormat;
+  if (input.model.startsWith("openai/gpt-oss")) body.reasoning_effort = "low";
+  return fetchJson("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.apiKey}` },
+    body: JSON.stringify(body),
+  }, input.timeoutMs);
+}
+
+async function groqJson(input: { systemPrompt: string; userMessage: string; kind: "outline" | "module"; apiKey: string; evidence: string; sources: Array<{ id: number; title: string; url: string }> }) {
+  const { instructions, user } = writerPrompt(input);
+  const schema = input.kind === "outline" ? outlineSchema : moduleSchema;
+  const schemaName = input.kind === "outline" ? "course_outline" : "course_module";
+  const messages = [
+    { role: "system", content: `${instructions}\n\nReturn JSON matching this schema:\n${JSON.stringify(schema)}` },
+    { role: "user", content: `${user}\n\nReturn only valid JSON.` },
+  ];
+  const formats: Array<Record<string, unknown>> = [
+    { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
+    { type: "json_object" },
+  ];
+  let lastError: unknown;
+  for (const model of groqModelList()) {
+    for (const responseFormat of formats) {
+      try {
+        const response = await groqChat({
+          apiKey: input.apiKey,
+          model,
+          messages,
+          maxTokens: input.kind === "outline" ? 8000 : 12000,
+          timeoutMs: 65000,
+          responseFormat,
+        });
+        return finalizeWriterJson(parseJsonObject(extractGroqText(response)), input.kind, input.evidence, input.sources);
+      } catch (error) {
+        lastError = error;
+        if (groqKeyRejected(error)) {
+          throw new HttpsError("failed-precondition", "The Groq API key was rejected. Create a new key at console.groq.com/keys.");
+        }
+        if (error instanceof HttpsError && error.code === "resource-exhausted") throw error;
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new HttpsError("internal", "The course writer could not complete this request. Please retry.");
+}
+
 export async function generateStructuredContent(data: unknown, _uid: string) {
   const payload = (data ?? {}) as { kind?: string; systemPrompt?: string; userMessage?: string; evidenceQuery?: string };
   const kind = payload.kind;
   if (kind !== "outline" && kind !== "module") throw new HttpsError("invalid-argument", "Choose a supported course content type.");
   const systemPrompt = assertText(payload.systemPrompt, "Course instructions", 12000);
   const userMessage = assertText(payload.userMessage, "Course request", 10000);
-  const evidenceQuery = kind === "module" ? assertText(payload.evidenceQuery, "Evidence search", 700) : "";
-  const openAiKey = requireKey("OPENAI_API_KEY", openAiApiKey.value());
-  let evidence = "";
-  let sources: Array<{ id: number; title: string; url: string }> = [];
-  if (kind === "module") {
-    try {
-      const result = await groundedEvidence(evidenceQuery, requireKey("GEMINI_API_KEY", geminiApiKey.value()));
-      evidence = result.evidence;
-      sources = result.sources;
-    } catch {
-      /* Module still generates without grounded web references. */
-    }
-  }
-  const content = await openAiJson({ systemPrompt, userMessage, kind, apiKey: openAiKey, evidence, sources });
+  const groqKey = groqApiKey.value();
+  if (!groqKey) groqWriterUnavailable();
+  const content = await groqJson({
+    systemPrompt,
+    userMessage,
+    kind,
+    apiKey: groqKey,
+    evidence: "",
+    sources: [],
+  });
   return { content };
 }
 
@@ -237,23 +438,33 @@ export async function askCourseTutor(data: unknown, _uid: string) {
   const system = assertText(payload.systemPrompt, "Tutor context", 24000);
   const safeMessages = messages
     .filter((message) => message?.role === "user" || message?.role === "assistant")
-    .map((message) => ({ role: message.role, content: String(message.content || "").slice(0, 5000) }))
+    .map((message) => ({ role: message.role as string, content: String(message.content || "").slice(0, 5000) }))
     .filter((message) => message.content.trim());
   if (!safeMessages.length) throw new HttpsError("invalid-argument", "Send a question to the tutor.");
-  const response = await fetchJson("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${requireKey("OPENAI_API_KEY", openAiApiKey.value())}` },
-    body: JSON.stringify({
-      model: readEnv("OPENAI_MODEL", "gpt-4.1-mini"),
-      instructions: system,
-      input: safeMessages,
-      max_output_tokens: 1300,
-      store: false,
-    }),
-  }, 35000);
-  const text = extractOpenAiText(response);
-  if (!text) throw new HttpsError("internal", "The tutor returned an empty answer. Please retry.");
-  return { text };
+  const groqKey = groqApiKey.value();
+  if (!groqKey) groqWriterUnavailable();
+  let lastError: unknown;
+  for (const model of groqModelList()) {
+    try {
+      const response = await groqChat({
+        apiKey: groqKey,
+        model,
+        messages: [{ role: "system", content: system }, ...safeMessages],
+        maxTokens: 1300,
+        timeoutMs: 35000,
+      });
+      const text = extractGroqText(response);
+      if (!text) throw new HttpsError("internal", "The tutor returned an empty answer. Please retry.");
+      return { text };
+    } catch (error) {
+      lastError = error;
+      if (groqKeyRejected(error)) {
+        throw new HttpsError("failed-precondition", "The Groq API key was rejected. Create a new key at console.groq.com/keys.");
+      }
+      if (error instanceof HttpsError && error.code !== "internal") throw error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new HttpsError("internal", "The tutor could not answer. Please retry.");
 }
 
 function reconstructAbstract(index: Record<string, number[]> | undefined): string {
