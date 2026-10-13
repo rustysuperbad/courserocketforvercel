@@ -12,8 +12,8 @@ const REGION = "us-central1";
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const YOUTUBE_API_KEY = defineSecret("YOUTUBE_API_KEY");
-const OPENAI_MODEL = defineString("OPENAI_MODEL", { default: "gpt-6.1-sol" });
-const GEMINI_MODEL = defineString("GEMINI_MODEL", { default: "gemini-3.8-flash" });
+const OPENAI_MODEL = defineString("OPENAI_MODEL", { default: "gpt-4.1-mini" });
+const GEMINI_MODEL = defineString("GEMINI_MODEL", { default: "gemini-2.0-flash" });
 const RESOURCE_CACHE_MS = 12 * 60 * 60 * 1000;
 
 setGlobalOptions({ region: REGION, maxInstances: 8 });

@@ -18,6 +18,9 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import AIChat from "../components/AIChat";
+import GenerateStartOverlay from "../components/GenerateStartOverlay";
+import GenerationTheatre from "../components/GenerationTheatre";
+import { splitLearnerRequest } from "../lib/lessonContentQuality";
 
 /** Total offset from viewport top where course chrome begins (sticky sub-bar under global nav). */
 const COURSE_SCROLL_OFFSET_PX = 118;
@@ -447,21 +450,19 @@ export default function Course() {
     displayCourse.generationStatus === "complete";
 
   if (isGeneratingCourse && mods.length === 0) {
+    const { goal } = splitLearnerRequest(displayCourse.topic || displayCourse.title || "");
+    const genTotal = Number(displayCourse.generationProgressTotal) || 0;
+    const genDone = Number(displayCourse.generationProgressDone) || 0;
+    const pct = genTotal > 0 ? Math.min(92, Math.round((genDone / genTotal) * 100)) : 12;
     return (
       <div className="cr-course-root" style={s.root}>
-        <Navbar />
-        <div style={s.errorWrap}>
-          <div className="cr-card" style={s.genWaitCard}>
-            <div style={s.genSpinnerWrap}>
-              <div style={s.genSpinner} />
-            </div>
-            <div style={s.genWaitTitle}>Designing your course</div>
-            <div style={s.genWaitBody}>{displayCourse.generationMessage || "This usually takes less than a minute."}</div>
-            <button type="button" className="cr-btn cr-btn-ghost" onClick={() => navigate("/dashboard")} style={{ marginTop: 8 }}>
-              ← Courses
-            </button>
-          </div>
-        </div>
+        <GenerateStartOverlay
+          goal={goal}
+          stage={displayCourse.generationMessage || "design"}
+          note={displayCourse.generationMessage || "Designing the modules."}
+          percent={pct}
+          status="running"
+        />
       </div>
     );
   }
@@ -532,8 +533,8 @@ export default function Course() {
           border: 1px solid transparent !important;
         }
         .cr-mod-crumb:hover:not(.cr-mod-crumb-active) {
-          background: rgba(255,255,255,0.04) !important;
-          box-shadow: inset 2px 0 0 rgba(99,102,241,0.35);
+          background: var(--surface-2) !important;
+          box-shadow: inset 2px 0 0 var(--ink);
         }
         .cr-paper-link {
           transition: transform 170ms cubic-bezier(0.22,1,0.36,1), box-shadow 170ms ease;
@@ -583,12 +584,24 @@ export default function Course() {
         </div>
       )}
       {isGeneratingCourse && mods.length > 0 && (
-        <div style={{ ...s.subBarGen, ...(genFailed ? { borderTop: "none" } : {}) }}>
-          <div style={{ ...s.enrichingBanner, margin: "0 auto", maxWidth: "1300px" }}>
-            <span style={s.enrichingDot} aria-hidden />
-            {displayCourse.generationMessage ||
-              "Finishing lesson content, quizzes, videos, and papers…"}
-          </div>
+        <div className="cr-course-theatre">
+          <GenerationTheatre
+            stage={displayCourse.generationMessage || "write"}
+            note={displayCourse.generationMessage || "Writing the next module."}
+            percent={
+              Number(displayCourse.generationProgressTotal) > 0
+                ? Math.min(
+                    96,
+                    Math.round(
+                      (Number(displayCourse.generationProgressDone || 0) /
+                        Number(displayCourse.generationProgressTotal)) *
+                        100
+                    )
+                  )
+                : 28
+            }
+            status="running"
+          />
         </div>
       )}
 
@@ -659,12 +672,8 @@ export default function Course() {
                   <div
                     style={{
                       ...s.modBadge,
-                      background: done
-                        ? "var(--success)"
-                        : active
-                        ? "var(--primary)"
-                        : "rgba(255,255,255,0.06)",
-                      color: done || active ? "#fff" : "var(--text-3)",
+                      background: done || active ? "var(--ink)" : "var(--surface-2)",
+                      color: done || active ? "var(--canvas)" : "var(--text-3)",
                     }}
                   >
                     {done ? "✓" : i + 1}
@@ -724,8 +733,10 @@ export default function Course() {
                 ) : isGeneratingCourse ? (
                   <div style={s.pendingBlock}>
                     <span style={s.miniSpin} />
-                    <span>Generating lessons…</span>
+                    <span>Writing this module…</span>
                   </div>
+                ) : module.generationQuality === "failed" ? (
+                  <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
                 ) : (
                   <div style={s.empty}>No lesson content available for this module.</div>
                 )}
@@ -736,9 +747,9 @@ export default function Course() {
                   This outline is a starter structure because CourseRocket could not generate a tailored path. Try generating the course again.
                 </div>
               ) : null}
-              {module.generationQuality === "template-fallback" ? (
-                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.28)", background: "rgba(245, 158, 11, 0.08)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
-                  This module is a starter template because its content did not pass CourseRocket’s quality checks. Try regenerating it for tailored lessons and a quiz.
+              {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
+                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 2, border: "var(--hairline)", background: "var(--surface)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                  This module needs another write. Use Edit course → Regenerate module.
                 </div>
               ) : null}
               {module.generationQuality !== "template-fallback" && module.groundingStatus === "unavailable" ? (
@@ -1052,8 +1063,8 @@ function Section({ title, children }) {
 const lessonMd = {
   bold: { fontWeight: 650, color: "var(--text)" },
   inlineCode: {
-    background: "rgba(99,102,241,0.1)",
-    color: "var(--primary-2)",
+    background: "var(--surface-2)",
+    color: "var(--text-3)",
     padding: "2px 6px",
     borderRadius: 5,
     fontFamily: "ui-monospace, monospace",
@@ -1291,7 +1302,7 @@ const editUi = {
     right: 0,
     width: "min(400px, 100vw)",
     height: `calc(100vh - ${COURSE_SCROLL_OFFSET_PX}px)`,
-    background: "rgba(17,21,34,0.97)",
+    background: "var(--surface)",
     borderLeft: "1px solid var(--border)",
     zIndex: 120,
     overflowY: "auto",
@@ -1579,7 +1590,7 @@ const vc = {
   },
   watchLink: {
     fontSize: 12,
-    color: "var(--primary-2)",
+    color: "var(--text-3)",
     fontWeight: 600,
     letterSpacing: "0.01em",
   },
@@ -1595,9 +1606,8 @@ const s = {
   },
   skeletonSidebar: {
     padding: "22px 14px",
-    boxShadow: "4px 0 32px rgba(0,0,0,0.2)",
-    background: "linear-gradient(180deg, rgba(15,21,37,0.65), rgba(15,21,37,0.35))",
-    borderRight: "none",
+    background: "var(--canvas)",
+    borderRight: "var(--hairline)",
   },
   skeletonMain: { padding: "30px 40px" },
 
@@ -1648,8 +1658,8 @@ const s = {
     width: 28,
     height: 28,
     borderRadius: "50%",
-    border: "2px solid rgba(99,102,241,0.25)",
-    borderTopColor: "var(--primary-2)",
+    border: "2px solid var(--surface-3)",
+    borderTopColor: "var(--ink)",
     animation: "spin 0.85s linear infinite",
     margin: "0 auto",
   },
@@ -1669,7 +1679,7 @@ const s = {
     alignItems: "center",
     gap: 12,
     padding: "14px 18px",
-    background: "rgba(255,255,255,0.03)",
+    background: "var(--surface-2)",
     borderRadius: "var(--radius)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
     lineHeight: 1.6,
@@ -1679,8 +1689,8 @@ const s = {
     width: 13,
     height: 13,
     borderRadius: "50%",
-    border: "2px solid rgba(99,102,241,0.2)",
-    borderTopColor: "var(--primary-2)",
+    border: "2px solid var(--surface-3)",
+    borderTopColor: "var(--ink)",
     animation: "spin 0.8s linear infinite",
     flexShrink: 0,
   },
@@ -1700,10 +1710,8 @@ const s = {
   },
 
   subBar: {
-    borderBottom: "1px solid rgba(148,163,184,0.06)",
-    background: "rgba(10,14,26,0.72)",
-    backdropFilter: "blur(16px)",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.28)",
+    borderBottom: "var(--hairline)",
+    background: "var(--canvas)",
     position: "sticky",
     top: 64,
     zIndex: 30,
@@ -1742,25 +1750,26 @@ const s = {
     letterSpacing: "0.01em",
     textTransform: "none",
     color: "var(--text-2)",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: 999,
-    padding: "8px 14px",
+    background: "transparent",
+    borderRadius: 0,
+    padding: "0 12px 0 0",
     flexShrink: 0,
-    border: "1px solid rgba(148,163,184,0.1)",
+    border: 0,
     lineHeight: 1.2,
   },
   subRight: { display: "flex", alignItems: "center", gap: 12, flexShrink: 0 },
   progressPill: {
     display: "inline-flex",
     alignItems: "center",
-    background: "rgba(255,255,255,0.05)",
+    background: "transparent",
     color: "var(--text-2)",
     fontSize: 13,
-    fontWeight: 500,
-    padding: "8px 14px",
-    borderRadius: 999,
-    letterSpacing: "0.01em",
-    border: "1px solid rgba(148,163,184,0.08)",
+    fontWeight: 600,
+    padding: 0,
+    borderRadius: 0,
+    letterSpacing: "0.025em",
+    textTransform: "uppercase",
+    border: 0,
   },
 
   layout: {
@@ -1770,11 +1779,11 @@ const s = {
   },
 
   sidebar: {
-    borderRight: "none",
-    boxShadow: "6px 0 40px rgba(0,0,0,0.22)",
+    borderRight: "var(--hairline)",
+    boxShadow: "none",
     padding: "22px 12px",
     overflowY: "auto",
-    background: "linear-gradient(180deg, rgba(17,21,37,0.92) 0%, rgba(13,17,31,0.85) 100%)",
+    background: "var(--canvas)",
     position: "sticky",
     top: COURSE_SCROLL_OFFSET_PX,
     height: `calc(100vh - ${COURSE_SCROLL_OFFSET_PX}px)`,
@@ -1794,16 +1803,16 @@ const s = {
   },
   sidebarMeta: { fontSize: 12.5, color: "var(--text-2)", fontWeight: 500 },
   progTrack: {
-    height: 5,
-    background: "rgba(255,255,255,0.05)",
-    borderRadius: 999,
+    height: 2,
+    background: "var(--surface-3)",
+    borderRadius: 0,
     overflow: "hidden",
     margin: "0 8px 16px",
-    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.35)",
+    boxShadow: "none",
   },
   progFill: {
     height: "100%",
-    background: "linear-gradient(90deg, var(--primary), var(--accent))",
+    background: "var(--ink)",
     transition: "width 360ms ease",
   },
   modList: { display: "flex", flexDirection: "column", gap: 6 },
@@ -1815,15 +1824,15 @@ const s = {
     borderRadius: 11,
     cursor: "pointer",
     width: "100%",
-    background: "rgba(255,255,255,0.015)",
+    background: "transparent",
     textAlign: "left",
     color: "inherit",
     outline: "none",
   },
   modItemActive: {
-    background: "rgba(99,102,241,0.1)",
-    boxShadow: "inset 3px 0 0 rgba(129,140,248,0.85)",
-    borderRadius: 11,
+    background: "var(--surface-2)",
+    boxShadow: "inset 3px 0 0 var(--ink)",
+    borderRadius: 2,
   },
   modBadge: {
     width: 29,
@@ -1842,7 +1851,7 @@ const s = {
   main: {
     padding: `${MAIN_PAD.py} ${MAIN_PAD.px} ${MAIN_PAD.pb}`,
     overflowY: "auto",
-    background: "rgba(8,11,20,0.4)",
+    background: "var(--canvas)",
   },
   contentColumn: {
     maxWidth: CONTENT_MAX_W,
@@ -1853,13 +1862,13 @@ const s = {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    background: "linear-gradient(120deg, rgba(99,102,241,0.16), rgba(99,102,241,0.05))",
-    border: "none",
-    boxShadow: "0 12px 36px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)",
-    color: "var(--primary-2)",
+    background: "transparent",
+    border: 0,
+    boxShadow: "none",
+    color: "var(--text-1)",
     fontSize: 13,
-    padding: "11px 18px",
-    borderRadius: "var(--radius)",
+    padding: 0,
+    borderRadius: 0,
     marginBottom: 22,
     maxWidth: "100%",
     lineHeight: 1.55,
@@ -1867,16 +1876,15 @@ const s = {
   enrichingDot: {
     width: 8,
     height: 8,
-    borderRadius: "50%",
-    background: "var(--primary)",
-    boxShadow: "0 0 10px var(--primary)",
+    borderRadius: 50,
+    background: "var(--ink)",
+    boxShadow: "none",
     flexShrink: 0,
-    animation: "ai-bounce 1.2s infinite ease-in-out",
   },
   moduleHeader: { marginBottom: 24, maxWidth: "100%", paddingBottom: 2 },
   moduleTag: {
     fontSize: 10.5,
-    color: "var(--primary-2)",
+    color: "var(--text-3)",
     fontWeight: 700,
     marginBottom: 8,
     letterSpacing: "0.16em",
@@ -1915,7 +1923,7 @@ const s = {
   conceptTag: {
     background: "linear-gradient(125deg, rgba(99,102,241,0.18), rgba(99,102,241,0.06))",
     border: "none",
-    color: "var(--primary-2)",
+    color: "var(--text-3)",
     fontSize: 12.5,
     padding: "7px 14px",
     borderRadius: 999,
@@ -2156,7 +2164,7 @@ const s = {
     height: 32,
     borderRadius: 8,
     background: "var(--primary-soft)",
-    color: "var(--primary-2)",
+    color: "var(--text-3)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -2260,7 +2268,7 @@ const s = {
   },
   questionNum: {
     fontSize: 11,
-    color: "var(--primary-2)",
+    color: "var(--text-3)",
     fontWeight: 700,
     marginBottom: 8,
     letterSpacing: 0.7,
@@ -2291,10 +2299,10 @@ const s = {
     lineHeight: 1.55,
   },
   optSelected: {
-    background: "linear-gradient(100deg, rgba(99,102,241,0.16), rgba(99,102,241,0.05))",
+    background: "var(--ink)",
     border: "none",
-    color: "var(--text)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 22px rgba(99,102,241,0.15)",
+    color: "var(--canvas)",
+    boxShadow: "none",
   },
   optCorrect: {
     background: "rgba(16,185,129,0.13)",

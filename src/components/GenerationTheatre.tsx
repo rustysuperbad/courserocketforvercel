@@ -7,19 +7,24 @@ type Props = {
   note?: string;
   percent?: number;
   status?: string;
+  variant?: "paper" | "ink";
 };
 
-export default function GenerationTheatre({ stage, note, percent = 0, status }: Props) {
+export default function GenerationTheatre({ stage, note, percent = 0, status, variant = "paper" }: Props) {
   const reduce = usePrefersReducedMotion();
   const active = status === "failed" || status === "blocked" ? 3 : theatreIndexFromStage(stage);
   const label = THEATRE_STEPS[active]?.label ?? "Working";
+  const shown = Math.max(0, Math.min(100, Math.round(percent)));
 
   return (
-    <section className="cr-theatre" aria-label="Course generation">
+    <section className={"cr-theatre" + (variant === "ink" ? " is-ink" : "")} aria-label="Course generation">
       <div className="cr-theatre-island">
         <span className="cr-theatre-dot" aria-hidden="true" />
         <span>{status === "failed" ? "Stopped" : status === "blocked" ? "Still gathering material" : label}</span>
-        <span className="cr-kind">{Math.round(percent)}%</span>
+        <span className="cr-kind">{shown}%</span>
+      </div>
+      <div className="cr-theatre-meter" aria-hidden="true">
+        <i style={{ width: `${Math.max(6, shown)}%` }} />
       </div>
       <ol className="cr-theatre-steps">
         {THEATRE_STEPS.map((step, index) => {
@@ -28,11 +33,11 @@ export default function GenerationTheatre({ stage, note, percent = 0, status }: 
             <motion.li
               key={step.id}
               className={"cr-theatre-step " + state}
-              animate={reduce ? undefined : { opacity: index <= active ? 1 : 0.45 }}
+              animate={reduce ? undefined : { opacity: index <= active ? 1 : 0.38 }}
             >
-              <span aria-hidden="true">{index < active ? "—" : index === active ? "▸" : "·"}</span>
+              <span aria-hidden="true">{index < active ? "✓" : index === active ? "▸" : "·"}</span>
               <span>
-                <b style={{ display: "block", fontWeight: 600 }}>{step.label}</b>
+                <b>{step.label}</b>
                 <small>{index === active && note ? note : step.detail}</small>
               </span>
             </motion.li>

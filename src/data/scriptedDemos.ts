@@ -52,12 +52,12 @@ export function scriptedCourseForGoal(goal: string): DemoCourse {
 }
 
 export const THEATRE_STEPS = [
-  { id: "queued", label: "Reading your goal", detail: "Just the sentence you typed." },
-  { id: "path", label: "Noting what you know", detail: "We’ll skip the bits you already have." },
-  { id: "retrieve", label: "Gathering material", detail: "Lessons, a quiz, something to watch." },
-  { id: "write", label: "Writing the lessons", detail: "Turning the goal into modules." },
-  { id: "verify", label: "Checking the quiz", detail: "Making sure the questions match the lessons." },
-  { id: "resources", label: "Picking a video", detail: "One watch-through, not a dump of search results." },
+  { id: "queued", label: "Reading your goal", detail: "What you typed, and what you already know." },
+  { id: "path", label: "Choosing the path", detail: "A short sequence of modules, not a dump of topics." },
+  { id: "retrieve", label: "Gathering material", detail: "Sources for the lessons, not filler." },
+  { id: "write", label: "Writing the lessons", detail: "One module at a time, with a worked example." },
+  { id: "verify", label: "Checking the quiz", detail: "Questions that match what was just taught." },
+  { id: "resources", label: "Picking a video", detail: "One watch-through, not a search dump." },
   { id: "ready", label: "Ready to open", detail: "Your course is ready." },
 ] as const;
 
@@ -66,6 +66,7 @@ export function theatreIndexFromStage(stage?: string): number {
   if (!value || value === "queued") return 0;
   if (value.includes("path") || value.includes("diagnostic") || value.includes("mastery")) return 1;
   if (value.includes("retriev") || value.includes("source") || value.includes("embed")) return 2;
+  if (value.includes("design") || value.includes("outline") || value.includes("path")) return 1;
   if (value.includes("write") || value.includes("module") || value.includes("lesson")) return 3;
   if (value.includes("verif") || value.includes("critic") || value.includes("quiz")) return 4;
   if (value.includes("resource") || value.includes("video") || value.includes("paper") || value.includes("link")) return 5;
