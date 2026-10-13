@@ -1,10 +1,4 @@
-import { httpsCallable } from "firebase/functions";
-import { functions } from "./firebase";
-
-const generateStructuredContentCall = httpsCallable(functions, "generateStructuredContent", { timeout: 120000 });
-const askCourseTutorCall = httpsCallable(functions, "askCourseTutor", { timeout: 45000 });
-const searchYouTubeCall = httpsCallable(functions, "searchYouTubeVideos", { timeout: 35000 });
-const searchPapersCall = httpsCallable(functions, "searchAcademicPapers", { timeout: 30000 });
+import { invokeBackend } from "./backend";
 
 function raceWithAbort(promise, signal) {
   if (!signal) return promise;
@@ -24,8 +18,8 @@ function raceWithAbort(promise, signal) {
 }
 
 export async function requestStructuredContent({ kind, systemPrompt, userMessage, evidenceQuery = "" }) {
-  const response = await generateStructuredContentCall({ kind, systemPrompt, userMessage, evidenceQuery });
-  return response.data?.content || null;
+  const response = await invokeBackend("generateStructuredContent", { kind, systemPrompt, userMessage, evidenceQuery }, 120000);
+  return response?.content || null;
 }
 
 export async function generateStructuredJson({ kind, systemPrompt, userMessage, evidenceQuery = "" }) {
@@ -52,16 +46,16 @@ export function buildTutorSystemPrompt({ courseTitle, moduleTitle, moduleSummary
 }
 
 export async function requestCourseTutor({ systemPrompt, messages }) {
-  const response = await askCourseTutorCall({ systemPrompt, messages });
-  return String(response.data?.text || "").trim();
+  const response = await invokeBackend("askCourseTutor", { systemPrompt, messages }, 45000);
+  return String(response?.text || "").trim();
 }
 
 export async function searchYouTubeResults({ query, maxResults, language, signal }) {
-  const response = await raceWithAbort(searchYouTubeCall({ query, maxResults, language }), signal);
-  return Array.isArray(response.data?.items) ? response.data.items : [];
+  const response = await raceWithAbort(invokeBackend("searchYouTubeVideos", { query, maxResults, language }, 35000), signal);
+  return Array.isArray(response?.items) ? response.items : [];
 }
 
 export async function searchAcademicPapers({ query, signal }) {
-  const response = await raceWithAbort(searchPapersCall({ query }), signal);
-  return Array.isArray(response.data?.papers) ? response.data.papers : [];
+  const response = await raceWithAbort(invokeBackend("searchAcademicPapers", { query }, 30000), signal);
+  return Array.isArray(response?.papers) ? response.papers : [];
 }

@@ -11,6 +11,9 @@ node_modules/
 dist/
 build/
 
+supabase/functions/**/handler.js
+supabase/.temp/
+
 # firebase and logs
 .firebase/
 *.log

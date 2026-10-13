@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
@@ -24,8 +23,10 @@ export type IngestionFlags = {
   maxChunksPerSource: number;
 };
 
-export const EMBEDDING_MODEL = "text-embedding-3-small";
-export const EMBEDDING_DIMENSIONS = 1536;
+export { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, openAiEmbedder, type Embedder } from "./embeddings";
+export { contentHash, splitIntoChunks } from "./chunking";
+import { contentHash, splitIntoChunks } from "./chunking";
+import { openAiEmbedder, type Embedder } from "./embeddings";
 
 export function parseFlags(argv: readonly string[]): IngestionFlags {
   const only = argv.find((arg) => arg.startsWith("--only="))?.slice("--only=".length);
@@ -38,31 +39,6 @@ export function parseFlags(argv: readonly string[]): IngestionFlags {
     dryRun: argv.includes("--dry-run"),
     maxChunksPerSource: Number.isInteger(maxChunks) && maxChunks > 0 ? maxChunks : 400,
   };
-}
-
-export function splitIntoChunks(text: string, maxCharacters = 1100, overlap = 160): string[] {
-  const paragraphs = text.replace(/\r/g, "").split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
-  const chunks: string[] = [];
-  let current = "";
-  for (const paragraph of paragraphs) {
-    if (paragraph.length > maxCharacters) {
-      if (current) chunks.push(current);
-      current = "";
-      for (let start = 0; start < paragraph.length; start += maxCharacters - overlap) {
-        chunks.push(paragraph.slice(start, start + maxCharacters).trim());
-      }
-      continue;
-    }
-    if (current.length && current.length + paragraph.length + 2 > maxCharacters) {
-      chunks.push(current);
-      const tail = current.slice(-overlap).trim();
-      current = tail ? `${tail}\n\n${paragraph}` : paragraph;
-    } else {
-      current = current ? `${current}\n\n${paragraph}` : paragraph;
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks.filter((chunk) => chunk.length >= 60);
 }
 
 export function licenseDecision(source: Source, flags: Pick<IngestionFlags, "approveShareAlike" | "allowNonCommercial"> & Partial<Pick<IngestionFlags, "approveRfc">>): { ingest: boolean; status: "approved" | "review_required" | "blocked" } {
@@ -120,9 +96,6 @@ export function stripHtml(html: string): string {
     .replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-export function contentHash(text: string): string {
-  return crypto.createHash("sha256").update(text).digest("hex");
-}
 
 export type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 const USER_AGENT = "CourseRocket/0.2 (educational source ingestion; contact: support@courserocket.app)";
@@ -164,18 +137,6 @@ export function planIngestion(sources: Source[], flags: IngestionFlags): Ingesti
     .map((source) => ({ source, decision: licenseDecision(source, flags) }));
 }
 
-export type Embedder = (inputs: string[]) => Promise<number[][]>;
-
-export function openAiEmbedder(openai: OpenAI): Embedder {
-  return async (inputs) => {
-    const response = await openai.embeddings.create({ model: EMBEDDING_MODEL, input: inputs, dimensions: EMBEDDING_DIMENSIONS });
-    return inputs.map((_, index) => {
-      const vector = response.data[index]?.embedding;
-      if (!vector) throw new Error("OpenAI returned an incomplete embedding batch.");
-      return vector;
-    });
-  };
-}
 
 export type IngestionResult = { key: string; status: "skipped" | "unchanged" | "ingested" | "dry-run" | "failed"; chunks: number; detail?: string };
 

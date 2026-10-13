@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCX_rDFgplf0DQWT1c-38BvaSw3-AF81H4",
-  authDomain: "courserocket03.firebaseapp.com",
-  projectId: "courserocket03",
-  storageBucket: "courserocket03.firebasestorage.app",
-  messagingSenderId:  "950282294833",
-  appId:  "1:950282294833:web:6219475af16e7d052aa710"
+  apiKey: "AIzaSyAk7DCHGgbUGNYORZTd6ScaOCM2qV-kHJs",
+  authDomain: "courserocket26.firebaseapp.com",
+  projectId: "courserocket26",
+  storageBucket: "courserocket26.firebasestorage.app",
+  messagingSenderId: "944746302184",
+  appId: "1:944746302184:web:44f0f19c03df47b7db575d"
 };
 
 /** Single source of truth for Firestore/GCP project id (used in setup help links). */

@@ -1,0 +1,10 @@
+project_id = "kxusnfytnjltywalxiom"
+
+[api]
+enabled = true
+
+[functions.api]
+verify_jwt = false
+
+[functions.inngest]
+verify_jwt = false

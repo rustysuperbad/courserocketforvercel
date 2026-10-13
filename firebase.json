@@ -5,5 +5,18 @@
     "predeploy": [
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "CourseRocket",
+        "supportEmail": "courserocketstartup@gmail.com",
+        "authorizedRedirectUris": [
+          "http://localhost",
+          "https://courserocket26.firebaseapp.com"
+        ]
+      }
+    }
   }
 }
