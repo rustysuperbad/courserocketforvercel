@@ -736,24 +736,34 @@ export default function Course() {
                     <span>Writing this module…</span>
                   </div>
                 ) : module.generationQuality === "failed" ? (
-                  <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
+                  <div style={s.lessonsContainer}>
+                    {[0, 1].map((i) => (
+                      <div key={i} className="cr-card cr-lesson-card" style={s.lessonBlock}>
+                        {i === 0 ? (
+                          <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
+                        ) : (
+                          <div style={s.empty}>Two lessons, same as every other module, after a rewrite.</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div style={s.empty}>No lesson content available for this module.</div>
                 )}
               </Section>
 
               {course?.generationQuality === "template-fallback" ? (
-                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.28)", background: "rgba(245, 158, 11, 0.08)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
                   This outline is a starter structure because CourseRocket could not generate a tailored path. Try generating the course again.
                 </div>
               ) : null}
               {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
-                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 2, border: "var(--hairline)", background: "var(--surface)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
                   This module needs another write. Use Edit course → Regenerate module.
                 </div>
               ) : null}
               {module.generationQuality !== "template-fallback" && module.groundingStatus === "unavailable" ? (
-                <div role="status" style={{ marginTop: 14, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(245, 158, 11, 0.2)", background: "rgba(245, 158, 11, 0.055)", color: "var(--text-2)", fontSize: 13, lineHeight: 1.55 }}>
+                <div role="status" className="cr-cell" style={{ marginTop: 14, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
                   Web sources were unavailable while this module was written. Check time-sensitive claims against a current reference.
                 </div>
               ) : null}
@@ -868,7 +878,7 @@ export default function Course() {
                   </div>
                 )}
                 <button className="cr-btn cr-btn-ghost" onClick={() => setChatOpen(true)}>
-                  ✦ Ask AI about this module
+                  Ask about this module
                 </button>
                 {activeModule < mods.length - 1 && (
                   <button className="cr-btn cr-btn-ghost" onClick={() => openModule(activeModule + 1)}>
@@ -1499,17 +1509,16 @@ const vc = {
     color: "inherit",
     overflow: "hidden",
     borderRadius: "var(--radius-lg)",
-    background: "linear-gradient(155deg, var(--surface) 0%, var(--surface-2) 100%)",
-    boxShadow:
-      "0 16px 48px rgba(0,0,0,0.32), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.05)",
-    transition: "transform 200ms cubic-bezier(0.22,1,0.36,1), box-shadow 200ms ease",
+    background: "var(--surface)",
+    boxShadow: "none",
+    transition: "border-color var(--dur-2) var(--ease-out)",
     marginBottom: 6,
-    border: "none",
+    border: "var(--hairline)",
   },
   thumbWrap: {
     position: "relative",
     paddingBottom: "52%",
-    background: "linear-gradient(180deg, #0c1020, #000)",
+    background: "var(--ink)",
     overflow: "hidden",
     borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
   },
@@ -1633,19 +1642,19 @@ const s = {
     alignItems: "center",
     gap: 14,
     padding: "11px 22px",
-    background: "linear-gradient(90deg, rgba(239,68,68,0.1), rgba(239,68,68,0.04))",
-    borderBottom: "none",
-    boxShadow: "inset 0 -1px 0 rgba(239,68,68,0.2)",
-    color: "#fca5a5",
+    background: "var(--surface)",
+    borderBottom: "var(--hairline)",
+    boxShadow: "none",
+    color: "var(--danger)",
     fontSize: 13,
     maxWidth: "100%",
     lineHeight: 1.55,
   },
   subBarGen: {
     borderBottom: "none",
-    background: "linear-gradient(180deg, rgba(99,102,241,0.07), rgba(99,102,241,0.02))",
+    background: "var(--canvas)",
     padding: "10px 20px",
-    boxShadow: "inset 0 -1px 0 rgba(255,255,255,0.04)",
+    boxShadow: "none",
   },
   genWaitCard: {
     padding: "40px 32px",
@@ -1973,8 +1982,8 @@ const s = {
       borderColor: "rgba(251,191,36,0.1)",
     },
     tip: {
-      background: "rgba(99,102,241,0.05)",
-      borderColor: "rgba(99,102,241,0.1)",
+      background: "var(--accent-soft)",
+      borderColor: "var(--border)",
     },
     takeaway: {
       background: "rgba(255,255,255,0.03)",
@@ -2063,14 +2072,14 @@ const s = {
     maxWidth: "72ch",
   },
   calloutTip: {
-    background: "rgba(99,102,241,0.07)",
-    borderRadius: 10,
+    background: "var(--surface-2)",
+    borderRadius: "var(--radius-nested)",
     padding: "14px 16px",
     margin: "10px 0 16px",
     fontSize: 15.5,
     lineHeight: 1.72,
     color: "var(--text-2)",
-    border: "1px solid rgba(99,102,241,0.12)",
+    border: "var(--hairline)",
     maxWidth: "72ch",
   },
   calloutCaution: {
@@ -2098,16 +2107,16 @@ const s = {
   codeBlockFrame: {
     borderRadius: "var(--radius-lg)",
     overflow: "hidden",
-    boxShadow:
-      "0 18px 48px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.04)",
+    boxShadow: "none",
+    border: "var(--hairline)",
   },
   codeToolbar: {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
     padding: "10px 14px 9px",
-    background: "linear-gradient(180deg, rgba(24,30,50,0.98), rgba(14,18,32,0.96))",
-    borderBottom: "1px solid rgba(255,255,255,0.05)",
+    background: "var(--ink)",
+    borderBottom: "1px solid rgba(243, 245, 249, 0.12)",
   },
   codeLangPill: {
     display: "inline-flex",
@@ -2127,7 +2136,7 @@ const s = {
   codePre: {
     margin: 0,
     padding: "20px 22px 22px",
-    background: "linear-gradient(180deg, rgba(6,8,16,0.92) 0%, rgba(4,6,12,0.98) 100%)",
+    background: "var(--ink)",
     border: "none",
     borderRadius: 0,
     overflowX: "auto",
@@ -2213,23 +2222,22 @@ const s = {
     flexWrap: "wrap",
     paddingTop: 28,
     marginTop: 28,
-    borderTop: "none",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+    borderTop: "var(--hairline)",
+    boxShadow: "none",
     maxWidth: "100%",
   },
   completedBadge: {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
-    background: "linear-gradient(120deg, rgba(16,185,129,0.16), rgba(16,185,129,0.05))",
-    border: "none",
+    background: "var(--surface-2)",
+    border: "var(--hairline)",
     color: "var(--success)",
     fontSize: 13.5,
     fontWeight: 600,
     padding: "10px 16px",
-    borderRadius: 999,
-    boxShadow:
-      "0 8px 24px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.08)",
+    borderRadius: "var(--radius-pill)",
+    boxShadow: "none",
   },
 
   backBtn: {
@@ -2245,7 +2253,7 @@ const s = {
   quizTitle: {
     fontFamily: "var(--font-display)",
     fontSize: 25,
-    fontWeight: 800,
+    fontWeight: 400,
     color: "var(--text)",
     letterSpacing: "-0.45px",
     marginBottom: 8,
@@ -2320,7 +2328,8 @@ const s = {
     width: 24,
     height: 24,
     borderRadius: 6,
-    background: "rgba(255,255,255,0.06)",
+    background: "var(--surface-3)",
+    color: "var(--text-2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -2334,10 +2343,10 @@ const s = {
     color: "var(--text-2)",
     lineHeight: 1.72,
     padding: "14px 17px",
-    background: "linear-gradient(95deg, rgba(99,102,241,0.08), rgba(99,102,241,0.02))",
-    borderRadius: "var(--radius)",
-    border: "none",
-    boxShadow: "inset 3px 0 0 rgba(129,140,248,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
+    background: "var(--surface-2)",
+    borderRadius: "var(--radius-nested)",
+    border: "var(--hairline)",
+    boxShadow: "none",
   },
   resultCard: {
     padding: "38px 32px",
@@ -2351,7 +2360,7 @@ const s = {
   scoreNum: {
     fontFamily: "var(--font-display)",
     fontSize: 60,
-    fontWeight: 800,
+    fontWeight: 400,
     color: "var(--text)",
     lineHeight: 1,
   },

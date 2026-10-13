@@ -232,3 +232,11 @@ Python sandbox is a shared component (`src/components/learn/PythonSandbox.tsx`):
 Networking is **not** the product. Landing default goal is chess. One chip is labelled **example**; the instrument marks that path “Example only”. Networking copy is gone from nav, dashboard, stats, login, privacy, and the sandbox starter. It only appears if the visitor types it (scripted landing preview, or a course they generate).
 
 Jargon dropped: jobs, diagnostics, launch domain, approved sources, library. Signed-in IA is **Courses** + **Stats**. What you already know is a field on the generate form (appended into the existing topic string — no `src/lib` change). Sandbox lives at `/sandbox`, linked from Courses, not a third nav item. Old `/learn*` routes redirect.
+
+## Polish pass — no lumps (this chat)
+
+Dashboard heading is a 12-col bento: title full width, three equal `span-4` stats so “MODULES DONE” never clips. Ask (`AIChat.jsx`) is paper: ink FAB, surface panel, hairline, no indigo glow or midnight drawer. Course reader ditched leftover midnight shadows on videos, quiz letters, banners, and code chrome (code stays ink tiles).
+
+Module generation is a rigid 2 lessons + 2 quiz shape. Outline must match the complexity target (4–7). A leaking quiz no longer empties the whole module. Failed modules still render two lesson cells so the reader does not jump.
+
+Auto-commit: project `stop` hook `.cursor/hooks/auto-commit-push.sh` commits safe files on `redesign` and pushes. Secrets stay out. This environment may still fail GitHub HTTPS without local credentials.

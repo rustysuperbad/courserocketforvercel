@@ -41,12 +41,13 @@
 }
 .cr-stat-value {
   font-family: var(--font-number);
-  font-size: var(--text-heading-sm);
+  font-size: clamp(28px, 3.2vw, 42px);
   font-weight: 400;
   letter-spacing: var(--track-display);
   font-variant-numeric: tabular-nums lining-nums;
-  line-height: 1;
+  line-height: 1.05;
   color: var(--text-1);
+  overflow-wrap: anywhere;
 }
 .cr-stat-label {
   color: var(--text-3);

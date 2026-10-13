@@ -87,6 +87,43 @@ function refineCatalogTitleIfLazy(titleRaw, topicRaw) {
   return title;
 }
 
+function shapeEnrichedModule(module, lessonResult, videos, papers) {
+  return {
+    ...module,
+    lessons: (lessonResult.lessons || []).slice(0, 2),
+    quiz: (lessonResult.quiz || []).slice(0, 2),
+    sources: lessonResult.sources || [],
+    groundingStatus: lessonResult.groundingStatus || "unavailable",
+    generationQuality: lessonResult.generationQuality || "template-fallback",
+    videos: (videos || []).slice(0, 2),
+    papers: (papers || []).slice(0, 2),
+  };
+}
+
+function takeStrings(list, max) {
+  return (Array.isArray(list) ? list : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, max);
+}
+
+function normalizeOutlineModules(modules, targetCount) {
+  const n = Math.max(4, Math.min(7, Number(targetCount) || 5));
+  return (Array.isArray(modules) ? modules : []).slice(0, n).map((m, i) => {
+    const title = String(m?.title || `Module ${i + 1}`).trim();
+    const youtubeQueries = takeStrings(m?.youtubeQueries, 1);
+    const paperTopics = takeStrings(m?.paperTopics, 1);
+    return {
+      id: String(m?.id || `module_${i + 1}`),
+      title,
+      summary: String(m?.summary || "").trim(),
+      concepts: takeStrings(m?.concepts, 6),
+      youtubeQueries: youtubeQueries.length ? youtubeQueries : [title],
+      paperTopics: paperTopics.length ? paperTopics : [title],
+    };
+  });
+}
+
 function normalizeCourseKeyConcepts(raw, modules) {
   const fromModel = Array.isArray(raw)
     ? raw.map((s) => String(s || "").trim()).filter(Boolean)
@@ -304,14 +341,11 @@ export async function generateCourseStructure(topic, onProgress) {
     if (!Array.isArray(course.modules) || course.modules.length === 0) {
       throw new Error("Empty modules.");
     }
-    course.modules = course.modules.map((m, i) => ({
-      id: m.id || "module_" + (i + 1),
-      title: m.title || "Module " + (i + 1),
-      summary: m.summary || "",
-      concepts: Array.isArray(m.concepts) ? m.concepts : [],
-      youtubeQueries: Array.isArray(m.youtubeQueries) ? m.youtubeQueries : [],
-      paperTopics: Array.isArray(m.paperTopics) ? m.paperTopics : [],
-    }));
+    course.modules = normalizeOutlineModules(course.modules, moduleTarget);
+    const needed = Number(moduleTarget) || 5;
+    if (course.modules.length !== needed) {
+      throw new Error(`Need ${needed} modules, got ${course.modules.length}.`);
+    }
 
     const { goal } = splitLearnerRequest(topic);
     course.title = refineCatalogTitleIfLazy(course.title, goal);
@@ -369,17 +403,19 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
       i,
       total
     );
-    const lessons = normalizeLessonsPayload(rawLessons);
-    const quiz = normalizeQuizItems(rawQuiz);
+    const lessons = normalizeLessonsPayload(rawLessons).slice(0, 2);
+    const quiz = normalizeQuizItems(rawQuiz).slice(0, 2);
     const fingerprints = buildLeakFingerprints(topic);
     const gate = assessModuleContentGate(lessons, quiz, fingerprints);
-    if (!gate.gateOk || lessons.length < 2) {
+    // Keep a uniform 2+2 shape whenever the writer produced it. Do not
+    // discard a whole module because one quiz item leaked.
+    if (lessons.length < 2 || gate.lessonFails.length) {
       console.warn(`[gen] quality rejected for ${m.id}`);
       return { lessons: [], quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "failed" };
     }
     return {
       lessons,
-      quiz: quiz.length >= 2 ? quiz : [],
+      quiz,
       sources: Array.isArray(sources) ? sources : [],
       groundingStatus: groundingStatus || "unavailable",
       generationQuality: "generated",
@@ -450,16 +486,7 @@ export async function enrichModules(modules, topic, level, onProgress, options =
         `${lessonResult.quiz.length} quiz, ${videos.length} videos, ${papers.length} papers`
       );
 
-      return {
-        ...m,
-        lessons: lessonResult.lessons,
-        quiz: lessonResult.quiz,
-        sources: lessonResult.sources || [],
-        groundingStatus: lessonResult.groundingStatus || "unavailable",
-        generationQuality: lessonResult.generationQuality || "template-fallback",
-        videos,
-        papers,
-      };
+      return shapeEnrichedModule(m, lessonResult, videos, papers);
     })
   );
 
@@ -493,16 +520,7 @@ export async function enrichOneModule(
     fetchModulePapers(module),
   ]);
   if (typeof onProgress === "function") onProgress();
-  return {
-    ...module,
-    lessons: lessonResult.lessons,
-    quiz: lessonResult.quiz,
-    sources: lessonResult.sources || [],
-    groundingStatus: lessonResult.groundingStatus || "unavailable",
-    generationQuality: lessonResult.generationQuality || "template-fallback",
-    videos,
-    papers,
-  };
+  return shapeEnrichedModule(module, lessonResult, videos, papers);
 }
 
 /**
@@ -532,14 +550,5 @@ export async function regenerateModuleContent(module, topic, level, moduleIndex,
     }),
     fetchModulePapers(base),
   ]);
-  return {
-    ...module,
-    lessons: lessonResult.lessons,
-    quiz: lessonResult.quiz,
-    sources: lessonResult.sources || [],
-    groundingStatus: lessonResult.groundingStatus || "unavailable",
-    generationQuality: lessonResult.generationQuality || "template-fallback",
-    videos,
-    papers,
-  };
+  return shapeEnrichedModule(module, lessonResult, videos, papers);
 }
