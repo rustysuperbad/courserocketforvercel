@@ -10,6 +10,7 @@ export const langfusePublicKey = envValue("LANGFUSE_PUBLIC_KEY");
 export const langfuseSecretKey = envValue("LANGFUSE_SECRET_KEY");
 export const sentryDsn = envValue("SENTRY_DSN");
 export const openAiApiKey = envValue("OPENAI_API_KEY");
+export const groqApiKey = envValue("GROQ_API_KEY");
 export const geminiApiKey = envValue("GEMINI_API_KEY");
 export const youtubeApiKey = envValue("YOUTUBE_API_KEY");
 
