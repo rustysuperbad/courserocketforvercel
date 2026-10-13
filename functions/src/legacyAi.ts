@@ -536,22 +536,116 @@ export async function searchAcademicPapers(data: unknown, _uid: string) {
   };
 }
 
-export async function searchYouTubeVideos(data: unknown, _uid: string) {
-  const payload = (data ?? {}) as { query?: string; language?: string; maxResults?: number };
-  const query = assertText(payload.query, "Video search", 300);
-  const language = /^[a-z]{2}$/i.test(String(payload.language || "")) ? String(payload.language).toLowerCase() : "en";
-  const maxResults = Math.min(Math.max(Number(payload.maxResults) || 20, 1), 47);
+type YoutubeSearchItem = {
+  id: { videoId: string };
+  snippet: {
+    title: string;
+    channelTitle: string;
+    description: string;
+    thumbnails: { medium?: { url: string } };
+  };
+};
+
+function youtubeText(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value !== "object") return "";
+  const rec = value as { simpleText?: string; runs?: Array<{ text?: string }> };
+  if (rec.simpleText) return rec.simpleText;
+  if (Array.isArray(rec.runs)) return rec.runs.map((run) => run?.text || "").join("");
+  return "";
+}
+
+function collectInnerTubeVideos(node: unknown, out: YoutubeSearchItem[], seen: Set<string>): void {
+  if (!node || typeof node !== "object") return;
+  const rec = node as Record<string, unknown>;
+  const renderer = (rec.videoRenderer || rec.compactVideoRenderer || rec.videoWithContextRenderer) as Record<string, unknown> | undefined;
+  const videoId = String(renderer?.videoId || "").trim();
+  if (videoId && !seen.has(videoId)) {
+    seen.add(videoId);
+    out.push({
+      id: { videoId },
+      snippet: {
+        title: youtubeText(renderer?.title),
+        channelTitle: youtubeText(renderer?.ownerText) || youtubeText(renderer?.shortBylineText) || youtubeText(renderer?.longBylineText),
+        description: youtubeText(renderer?.descriptionSnippet),
+        thumbnails: { medium: { url: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` } },
+      },
+    });
+  }
+  for (const value of Object.values(rec)) {
+    if (value && typeof value === "object") collectInnerTubeVideos(value, out, seen);
+  }
+}
+
+async function searchYouTubeDataApi(query: string, language: string, maxResults: number): Promise<YoutubeSearchItem[]> {
+  const key = youtubeApiKey.value();
+  if (!key) throw new Error("YOUTUBE_API_KEY is not configured for CourseRocket.");
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
   url.searchParams.set("part", "snippet");
   url.searchParams.set("type", "video");
   url.searchParams.set("safeSearch", "moderate");
-  url.searchParams.set("videoDuration", "medium");
   url.searchParams.set("relevanceLanguage", language);
   url.searchParams.set("regionCode", "US");
   url.searchParams.set("maxResults", String(maxResults));
   url.searchParams.set("fields", "items(id/videoId,snippet/title,snippet/channelTitle,snippet/thumbnails/medium,snippet/description)");
   url.searchParams.set("q", query);
-  url.searchParams.set("key", requireKey("YOUTUBE_API_KEY", youtubeApiKey.value()));
+  url.searchParams.set("key", key);
   const response = await fetchJson(url.toString());
-  return { items: Array.isArray(response.items) ? response.items : [] };
+  const items = Array.isArray(response.items) ? response.items as YoutubeSearchItem[] : [];
+  return items.filter((item) => item?.id?.videoId);
+}
+
+async function searchYouTubeWeb(query: string, language: string, maxResults: number): Promise<YoutubeSearchItem[]> {
+  const response = await fetch("https://www.youtube.com/youtubei/v1/search?prettyPrint=false", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+      "Accept-Language": language === "en" ? "en-US,en;q=0.9" : `${language},en;q=0.8`,
+    },
+    body: JSON.stringify({
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: "2.20241001.00.00",
+          hl: language,
+          gl: "US",
+        },
+      },
+      query,
+    }),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`YouTube web search returned ${response.status}: ${body.slice(0, 180)}`);
+  }
+  const payload = await response.json() as unknown;
+  const items: YoutubeSearchItem[] = [];
+  collectInnerTubeVideos(payload, items, new Set());
+  return items.slice(0, maxResults);
+}
+
+function youtubeDataApiBlocked(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /403|blocked|PERMISSION_DENIED|not configured|YOUTUBE_API_KEY/i.test(message);
+}
+
+export async function searchYouTubeVideos(data: unknown, _uid: string) {
+  const payload = (data ?? {}) as { query?: string; language?: string; maxResults?: number };
+  const query = assertText(payload.query, "Video search", 300);
+  const language = /^[a-z]{2}$/i.test(String(payload.language || "")) ? String(payload.language).toLowerCase() : "en";
+  const maxResults = Math.min(Math.max(Number(payload.maxResults) || 20, 1), 47);
+
+  try {
+    const items = await searchYouTubeDataApi(query, language, maxResults);
+    if (items.length) return { items };
+  } catch (error) {
+    if (!youtubeDataApiBlocked(error)) throw error;
+    console.warn("[youtube] Data API blocked or missing; using web search.");
+  }
+
+  const items = await searchYouTubeWeb(query, language, maxResults);
+  return { items };
 }

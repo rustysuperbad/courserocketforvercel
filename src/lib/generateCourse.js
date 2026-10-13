@@ -429,7 +429,7 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
 async function fetchModuleVideos(m, videoOpts = {}) {
   const ytQuery = (m.youtubeQueries || [])[0] || m.title;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 7000);
+  const timer = setTimeout(() => ctrl.abort(), 20000);
   const preferredLanguage =
     videoOpts.preferredVideoLanguage ?? m.preferredVideoLanguage;
   try {

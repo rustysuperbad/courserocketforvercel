@@ -256,6 +256,7 @@ function rankVideoPool(rawItems, poolCap, preferred) {
     }));
 
   let filtered = enriched.filter((v) => passesLanguageGate(v, preferred));
+  if (!filtered.length) filtered = enriched;
   filtered = sortCandidatesEducational(filtered, enriched.map((e) => e.videoId), preferredIsEnglish);
 
   const strip = ({ videoId, title, channel, thumbnail, description }) => ({
@@ -357,22 +358,8 @@ export async function fetchYouTubeVideos(query, maxResults = 1, signal, opts = {
 
     merged = mergeUniquePreferScore(await attempt(base), poolFloor);
 
-    if (relevanceLang === DEFAULT_LANG && merged.length < n) {
-      merged = mergeUniquePreferScore([...merged, ...(await attempt(`${base} English tutorial lecture explained`))], poolFloor);
-    }
-
-    if (relevanceLang === DEFAULT_LANG && merged.length < n) {
-      merged = mergeUniquePreferScore(
-        [...merged, ...(await attempt(base, { videoCaption: "closedCaption", order: "relevance" }))],
-        poolFloor
-      );
-    }
-
-    if (relevanceLang === DEFAULT_LANG && merged.length < n) {
-      merged = mergeUniquePreferScore(
-        [...merged, ...(await attempt(base, { order: "rating" }))],
-        poolFloor
-      );
+    if (merged.length < n) {
+      merged = mergeUniquePreferScore([...merged, ...(await attempt(`${base} tutorial`))], poolFloor);
     }
 
     const picked = mergeUniquePreferScore(merged, n);
@@ -380,10 +367,7 @@ export async function fetchYouTubeVideos(query, maxResults = 1, signal, opts = {
     return picked;
   } catch (e) {
     const msg = String(e?.message || e);
-    if (msg.includes("403")) {
-      console.warn("[YouTube] 403 — quota likely exhausted.");
-    }
-    cache.set(cacheKey, []);
+    console.warn("[YouTube] search failed:", msg.slice(0, 220));
     return [];
   }
 }
