@@ -16,6 +16,15 @@ export function normalizeForLeakMatch(s) {
  * Strip conversational / meta prefixes from a learner topic so the model
  * sees scope (e.g. hardware + goal) without echoing "I want…" scaffolding.
  */
+/** Split dashboard "goal. I already know: …" blobs into teaching goal vs prior knowledge. */
+export function splitLearnerRequest(raw) {
+  const text = String(raw || "").trim();
+  const parts = text.split(/\.\s*I already know:\s*/i);
+  const goal = deriveTeachingScopeFromPrompt(parts[0] || text);
+  const prior = parts.length > 1 ? parts.slice(1).join(". ").trim() : "";
+  return { goal: goal || text, prior, raw: text };
+}
+
 export function deriveTeachingScopeFromPrompt(raw) {
   let t = String(raw || "").trim();
   if (!t) return "";
@@ -33,6 +42,8 @@ export function deriveTeachingScopeFromPrompt(raw) {
     /^(teach\s+me\s+(about\s+)?)/i,
     /^(show\s+me\s+how\s+to\s+)/i,
     /^(walk\s+me\s+through\s+)/i,
+    /^(learn\s+to\s+)/i,
+    /^(learn\s+)/i,
     /^(i\s+need\s+a\s+course\s+(on|about)\s+)/i,
   ];
 

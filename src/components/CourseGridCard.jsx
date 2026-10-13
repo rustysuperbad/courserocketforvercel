@@ -88,7 +88,7 @@ const cardStyles = {
   },
   cardCta: {
     fontSize: 13,
-    color: "var(--primary-2)",
+    color: "var(--text-1)",
     fontWeight: 600,
     marginTop: 4,
   },
@@ -169,7 +169,7 @@ export default function CourseGridCard({ course, onClick, onRetryGeneration, fea
         </div>
         <div style={s.progressMeta}>
           <span>{leftMeta}</span>
-          <span style={{ color: "var(--primary-2)", fontWeight: 600 }}>{rightMeta}</span>
+          <span style={{ color: "var(--text-3)", fontWeight: 600 }}>{rightMeta}</span>
         </div>
       </div>
       {isFailed && onRetryGeneration && (

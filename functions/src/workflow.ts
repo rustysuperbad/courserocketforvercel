@@ -66,8 +66,8 @@ export const processCourseGeneration = inngest.createFunction(
               step: item, concept, goal: snapshot.goal, domain: snapshot.domain, ownerUid: snapshot.firebase_uid, analogyContext: analogy,
               retrieve: retrieveForGeneration,
               writeLesson: async (input) => {
-                const model = readEnv("OPENAI_MODEL", "gpt-6.1-sol");
-                const criticModel = readEnv("GEMINI_MODEL", "gemini-3.8-flash");
+                const model = readEnv("OPENAI_MODEL", "gpt-4.1-mini");
+                const criticModel = readEnv("GEMINI_MODEL", "gemini-2.0-flash");
                 const lessonWriter = createVerifiedLessonProvider({ openAiKey: openAiApiKey.value(), geminiKey: geminiApiKey.value(), openAiModel: model, geminiModel: criticModel });
                 const lesson = await generateVerifiedLesson(input, lessonWriter.provider);
                 return { lesson, usage: lessonWriter.usage };
@@ -94,8 +94,8 @@ export const processCourseGeneration = inngest.createFunction(
             for (const [url, status] of Object.entries(built.linkStatus)) {
               await serviceClient().from("sources").update({ link_status: status, link_checked_at: new Date().toISOString() }).eq("url", url);
             }
-            const model = readEnv("OPENAI_MODEL", "gpt-6.1-sol");
-            const criticModel = readEnv("GEMINI_MODEL", "gemini-3.8-flash");
+            const model = readEnv("OPENAI_MODEL", "gpt-4.1-mini");
+            const criticModel = readEnv("GEMINI_MODEL", "gemini-2.0-flash");
             const { error: usageError } = await serviceClient().rpc("record_generation_usage", {
               p_run_id: runId, p_usage_key: `module-${position}`,
               p_provider: built.cacheHit ? "cache" : "openai+google-gemini",

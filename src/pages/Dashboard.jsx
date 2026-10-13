@@ -23,6 +23,7 @@ import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import CourseGridCard from "../components/CourseGridCard";
 import GenerationTheatre from "../components/GenerationTheatre";
+import GenerateStartOverlay from "../components/GenerateStartOverlay";
 import { firestoreSetupHelpFromError } from "../lib/firestoreErrors";
 
 const PROMPT_IDEAS = [
@@ -51,6 +52,7 @@ export default function Dashboard() {
   /** Until Firestore lists this id, merge a row so landing + dashboard flows show the same in-grid card immediately. */
   const [bootstrappingCourse, setBootstrappingCourse] = useState(null);
   const [error, setError] = useState("");
+  const [launchGoal, setLaunchGoal] = useState("");
   /** GCP: Firestore API off or database not created — fixed in Google Cloud / Firebase Console. */
   const [firestoreSetup, setFirestoreSetup] = useState(null);
   const navigate = useNavigate();
@@ -230,10 +232,12 @@ export default function Dashboard() {
 
       setError("");
       setFirestoreSetup(null);
+      setLaunchGoal(myTopic);
 
       try {
         const serverGenerating = await countGeneratingCoursesForUser(user.uid);
         if (serverGenerating >= MAX_CONCURRENT) {
+          setLaunchGoal("");
           setError(
             `Up to ${MAX_CONCURRENT} courses can generate at once. Wait for one to finish.`
           );
@@ -241,7 +245,9 @@ export default function Dashboard() {
         }
         const { courseId } = await startOrResumeGeneratingCourse(user.uid, myTopic);
         setBootstrappingCourse(generatingCoursePlaceholder(user.uid, myTopic, courseId));
+        navigate(`/course/${courseId}`);
       } catch (e) {
+        setLaunchGoal("");
         const help = firestoreSetupHelpFromError(e);
         if (help) {
           setFirestoreSetup(help);
@@ -323,6 +329,7 @@ export default function Dashboard() {
       navigate("/login?signup=1");
       return;
     }
+    setLaunchGoal(t);
     setTopic("");
     setAlreadyKnow("");
     setFirestoreSetup(null);
@@ -336,6 +343,15 @@ export default function Dashboard() {
 
   return (
     <div className="cr-dashboard" style={s.root}>
+      {launchGoal ? (
+        <GenerateStartOverlay
+          goal={launchGoal}
+          stage="queued"
+          note="Your course is in the queue."
+          percent={6}
+          status="running"
+        />
+      ) : null}
       <Navbar />
 
       <div className="cr-page cr-dashboard-body" style={s.body}>

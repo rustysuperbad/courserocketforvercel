@@ -13,6 +13,7 @@ import {
   buildLeakFingerprints,
   deriveTeachingScopeFromPrompt,
   proseContainsBannedPatterns,
+  splitLearnerRequest,
 } from "./lessonContentQuality";
 import { inferCodeLanguage } from "./courseGenerationUtils";
 
@@ -26,40 +27,34 @@ function parseJSON(raw) {
 }
 
 export const WRITING_RULES = [
-  "Write like an experienced instructor teaching one real person — not a textbook, not corporate eLearning, not generic AI content.",
-  "Voice: confident, direct, human. The tone of a strong YouTube educator or modern course creator.",
-  "",
-  "Avoid: filler, robotic transitions, repeating concepts, generic 'why this matters' paragraphs,",
-  "overexplaining simple ideas, buzzwords, fake-deep philosophy, constant 'imagine this...' openers.",
-  "",
-  "Do: get to the point fast, use realistic specific examples, explain naturally, sound like a real expert.",
-  "Teach practically. Every paragraph should move the learner's understanding forward.",
-  "",
-  "Sections — use ## headings. Pick only what genuinely helps this lesson:",
-  "Introduction | Core Concept | Example | Real Use Case | Common Mistake | Quick Exercise | Key Takeaway",
-  "Do NOT use the same sections on both lessons. Do NOT force every section every time.",
-  "",
-  "Exercises: one concrete task the learner can actually do — not a recall question.",
-  "Programming courses: show what the code does, why it behaves that way, how to debug it.",
-  "Never write fake-deep lines like 'syntax is the bridge between logic and execution.'",
-  "",
-  "Length: 350–600 words per lesson. Dense and clear — not padded. Short paragraphs.",
+  "Write like a sharp instructor sitting next to one person. No textbook voice. No eLearning filler.",
+  "Every sentence must teach a move the learner can use. If a paragraph could fit any course, delete it.",
+  "Never copy, quote, or lightly rephrase the learner's request. Invent specific titles and examples.",
+  "Do not use a fixed section template. Choose headings that fit THIS lesson only.",
+  "Banned: Foundations of X, Introduction to X, Tools & Ecosystem, Core Concepts as a title,",
+  "why this matters, let's dive in, in today's world, unlock, journey, robust, seamless, leverage.",
+  "Programming: show a small real snippet, say what happens, say what breaks if you change one line.",
+  "Exercises: one thing they can do in five minutes. Not a recall question.",
+  "Length: 380–650 words. Short paragraphs. Specific nouns. No padding.",
 ].join("\n");
 
 export function buildCurriculumPrompt(moduleTarget, topic) {
-  const domain = detectSubjectDomain(topic);
-  const hint = domainTeachingHint(topic);
+  const { goal, prior } = splitLearnerRequest(topic);
+  const domain = detectSubjectDomain(goal);
+  const hint = domainTeachingHint(goal);
   return [
     "Design a course curriculum. Return ONLY valid JSON — no prose, no markdown fences.",
     `Domain: ${domain}. ${hint}`,
+    `Teach this goal: ${goal}`,
+    prior ? `Skip or briefly nod at what they already know: ${prior}` : "Assume a motivated beginner in this exact skill.",
     "",
     "Rules:",
-    "— Module titles name real subject matter — not slogans, not 'Foundations of X', not 'Introduction to X'.",
-    "— Each module covers distinct territory. No concept overlap between modules.",
-    "— Modules progress logically from fundamentals to application to nuance.",
-    "— Module summaries: 2 sentences, specific to that module's actual content.",
-    "— Concepts: 5–7 real domain terms practitioners use. No vague nouns.",
-    "— No placeholder text, variable names, or template artifacts.",
+    "— Course title: 2–7 words naming the skill. Never a sentence. Never 'Introduction to …'.",
+    "— Module titles name a concrete chunk of the skill (e.g. 'Print a petal with loops'), not a bucket like 'Foundations' or 'Tools & Ecosystem'.",
+    "— Do not paste the learner's wording into any title, summary, or concept.",
+    "— Each module covers distinct territory. Progress from first working example to a complete small piece.",
+    "— Module summaries: 2 sentences about what they will be able to do.",
+    "— Concepts: 5–7 terms a practitioner would actually say out loud.",
     `— Exactly ${moduleTarget} modules.`,
     "",
     "OUTPUT JSON:",
@@ -71,28 +66,31 @@ export function buildCurriculumPrompt(moduleTarget, topic) {
 }
 
 function buildModuleWritePrompt(module, topic, level, moduleIndex, totalModules, codeLang) {
+  const { goal, prior } = splitLearnerRequest(topic);
   const concepts = (module.concepts || []).filter(Boolean).join(", ");
   return [
     WRITING_RULES,
     "",
-    domainTeachingHint(topic, module),
+    domainTeachingHint(goal, module),
     codeLang
       ? `Include at most one \`\`\`${codeLang} block per lesson where code genuinely helps. Explain what the code does in plain language.`
       : "No code blocks unless the topic truly requires them.",
     "",
     `Level: ${level || "Intermediate"}. Module ${moduleIndex + 1} of ${totalModules}.`,
+    `Skill: ${goal}`,
+    prior ? `Already know: ${prior}` : "",
     `Module: ${module.title}`,
     `Description: ${module.summary || "(see title)"}`,
     concepts ? `Concepts: ${concepts}` : "",
     "",
-    "Write 2 lessons on this module. Each covers a distinct angle — no overlap between them.",
-    "Lesson headings should be specific and engaging, not just the concept name.",
-    "Include realistic examples, a practical exercise, and at least one common mistake or misconception.",
+    "Write 2 lessons on this module. Each covers a distinct angle — no overlap.",
+    "Headings must be specific to the skill, not the learner's original sentence.",
+    "Include one worked example, one thing that usually goes wrong, and one tiny exercise.",
     "",
     'OUTPUT JSON: {"lessons":[{"heading":"...","text":"markdown with ## sections"},{"heading":"...","text":"..."}],',
     '"quiz":[{"question":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."},',
     '{"question":"...","options":["a","b","c","d"],"correctIndex":2,"explanation":"..."}]}',
-    "Exactly 2 lessons (350–600 words each) and 2 quiz questions. Return only JSON.",
+    "Exactly 2 lessons (380–650 words each) and 2 quiz questions. Return only JSON.",
   ].filter(Boolean).join("\n");
 }
 
@@ -111,7 +109,8 @@ export async function extractCourseIntent(topic) {
 export async function writeModuleLessons(module, topic, level, moduleIndex, totalModules) {
   const codeLang = inferCodeLanguage(topic, module);
   const system = buildModuleWritePrompt(module, topic, level, moduleIndex, totalModules, codeLang);
-  const user = `Course topic: ${deriveTeachingScopeFromPrompt(topic) || topic}\nWrite the JSON now.`;
+  const { goal, prior } = splitLearnerRequest(topic);
+  const user = `Skill to teach: ${goal || deriveTeachingScopeFromPrompt(topic) || topic}${prior ? `\nAlready know: ${prior}` : ""}\nWrite the JSON now. Do not repeat the skill sentence as a title.`;
 
   const raw = await generateStructuredJson({
     kind: "module",

@@ -39,7 +39,7 @@ export default function BrandIntro() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            <img src="/logo-mark.png" alt="" width={48} height={48} className="cr-intro-mark" />
+            <img src="/logo-mark.svg" alt="" width={48} height={48} className="cr-intro-mark" />
             <span className="cr-intro-word">courserocket</span>
           </motion.div>
           <button type="button" className="cr-intro-skip" onClick={close}>Skip</button>

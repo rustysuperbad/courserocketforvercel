@@ -46,14 +46,22 @@ export default function Login() {
         if (fullName.trim()) {
           await updateProfile(cred.user, { displayName: fullName.trim() });
         }
-        await upsertUserProfile(cred.user, fullName.trim());
+        try {
+          await upsertUserProfile(cred.user, fullName.trim());
+        } catch (profileErr) {
+          console.warn("[login] profile write failed after email sign-up:", profileErr);
+        }
       } else {
         const cred = await signInWithEmailAndPassword(auth, email, password);
-        await upsertUserProfile(cred.user);
+        try {
+          await upsertUserProfile(cred.user);
+        } catch (profileErr) {
+          console.warn("[login] profile write failed after email sign-in:", profileErr);
+        }
       }
       goNext();
     } catch (e2) {
-      setErr(prettyAuthError(e2?.code || e2?.message));
+      setErr(prettyAuthError(e2));
     } finally {
       setLoading(false);
     }
@@ -64,10 +72,14 @@ export default function Login() {
     setLoading(true);
     try {
       const cred = await signInWithPopup(auth, googleProvider);
-      await upsertUserProfile(cred.user);
+      try {
+        await upsertUserProfile(cred.user);
+      } catch (profileErr) {
+        console.warn("[login] profile write failed after Google sign-in:", profileErr);
+      }
       goNext();
     } catch (e2) {
-      setErr(prettyAuthError(e2?.code || e2?.message));
+      setErr(prettyAuthError(e2));
     } finally {
       setLoading(false);
     }
@@ -186,7 +198,8 @@ function GoogleMark() {
   );
 }
 
-function prettyAuthError(code) {
+function prettyAuthError(err) {
+  const code = err?.code || "";
   const map = {
     "auth/invalid-email": "That email looks invalid.",
     "auth/user-not-found": "No account exists for that email.",
@@ -195,6 +208,16 @@ function prettyAuthError(code) {
     "auth/email-already-in-use": "An account with this email already exists.",
     "auth/weak-password": "Password should be at least 6 characters.",
     "auth/popup-closed-by-user": "Sign-in window was closed.",
+    "auth/popup-blocked": "The sign-in window was blocked. Allow popups and try again.",
+    "auth/cancelled-popup-request": "Sign-in was cancelled. Try again.",
+    "auth/operation-not-allowed": "Google sign-in is not enabled on this Firebase project.",
+    "auth/unauthorized-domain": "This site is not in Firebase authorized domains.",
+    "permission-denied": "Your account cannot save data yet. Firestore rules are blocking writes.",
   };
-  return map[code] || "Something went wrong. Please try again.";
+  if (map[code]) return map[code];
+  const msg = String(err?.message || "").trim();
+  if (/missing or insufficient permissions/i.test(msg)) {
+    return "Your account cannot save data yet. Firestore rules are blocking writes.";
+  }
+  return msg || "Something went wrong. Please try again.";
 }

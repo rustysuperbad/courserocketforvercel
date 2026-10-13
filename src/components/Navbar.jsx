@@ -18,7 +18,7 @@ export default function Navbar({ minimal = false }) {
       <div className="cr-nav-inner">
         <div className="cr-nav-left">
           <button type="button" className="cr-brand" onClick={() => navigate("/")} aria-label="CourseRocket home">
-            <img src="/logo-mark.png" alt="" className="cr-brand-mark" draggable={false} />
+            <img src="/logo-mark.svg" alt="" className="cr-brand-mark" draggable={false} />
             <span className="cr-brand-word">course<span>rocket</span></span>
           </button>
           {!minimal && user && (

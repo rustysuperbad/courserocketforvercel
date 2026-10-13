@@ -129,7 +129,7 @@ function normalizedGroundingSources(candidate: Record<string, unknown> | undefin
 }
 
 async function groundedEvidence(query: string, apiKey: string) {
-  const model = readEnv("GEMINI_MODEL", "gemini-3.8-flash");
+  const model = readEnv("GEMINI_MODEL", "gemini-2.0-flash");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const response = await fetchJson(url, {
     method: "POST",
@@ -175,7 +175,7 @@ async function openAiJson(input: { systemPrompt: string; userMessage: string; ki
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.apiKey}` },
     body: JSON.stringify({
-      model: readEnv("OPENAI_MODEL", "gpt-6.1-sol"),
+      model: readEnv("OPENAI_MODEL", "gpt-4.1-mini"),
       instructions,
       input: user,
       max_output_tokens: input.kind === "outline" ? 5000 : 5200,
@@ -244,7 +244,7 @@ export async function askCourseTutor(data: unknown, _uid: string) {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${requireKey("OPENAI_API_KEY", openAiApiKey.value())}` },
     body: JSON.stringify({
-      model: readEnv("OPENAI_MODEL", "gpt-6.1-sol"),
+      model: readEnv("OPENAI_MODEL", "gpt-4.1-mini"),
       instructions: system,
       input: safeMessages,
       max_output_tokens: 1300,

@@ -151,6 +151,12 @@ Demos already avoid paid APIs (`scriptedDemos.ts`, palette without `autostart=1`
 | Skiper dynamic island (free, Stage 3) | Theatre status |
 | shadcn/Tailwind (Stage 1) | Primitives only; restyle to tokens |
 
+## Generation (2026-10-13)
+
+- Live courses were the **offline template** (`Introduction to {prompt}`, `Tools & Ecosystem — {prompt}`). The Edge writer defaulted to `gpt-6.1-sol` / `gemini-3.8-flash` (Cursor slugs, not API models), every call failed, and the client swallowed that into filler.
+- Defaults are now `gpt-4.1-mini` and `gemini-2.0-flash`. Outline failure **fails the run** instead of publishing a fake syllabus. Module write failure leaves the module empty with regenerate, never the echo template.
+- Generate click goes to a full **ink “Started”** overlay, then the course theatre. Course chrome is paper/ink (the gray rail was leftover midnight inline styles). Logo mark is ink, not indigo-cyan.
+
 ## Decisions (this chat)
 
 - Study the **current** UI, including the previous redesign. Do not revert to the 2025 template; strip its leftover CSS in Stage 1.

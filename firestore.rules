@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function ownedByRequester() {
+      return signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function writeKeepsOwner() {
+      return signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && (!('userId' in resource.data) || resource.data.userId == request.auth.uid);
+    }
+
+    // Profile + per-user course index. Missing parent docs are allowed:
+    // the index subcollection is written during first generation.
+    match /users/{userId} {
+      allow read, delete: if isUser(userId);
+      allow create, update: if isUser(userId);
+
+      match /courseList/{courseId} {
+        allow read, delete: if isUser(userId);
+        allow create, update: if isUser(userId)
+          && request.resource.data.userId == userId;
+      }
+    }
+
+    // Canonical course bodies. `get` of a missing doc is required so
+    // create-if-absent transactions can run.
+    match /courses/{courseId} {
+      allow get: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow list: if ownedByRequester();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if writeKeepsOwner();
+      allow delete: if ownedByRequester();
+    }
+
+    match /courseGenerationDrafts/{courseId} {
+      allow get: if signedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow list: if ownedByRequester();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if writeKeepsOwner();
+      allow delete: if ownedByRequester();
+    }
+  }
+}

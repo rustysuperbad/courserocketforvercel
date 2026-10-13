@@ -25,9 +25,15 @@ import {
   assessQuizLeakage,
   buildLeakFingerprints,
   repairCommonMarkdownIssues,
+  splitLearnerRequest,
 } from "./lessonContentQuality";
 function buildStructureUserMessage(topic) {
-  return `Learner request / course topic:\n${String(topic).trim()}\n\nReturn the JSON object now.`;
+  const { goal, prior } = splitLearnerRequest(topic);
+  return [
+    `Learner goal:\n${goal}`,
+    prior ? `They already know:\n${prior}` : "",
+    "Return the JSON object now. Never copy the learner's wording into titles or summaries.",
+  ].filter(Boolean).join("\n\n");
 }
 
 /** Strip accidental scaffolding / leaky JSON-ish lines models rarely emit. */
@@ -307,17 +313,14 @@ export async function generateCourseStructure(topic, onProgress) {
       paperTopics: Array.isArray(m.paperTopics) ? m.paperTopics : [],
     }));
 
-    course.title = refineCatalogTitleIfLazy(course.title, topic);
+    const { goal } = splitLearnerRequest(topic);
+    course.title = refineCatalogTitleIfLazy(course.title, goal);
     course.courseKeyConcepts = normalizeCourseKeyConcepts(course.courseKeyConcepts, course.modules);
     course.generationQuality = "generated";
     return course;
   } catch (e) {
-    console.warn("[gen] structure failed, using fallback:", e.message);
-    cb("Using offline course template…");
-    const fb = fallbackStructure(topic, complexity);
-    fb.title = refineCatalogTitleIfLazy(fb.title, topic);
-    fb.courseKeyConcepts = normalizeCourseKeyConcepts(fb.courseKeyConcepts, fb.modules);
-    return fb;
+    console.warn("[gen] structure failed:", e.message);
+    throw e;
   }
 }
 
@@ -371,8 +374,8 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
     const fingerprints = buildLeakFingerprints(topic);
     const gate = assessModuleContentGate(lessons, quiz, fingerprints);
     if (!gate.gateOk || lessons.length < 2) {
-      console.warn(`[gen] quality fallback for ${m.id}`);
-      return { lessons: fallbackLessons(m, topic), quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "template-fallback" };
+      console.warn(`[gen] quality rejected for ${m.id}`);
+      return { lessons: [], quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "failed" };
     }
     return {
       lessons,
@@ -383,7 +386,7 @@ async function generateLessonForModule(m, topic, i, total, level, extraUserInstr
     };
   } catch (e) {
     console.warn(`[gen] write failed for ${m.id}:`, e.message);
-    return { lessons: fallbackLessons(m, topic), quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "template-fallback" };
+    return { lessons: [], quiz: [], sources: [], groundingStatus: "unavailable", generationQuality: "failed" };
   }
 }
 
@@ -465,7 +468,9 @@ export async function enrichModules(modules, topic, level, onProgress, options =
 
 /** True until the module has lesson content (initial enrichment or post-regenerate). */
 export function moduleNeedsEnrichment(m) {
-  return !(m && Array.isArray(m.lessons) && m.lessons.length > 0);
+  if (!m) return true;
+  if (m.generationQuality === "failed") return false;
+  return !(Array.isArray(m.lessons) && m.lessons.length > 0);
 }
 
 /**
