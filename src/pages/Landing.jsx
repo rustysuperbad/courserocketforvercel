@@ -5,24 +5,23 @@ import Navbar from "../components/Navbar";
 import HeroInstrument from "../components/HeroInstrument";
 
 const suggestions = [
-  "Trace a web request across a network",
-  "Build a chess engine in Python",
-  "Explain DNS before TCP",
+  { label: "Build a chess engine in Python", example: false },
+  { label: "Become fluent in Spanish", example: false },
+  { label: "How a song is written", example: true },
 ];
 
 export default function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [topic, setTopic] = useState("Trace a web request across a network");
+  const [topic, setTopic] = useState("Build a chess engine in Python");
 
   const handleStart = () => {
     const value = topic.trim();
-    if (!value) {
-      navigate(user ? "/learn" : "/login?signup=1");
+    if (user) {
+      navigate(value ? `/dashboard?topic=${encodeURIComponent(value)}` : "/dashboard");
       return;
     }
-    if (user) navigate("/learn");
-    else navigate("/login?signup=1&topic=" + encodeURIComponent(value));
+    navigate(value ? "/login?signup=1&topic=" + encodeURIComponent(value) : "/login?signup=1");
   };
 
   return (
@@ -31,62 +30,62 @@ export default function Landing() {
       <main id="main">
         <section className="cr-landing-hero">
           <div className="cr-scroll-rise">
-            <p className="cr-kicker">Start from what you already know</p>
+            <p className="cr-kicker">A course from a sentence</p>
             <h1 className="cr-landing-title">
-              A course that<br />begins at <em>your</em> edge.
+              Tell us what you want<br />to get good at.
             </h1>
             <p className="cr-landing-subtitle">
-              Type a goal. Watch a path assemble: lessons, a quiz, a paper, a video — from attributed sources, labelled honestly.
-              Networking for beginners is the launch domain.
+              Type a goal, add what you already know, and we build a course you can actually continue — lessons, a quiz, something to watch.
             </p>
             <div className="cr-hero-form">
-              <label className="cr-sr-only" htmlFor="landing-topic">What do you want to be able to do?</label>
+              <label className="cr-sr-only" htmlFor="landing-topic">What do you want to get good at?</label>
               <input
                 id="landing-topic"
                 className="cr-input"
-                placeholder="e.g. Trace a web request across a network"
+                placeholder="e.g. Build a chess engine in Python"
                 value={topic}
                 onChange={(event) => setTopic(event.target.value)}
                 onKeyDown={(event) => event.key === "Enter" && handleStart()}
               />
               <button type="button" className="cr-btn cr-btn-primary cr-hero-submit" onClick={handleStart}>
-                {user ? "Open Learn" : "Continue"}
+                {user ? "Open courses" : "Continue"}
               </button>
             </div>
             <div className="cr-suggestion-list">
               {suggestions.map((item) => (
-                <button key={item} type="button" className="cr-goal-chip" onClick={() => setTopic(item)}>
-                  {item}
+                <button key={item.label} type="button" className="cr-goal-chip" onClick={() => setTopic(item.label)}>
+                  {item.label}
+                  {item.example ? <span className="cr-example-tag"> example</span> : null}
                 </button>
               ))}
             </div>
+            <p className="cr-example-note">Any subject works. The marked chip is only a sample of a path assembling.</p>
           </div>
           <div className="cr-scroll-shift">
             <HeroInstrument goal={topic} />
           </div>
         </section>
 
-        <section className="cr-proof cr-scroll-rise" aria-label="How a path is built">
-          <span>Goal</span>
-          <span>Prerequisite graph</span>
-          <span>Cited lessons</span>
-          <span>Practice until it sticks</span>
+        <section className="cr-proof cr-scroll-rise" aria-label="How a course is built">
+          <span>Your goal</span>
+          <span>What you already know</span>
+          <span>Lessons and a quiz</span>
+          <span>A place to try it</span>
         </section>
 
         <section className="cr-editorial">
           <div className="cr-scroll-rise">
-            <p className="cr-kicker">Not a chat dump</p>
-            <h2>The wait is the product.</h2>
+            <p className="cr-kicker">Keep it light</p>
+            <h2>Make a course. Keep going.</h2>
             <p className="cr-body">
-              Generation is staged: read your level, retrieve sources, write only from passages, verify claims, then quiz keys.
-              If a line is unsupported it stays marked as a draft.
+              Make a course, keep going, glance at your stats. If you want to run a tiny program, there is a sandbox from Courses.
             </p>
           </div>
           <div className="cr-split-list">
             {[
-              ["01", "Diagnostic first", "Say what you know. The path shortens or skips those nodes."],
-              ["02", "Sources with licenses", "Chunks carry title, URL, attribution. No invented paragraphs."],
-              ["03", "Studio, on a leash", "Build the capstone in the browser. Oversized apps hit a rate wall, on purpose."],
+              ["01", "Say the goal", "One sentence is enough. Spanish, chess, guitar — whatever you are actually trying to learn."],
+              ["02", "Mention what you know", "We skip the boring recap and start at your edge."],
+              ["03", "Learn, then try", "Open the course. If you want to run a tiny program, the sandbox is right there."],
             ].map(([n, title, copy]) => (
               <article key={n} className="cr-split-row">
                 <span className="cr-kicker">{n}</span>
@@ -102,10 +101,10 @@ export default function Landing() {
       <footer className="cr-footer">
         <div className="cr-footer-inner">
           <span className="cr-brand-word">courserocket</span>
-          <span>Cited paths. Honest labels.</span>
+          <span>Courses that start where you are.</span>
           <div className="cr-footer-links">
             <Link to="/privacy">Privacy</Link>
-            <Link to={user ? "/learn" : "/login"}>{user ? "Learn" : "Sign in"}</Link>
+            <Link to={user ? "/dashboard" : "/login"}>{user ? "Courses" : "Sign in"}</Link>
           </div>
         </div>
       </footer>

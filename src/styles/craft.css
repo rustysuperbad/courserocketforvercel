@@ -323,6 +323,39 @@
   transition: color var(--dur-1) var(--ease-in-out);
 }
 .cr-goal-chip:hover { color: var(--text-1); }
+.cr-example-tag {
+  margin-left: var(--space-6);
+  font-size: var(--text-caption);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--emphasis);
+}
+.cr-example-note {
+  margin: var(--space-12) 0 0;
+  max-width: 36em;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-3);
+}
+.cr-known-field {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-18);
+  max-width: 42em;
+}
+.cr-known-field span {
+  font-size: var(--text-nav);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.cr-sandbox-link {
+  margin: var(--space-18) 0 0;
+  font-size: 15px;
+  color: var(--text-2);
+}
 .cr-editorial {
   max-width: var(--page-max);
   margin: 0 auto;

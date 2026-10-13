@@ -130,6 +130,7 @@ export default function Profile() {
           <div style={s.headerLeft}>
             <div style={s.avatar}>{initials || "U"}</div>
             <div>
+              <div className="cr-page-kicker">Stats</div>
               <div style={s.name}>
                 {profile?.name || user?.displayName || user?.email || "You"}
               </div>
@@ -137,11 +138,8 @@ export default function Profile() {
             </div>
           </div>
           <div style={s.headerActions}>
-            <button className="cr-btn cr-btn-ghost" onClick={() => navigate("/")}>
-              Home
-            </button>
             <button className="cr-btn cr-btn-primary" onClick={() => navigate("/dashboard")}>
-              Open Dashboard
+              Your courses
             </button>
           </div>
         </div>
@@ -175,7 +173,7 @@ export default function Profile() {
               No courses yet
             </div>
             <div style={{ color: "var(--text-2)", fontSize: 14, marginBottom: 16 }}>
-              Head to the dashboard to create your first course.
+              Head to Courses and type a goal.
             </div>
             <button className="cr-btn cr-btn-primary" onClick={() => navigate("/dashboard")}>
               Create a course

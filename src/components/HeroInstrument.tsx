@@ -25,7 +25,7 @@ export default function HeroInstrument({ goal }: { goal: string }) {
           <div className="cr-kicker">{course.domain}</div>
           <strong>{course.goal}</strong>
         </div>
-        <span className="cr-kind">Cached demo · no API</span>
+        <span className="cr-kind">{course.domain === "Example" ? "Example only" : "Preview · no API"}</span>
       </div>
       {course.modules.map((module, index) => (
         <InstrumentRow key={module.id} module={module} show={index < visible} />

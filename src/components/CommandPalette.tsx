@@ -38,22 +38,18 @@ export default function CommandPalette() {
             <Command.Empty style={{ padding: 16, color: "var(--text-3)" }}>Nothing matches.</Command.Empty>
             <Command.Group heading="Navigate">
               <Command.Item onSelect={() => go("/")}>Home</Command.Item>
-              {user && <Command.Item onSelect={() => go("/dashboard")}>Library</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/learn")}>Learn</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/learn/onboarding")}>Diagnostic</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/learn/studio")}>Studio</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/learn/practice")}>Practice</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/learn/review")}>Reviews</Command.Item>}
-              {user && <Command.Item onSelect={() => go("/profile")}>Profile</Command.Item>}
+              {user && <Command.Item onSelect={() => go("/dashboard")}>Courses</Command.Item>}
+              {user && <Command.Item onSelect={() => go("/profile")}>Stats</Command.Item>}
+              {user && <Command.Item onSelect={() => go("/sandbox")}>Sandbox</Command.Item>}
               <Command.Item onSelect={() => go("/privacy")}>Privacy</Command.Item>
             </Command.Group>
             {user && (
               <Command.Group heading="Draft a course (does not start generation)">
-                <Command.Item onSelect={() => go("/dashboard?topic=" + encodeURIComponent("Trace a web request across a network"))}>
-                  Prefill: trace a web request
+                <Command.Item onSelect={() => go("/dashboard?topic=" + encodeURIComponent("Build a chess engine in Python"))}>
+                  Prefill: chess engine in Python
                 </Command.Item>
-                <Command.Item onSelect={() => go("/learn?goal=" + encodeURIComponent("Explain DNS before TCP"))}>
-                  Prefill Learn: DNS before TCP
+                <Command.Item onSelect={() => go("/dashboard?topic=" + encodeURIComponent("Become fluent in Spanish in 90 days"))}>
+                  Prefill: Spanish in 90 days
                 </Command.Item>
               </Command.Group>
             )}

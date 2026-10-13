@@ -5,7 +5,7 @@ export type DemoCourse = { goal: string; domain: string; modules: DemoModule[] }
 
 const NETWORKING: DemoCourse = {
   goal: "Trace a web request across a network",
-  domain: "Networking",
+  domain: "Example",
   modules: [
     { id: "m1", title: "Addresses, not magic", kind: "lesson", status: "idle" },
     { id: "m2", title: "DNS before the first packet", kind: "lesson", status: "idle" },
@@ -52,13 +52,13 @@ export function scriptedCourseForGoal(goal: string): DemoCourse {
 }
 
 export const THEATRE_STEPS = [
-  { id: "queued", label: "Reading the goal", detail: "No lesson yet — just the outcome you typed." },
-  { id: "path", label: "Mapping what you know", detail: "Prerequisite graph, then skip or shorten mastered nodes." },
-  { id: "retrieve", label: "Finding attributed sources", detail: "Hybrid search: vector, keyword, authority, beginner level." },
-  { id: "write", label: "Writing from passages", detail: "Claims must cite a chunk. Nothing is invented here." },
-  { id: "verify", label: "Checking claims and keys", detail: "A second model has to agree, or the line stays unverified." },
-  { id: "resources", label: "Scoring video and papers", detail: "Cached, de-duplicated, level-fit — not a dump of search results." },
-  { id: "ready", label: "Path ready", detail: "Open the reader. Status badges stay honest." },
+  { id: "queued", label: "Reading your goal", detail: "Just the sentence you typed." },
+  { id: "path", label: "Noting what you know", detail: "We’ll skip the bits you already have." },
+  { id: "retrieve", label: "Gathering material", detail: "Lessons, a quiz, something to watch." },
+  { id: "write", label: "Writing the lessons", detail: "Turning the goal into modules." },
+  { id: "verify", label: "Checking the quiz", detail: "Making sure the questions match the lessons." },
+  { id: "resources", label: "Picking a video", detail: "One watch-through, not a dump of search results." },
+  { id: "ready", label: "Ready to open", detail: "Your course is ready." },
 ] as const;
 
 export function theatreIndexFromStage(stage?: string): number {

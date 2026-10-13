@@ -35,7 +35,7 @@ export default function PythonSandbox({
   code,
   onCodeChange,
   heading = "Python",
-  note = "Runs in this browser via Pyodide. It cannot touch your network.",
+  note = "Runs in this browser. Nothing is sent to a server.",
   editable = true,
 }: Props) {
   const [output, setOutput] = useState("");

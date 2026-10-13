@@ -58,9 +58,8 @@ export default function Privacy() {
         <p className="cr-kicker">Privacy</p>
         <h1>Your learning data</h1>
         <p className="cr-body">
-          CourseRocket keeps Firebase Authentication and stores new learning records in Supabase.
-          Lessons are generated from cited sources; private notes stay on your account only.
-          This page is a working placeholder for a fuller policy.
+          CourseRocket uses your account to save the courses you make and how far you have got.
+          This page is a short placeholder until a fuller policy is written.
         </p>
         <div className="cr-legal-grid">
           <div>
@@ -68,10 +67,9 @@ export default function Privacy() {
           </div>
           <div>
             <ul>
-              <li>Firebase Auth identity (email or Google account).</li>
-              <li>Onboarding profile, mastery estimates, reviews, quiz attempts, and course jobs.</li>
-              <li>Optional private notes you upload, used only for your retrieval.</li>
-              <li>Lesson feedback you submit. We do not log full lesson text in traces.</li>
+              <li>Your sign-in (email or Google).</li>
+              <li>Courses you generate and your progress on them.</li>
+              <li>Optional notes you save for yourself.</li>
             </ul>
             {!user && <p className="cr-body" style={{ marginTop: 24 }}>Sign in to export or delete your learning records.</p>}
             {user && (
@@ -95,7 +93,7 @@ export default function Privacy() {
           </div>
         </div>
         <p style={{ marginTop: 60 }}>
-          <Link className="cr-link" to={user ? "/learn" : "/"}>{user ? "Back to Learn" : "Back to home"}</Link>
+          <Link className="cr-link" to={user ? "/dashboard" : "/"}>{user ? "Back to courses" : "Back to home"}</Link>
         </p>
       </main>
     </div>

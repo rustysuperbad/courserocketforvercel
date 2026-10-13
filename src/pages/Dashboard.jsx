@@ -26,12 +26,12 @@ import GenerationTheatre from "../components/GenerationTheatre";
 import { firestoreSetupHelpFromError } from "../lib/firestoreErrors";
 
 const PROMPT_IDEAS = [
-  "Build a stock predictor with Black-Scholes",
-  "Master React + TypeScript for production",
-  "Crash course on quantum computing",
-  "Build a multiplayer game in Unity",
-  "Become fluent in Spanish in 90 days",
-  "Modern systems design interviews",
+  "Build a chess engine in Python",
+  "Become fluent in Spanish",
+  "Learn to play guitar",
+  "Cook from scratch, one cuisine",
+  "Photograph on film",
+  "Write short stories that people finish",
 ];
 
 // Cap on concurrent generations. Each run fans out parallel module enrich calls;
@@ -42,6 +42,7 @@ export default function Dashboard() {
   const { user, authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [topic, setTopic] = useState(searchParams.get("topic") || "");
+  const [alreadyKnow, setAlreadyKnow] = useState("");
   const [courseSearch, setCourseSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
   const [mainCourses, setMainCourses] = useState([]);
@@ -312,6 +313,8 @@ export default function Dashboard() {
 
   const handleGenerate = () => {
     const t = topic.trim();
+    const known = alreadyKnow.trim();
+    const prompt = known ? `${t}. I already know: ${known}` : t;
     if (!t) {
       setError("Type a topic to generate.");
       return;
@@ -321,13 +324,14 @@ export default function Dashboard() {
       return;
     }
     setTopic("");
+    setAlreadyKnow("");
     setFirestoreSetup(null);
     if (searchParams.get("topic")) {
       const p = new URLSearchParams(searchParams);
       p.delete("topic");
       setSearchParams(p, { replace: true });
     }
-    void startGeneration(t);
+    void startGeneration(prompt);
   };
 
   return (
@@ -337,9 +341,9 @@ export default function Dashboard() {
       <div className="cr-page cr-dashboard-body" style={s.body}>
         <div style={s.heading} className="cr-dashboard-heading cr-scroll-rise">
           <div>
-            <div className="cr-page-kicker">Library</div>
-            <h1 style={s.h1}>Courses you can actually continue.</h1>
-            <p style={s.sub}>Pick up a path, or type a goal. Generation stays on the page — not a spinner over an empty shelf.</p>
+            <div className="cr-page-kicker">Courses</div>
+            <h1 style={s.h1}>What are you learning?</h1>
+            <p style={s.sub}>Make a course, pick one up, or see how far you have got. That is the whole app.</p>
           </div>
           <div className="cr-stat-row">
             <Stat label="Courses" value={stats.total} />
@@ -351,8 +355,8 @@ export default function Dashboard() {
         <div className="cr-generate-panel cr-scroll-rise">
           <div style={s.generateHead} className="cr-generator-header">
             <div>
-              <div style={s.generateLabel}>What should you be able to do?</div>
-              <div style={s.generateHint}>One outcome. The shelf stores the path; verified lessons live under Learn.</div>
+              <div style={s.generateLabel}>Start a course</div>
+              <div style={s.generateHint}>One goal. Optionally say what you already know so the course does not begin at zero.</div>
             </div>
           </div>
 
@@ -377,9 +381,24 @@ export default function Dashboard() {
                   : ""
               }
             >
-              Generate →
+              Make course
             </button>
           </div>
+          <label className="cr-known-field">
+            <span>What do you already know?</span>
+            <textarea
+              className="cr-input"
+              rows={2}
+              placeholder="Optional — e.g. I can read Python, I have never written a search function."
+              value={alreadyKnow}
+              onChange={(e) => setAlreadyKnow(e.target.value)}
+              disabled={generatingCount >= MAX_CONCURRENT}
+            />
+          </label>
+          <p className="cr-sandbox-link">
+            Want to try a tiny program first?{" "}
+            <button type="button" className="cr-link" onClick={() => navigate("/sandbox")}>Open the sandbox</button>
+          </p>
 
           <div style={s.chipRow} className="cr-topic-ideas">
             {PROMPT_IDEAS.map((p) => (
@@ -433,7 +452,7 @@ export default function Dashboard() {
         </div>
 
         <div style={s.sectionHead} className="cr-library-head">
-          <h2 style={s.h2}>Shelf</h2>
+          <h2 style={s.h2}>Your courses</h2>
           {displayCourses.length > 0 && (
             <div style={s.muted}>
               {mainCourses.length} saved
@@ -482,7 +501,7 @@ export default function Dashboard() {
           </div>
         ) : displayCourses.length === 0 ? (
           <div className="cr-empty-state">
-            <p>Empty shelf. Type a goal above — the first path appears as soon as the run is reserved.</p>
+            <p>No courses yet. Type a goal above and the first one will show up here.</p>
           </div>
         ) : filteredCourses.length === 0 ? (
           <div className="cr-empty-search">No courses match that search. Try another topic or choose a different filter.</div>
