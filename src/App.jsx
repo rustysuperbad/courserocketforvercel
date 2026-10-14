@@ -8,6 +8,9 @@ const Course = lazy(() => import("./pages/Course"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Studio = lazy(() => import("./pages/learn/Studio"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const PracticeBentoPreview = import.meta.env.DEV
+  ? lazy(() => import("./pages/PracticeBentoPreview"))
+  : null;
 import { useAuth } from "./context/AuthContext";
 import BrandIntro from "./components/BrandIntro";
 const CommandPalette = lazy(() => import("./components/CommandPalette"));
@@ -62,6 +65,9 @@ export default function App() {
         <Route path="/learn/analytics" element={<Navigate to="/profile" replace />} />
         <Route path="/learn/course/:courseId" element={<Navigate to="/dashboard" replace />} />
         <Route path="/privacy" element={<DeferredPage><Privacy /></DeferredPage>} />
+        {import.meta.env.DEV ? (
+          <Route path="/dev/practice-bento" element={<DeferredPage><PracticeBentoPreview /></DeferredPage>} />
+        ) : null}
       </Routes>
     </BrowserRouter>
   );

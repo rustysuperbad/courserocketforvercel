@@ -9,7 +9,6 @@ import {
   runOrResumeCourseGeneration,
   mergeCourseModule,
   replaceCourseModule,
-  setVideoTimestampSeconds,
 } from "../lib/coursePipeline";
 import {
   courseGenerationDraftRef,
@@ -18,7 +17,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import AIChat from "../components/AIChat";
-import PythonSandbox from "../components/learn/PythonSandbox";
+import PracticeBento from "../components/PracticeBento";
 import {
   SANDBOX_STARTERS,
   courseNeedsSandbox,
@@ -43,7 +42,6 @@ export default function Course() {
   const [loading, setLoading] = useState(true);
   const [activeModule, setActiveModule] = useState(0);
   const [progress, setProgress] = useState({});
-  const [showQuiz, setShowQuiz] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -357,7 +355,6 @@ export default function Course() {
 
   const openModule = (index) => {
     setActiveModule(index);
-    setShowQuiz(false);
     resetQuiz();
   };
 
@@ -556,8 +553,6 @@ export default function Course() {
   return (
     <div className="cr-course-root" style={s.root}>
       <style>{`
-        .cr-video-card:hover .cr-video-overlay { opacity: 1 !important; }
-        .cr-video-card:hover .cr-video-thumb { opacity: 0.88; }
         .cr-mod-crumb {
           transition: background 160ms ease, box-shadow 200ms ease, transform 160ms ease;
           border: 1px solid transparent !important;
@@ -725,277 +720,125 @@ export default function Course() {
         </aside>
 
         <main style={s.main} className="cr-course-main">
-          {!showQuiz ? (
-            <div className="cr-bento cr-course-bento cr-fade">
-              <div className={"cr-cell cr-course-tile " + (showSandbox ? "cr-span-8" : "cr-span-12")}>
-                <p className="cr-kicker">Course</p>
-                <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
-                <h1 style={s.moduleTitle}>{module.title}</h1>
-                <p style={s.moduleSummary}>{module.summary}</p>
+          <article className="cr-course-lesson cr-fade">
+            <p className="cr-kicker">Course</p>
+            <div style={s.moduleTag}>Module {ai + 1} of {mods.length}</div>
+            <h1 style={s.moduleTitle}>{module.title}</h1>
+            <p style={s.moduleSummary}>{module.summary}</p>
 
-                {module.concepts?.length > 0 && (
-                  <div style={{ ...s.conceptsRow, margin: "18px 0 24px" }}>
-                    {module.concepts.map((c) => (
-                      <span key={c} style={s.conceptTag}>{c}</span>
-                    ))}
-                  </div>
-                )}
-
-                {module.lessons?.length > 0 ? (
-                  <div style={s.lessonsContainer}>
-                    {module.lessons.map((lesson, i) => (
-                      <div key={i} className="cr-lesson-card" style={s.lessonBlock}>
-                        <h3 style={s.lessonHeading}>{renderLessonInlineMd(lesson.heading, `lh-${i}`)}</h3>
-                        <LessonBody text={lesson.text} />
-                      </div>
-                    ))}
-                  </div>
-                ) : isGeneratingCourse ? (
-                  <div style={s.pendingBlock}>
-                    <span style={s.miniSpin} />
-                    <span>Writing this module…</span>
-                  </div>
-                ) : module.generationQuality === "failed" ? (
-                  <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
-                ) : (
-                  <div style={s.empty}>No lesson content available for this module.</div>
-                )}
-
-                {course?.generationQuality === "template-fallback" ? (
-                  <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
-                    This outline is a starter structure. Try generating the course again.
-                  </p>
-                ) : null}
-                {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
-                  <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
-                    This module needs another write. Use Edit course → Regenerate module.
-                  </p>
-                ) : null}
-                {module.sources?.length > 0 ? (
-                  <div style={{ display: "grid", gap: 8, marginTop: 24 }}>
-                    {module.sources.map((source, index) => (
-                      <a
-                        key={source.url || index}
-                        href={source.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ display: "flex", gap: 10, alignItems: "baseline", color: "var(--primary-2)", textDecoration: "none", fontSize: 13, lineHeight: 1.5 }}
-                      >
-                        <span style={{ flex: "0 0 auto", opacity: 0.75 }}>[{source.id || index + 1}]</span>
-                        <span>{source.title || source.url}</span>
-                        <span aria-hidden="true" style={{ flex: "0 0 auto", opacity: 0.7 }}>↗</span>
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-
-                {typeof module.customSectionNotes === "string" && module.customSectionNotes.trim() ? (
-                  <div style={{ ...s.userNotesText, marginTop: 24 }}>{module.customSectionNotes.trim()}</div>
-                ) : null}
-
-                <div style={s.actions}>
-                  {module.quiz?.length > 0 && (
-                    <button
-                      className="cr-btn cr-btn-primary"
-                      onClick={() => setShowQuiz(true)}
-                    >
-                      Take module quiz →
-                    </button>
-                  )}
-                  {!isCompleted ? (
-                    <button className="cr-btn cr-btn-soft" onClick={markComplete}>
-                      Mark as complete
-                    </button>
-                  ) : (
-                    <div style={s.completedBadge}>
-                      ✓ Completed
-                      {quizScore !== undefined && module.quiz
-                        ? ` · Quiz ${quizScore}/${module.quiz.length}`
-                        : ""}
-                    </div>
-                  )}
-                  <button className="cr-btn cr-btn-ghost" onClick={() => setChatOpen(true)}>
-                    Ask about this module
-                  </button>
-                  {activeModule < mods.length - 1 && (
-                    <button className="cr-btn cr-btn-ghost" onClick={() => openModule(activeModule + 1)}>
-                      Next module →
-                    </button>
-                  )}
-                </div>
+            {module.concepts?.length > 0 && (
+              <div style={{ ...s.conceptsRow, margin: "18px 0 24px" }}>
+                {module.concepts.map((c) => (
+                  <span key={c} style={s.conceptTag}>{c}</span>
+                ))}
               </div>
+            )}
 
-              {showSandbox ? (
-                <div className="cr-cell cr-cell-ink cr-span-4 cr-course-sandbox">
-                  <PythonSandbox
-                    compact
-                    language={sandboxLang}
-                    onLanguageChange={setSandboxLang}
-                    code={sandboxBuffers[sandboxLang] || SANDBOX_STARTERS.python}
-                    onCodeChange={(value) => setSandboxBuffers((current) => ({ ...current, [sandboxLang]: value }))}
-                    note="Pick a language. It runs here."
-                  />
-                </div>
-              ) : null}
-
-              <div className="cr-cell cr-cell-ink cr-span-6 cr-course-videos">
-                <p className="cr-kicker">Videos</p>
-                {module.videos?.length > 0 ? (
-                  <div style={s.videoList}>
-                    {module.videos.map((v) => (
-                      <VideoRow
-                        key={v.videoId}
-                        video={v}
-                        courseId={id}
-                        stoppedSeconds={
-                          typeof videoProgressMap[v.videoId] === "number"
-                            ? videoProgressMap[v.videoId]
-                            : null
-                        }
-                      />
-                    ))}
+            {module.lessons?.length > 0 ? (
+              <div style={s.lessonsContainer}>
+                {module.lessons.map((lesson, i) => (
+                  <div key={i} className="cr-lesson-card" style={s.lessonBlock}>
+                    <h3 style={s.lessonHeading}>{renderLessonInlineMd(lesson.heading, `lh-${i}`)}</h3>
+                    <LessonBody text={lesson.text} />
                   </div>
-                ) : isGeneratingCourse ? (
-                  <div style={s.pendingBlock}>
-                    <span style={s.miniSpin} />
-                    <span>Finding curated videos…</span>
-                  </div>
-                ) : (
-                  <div style={s.empty}>No videos for this module yet.</div>
-                )}
+                ))}
               </div>
-
-              <div className="cr-cell cr-span-6 cr-course-papers">
-                <p className="cr-kicker">Papers</p>
-                {module.papers?.length > 0 ? (
-                  <div style={s.paperList}>
-                    {module.papers.map((p, i) => (
-                      <a
-                        key={i}
-                        href={p.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="cr-paper-link"
-                        style={s.paperCard}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={s.paperTitle}>{p.title}</div>
-                          <div style={s.paperMeta}>
-                            {p.authors}
-                            {p.year ? ` · ${p.year}` : ""}
-                          </div>
-                          {p.abstract && <div style={s.paperAbstract}>{p.abstract}</div>}
-                        </div>
-                        <div style={s.paperArrow}>→</div>
-                      </a>
-                    ))}
-                  </div>
-                ) : isGeneratingCourse ? (
-                  <div style={s.pendingBlock}>
-                    <span style={s.miniSpin} />
-                    <span>Fetching related reading…</span>
-                  </div>
-                ) : (
-                  <div style={s.empty}>No papers for this module yet.</div>
-                )}
+            ) : isGeneratingCourse ? (
+              <div style={s.pendingBlock}>
+                <span style={s.miniSpin} />
+                <span>Writing this module…</span>
               </div>
-            </div>
-          ) : (
-            <div className="cr-fade cr-course-quiz" style={{ maxWidth: "100%" }}>
-              <button
-                style={s.backBtn}
-                onClick={() => {
-                  setShowQuiz(false);
-                  resetQuiz();
-                }}
-              >
-                ← Back to module
-              </button>
-              <h2 style={s.quizTitle}>Module {ai + 1} Quiz</h2>
-              <p style={s.quizSub}>Test your understanding of {module.title}</p>
+            ) : module.generationQuality === "failed" ? (
+              <div style={s.empty}>This module did not write cleanly. Open Edit course and regenerate it.</div>
+            ) : (
+              <div style={s.empty}>No lesson content available for this module.</div>
+            )}
 
-              {module.quiz?.map((q, qIndex) => {
-                const selected = quizAnswers[qIndex];
-                return (
-                  <div key={qIndex} className="cr-card cr-quiz-question" style={s.questionCard}>
-                    <div style={s.questionNum}>Question {qIndex + 1}</div>
-                    <div style={s.questionText}>{renderLessonInlineMd(q.question, `qq-${qIndex}`)}</div>
-                    <div style={s.optionsList}>
-                      {q.options.map((opt, optIndex) => {
-                        let style = { ...s.option };
-                        if (quizSubmitted) {
-                          if (optIndex === q.correctIndex) style = { ...style, ...s.optCorrect };
-                          else if (optIndex === selected) style = { ...style, ...s.optWrong };
-                        } else if (selected === optIndex) {
-                          style = { ...style, ...s.optSelected };
-                        }
-                        return (
-                          <div
-                            key={optIndex}
-                            style={style}
-                            onClick={() => {
-                              if (quizSubmitted) return;
-                              setQuizAnswers((p) => ({ ...p, [qIndex]: optIndex }));
-                            }}
-                          >
-                            <div style={s.optLetter}>{["A", "B", "C", "D"][optIndex]}</div>
-                            <div style={{ flex: 1 }}>{renderLessonInlineMd(opt, `qo-${qIndex}-${optIndex}`)}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {quizSubmitted && (
-                      <div style={s.explanation}>
-                        <strong style={{ color: quizAnswers[qIndex] === q.correctIndex ? "var(--success)" : "var(--danger)" }}>
-                          {quizAnswers[qIndex] === q.correctIndex ? "✓ Correct. " : "✗ Incorrect. "}
-                        </strong>
-                        {renderLessonInlineMd(q.explanation, `qe-${qIndex}`)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            {course?.generationQuality === "template-fallback" ? (
+              <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
+                This outline is a starter structure. Try generating the course again.
+              </p>
+            ) : null}
+            {module.generationQuality === "template-fallback" || module.generationQuality === "failed" ? (
+              <p role="status" style={{ marginTop: 18, color: "var(--text-2)", fontSize: 16, lineHeight: 1.5 }}>
+                This module needs another write. Use Edit course → Regenerate module.
+              </p>
+            ) : null}
+            {module.sources?.length > 0 ? (
+              <div style={{ display: "grid", gap: 8, marginTop: 24 }}>
+                {module.sources.map((source, index) => (
+                  <a
+                    key={source.url || index}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: "flex", gap: 10, alignItems: "baseline", color: "var(--primary-2)", textDecoration: "none", fontSize: 13, lineHeight: 1.5 }}
+                  >
+                    <span style={{ flex: "0 0 auto", opacity: 0.75 }}>[{source.id || index + 1}]</span>
+                    <span>{source.title || source.url}</span>
+                    <span aria-hidden="true" style={{ flex: "0 0 auto", opacity: 0.7 }}>↗</span>
+                  </a>
+                ))}
+              </div>
+            ) : null}
 
-              {!quizSubmitted ? (
-                <button
-                  className="cr-btn cr-btn-primary"
-                  style={{ width: "100%", padding: "14px", marginTop: 8 }}
-                  disabled={module.quiz && Object.keys(quizAnswers).length < module.quiz.length}
-                  onClick={submitQuiz}
-                >
-                  Submit answers
+            {typeof module.customSectionNotes === "string" && module.customSectionNotes.trim() ? (
+              <div style={{ ...s.userNotesText, marginTop: 24 }}>{module.customSectionNotes.trim()}</div>
+            ) : null}
+
+            <div style={s.actions}>
+              {!isCompleted ? (
+                <button className="cr-btn cr-btn-primary" onClick={markComplete}>
+                  Mark as complete
                 </button>
               ) : (
-                <div className="cr-card" style={s.resultCard}>
-                  <div style={s.scoreNum}>
-                    {quizCorrect}
-                    <span style={{ fontSize: 26, color: "var(--text-3)" }}>
-                      /{module.quiz?.length || 0}
-                    </span>
-                  </div>
-                  <div style={s.scoreLabel}>correct answers</div>
-                  <div style={s.resultActions}>
-                    <button className="cr-btn cr-btn-ghost" onClick={resetQuiz}>
-                      Retry
-                    </button>
-                    <button
-                      className="cr-btn cr-btn-primary"
-                      onClick={() => {
-                        setShowQuiz(false);
-                        resetQuiz();
-                        if (activeModule < mods.length - 1) openModule(activeModule + 1);
-                        else navigate("/dashboard");
-                      }}
-                    >
-                      {activeModule < mods.length - 1
-                        ? "Next module →"
-                        : "Finish course ✓"}
-                    </button>
-                  </div>
+                <div style={s.completedBadge}>
+                  Done
+                  {quizScore !== undefined && module.quiz
+                    ? ` · Quiz ${quizScore}/${module.quiz.length}`
+                    : ""}
                 </div>
               )}
+              <button className="cr-btn cr-btn-ghost" onClick={() => setChatOpen(true)}>
+                Ask about this module
+              </button>
+              {activeModule < mods.length - 1 && (
+                <button className="cr-btn cr-btn-ghost" onClick={() => openModule(activeModule + 1)}>
+                  Next module →
+                </button>
+              )}
             </div>
-          )}
+          </article>
+
+          <PracticeBento
+            showSandbox={showSandbox}
+            isGenerating={isGeneratingCourse}
+            sandboxLang={sandboxLang}
+            onSandboxLang={setSandboxLang}
+            sandboxCode={sandboxBuffers[sandboxLang] || SANDBOX_STARTERS.python}
+            onSandboxCode={(value) => setSandboxBuffers((current) => ({ ...current, [sandboxLang]: value }))}
+            videos={module.videos || []}
+            videoProgressMap={videoProgressMap}
+            courseId={id}
+            papers={module.papers || []}
+            quiz={module.quiz || []}
+            quizAnswers={quizAnswers}
+            quizSubmitted={quizSubmitted}
+            onQuizPick={(qIndex, optIndex) => {
+              if (quizSubmitted) return;
+              setQuizAnswers((prev) => ({ ...prev, [qIndex]: optIndex }));
+            }}
+            onQuizSubmit={submitQuiz}
+            onQuizReset={resetQuiz}
+            quizCorrect={quizCorrect}
+            nextLabel={activeModule < mods.length - 1 ? "Next module →" : "Finish course"}
+            onNext={() => {
+              resetQuiz();
+              if (activeModule < mods.length - 1) openModule(activeModule + 1);
+              else navigate("/dashboard");
+            }}
+            renderText={renderLessonInlineMd}
+          />
         </main>
       </div>
 
@@ -1359,253 +1202,6 @@ const editUi = {
     flexWrap: "wrap",
     gap: 10,
     marginTop: 10,
-  },
-};
-
-const vidRow = {
-  shell: {
-    marginTop: 6,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    opacity: 0.88,
-    fontSize: 11.5,
-    color: "var(--text-3)",
-    paddingLeft: 2,
-  },
-  lab: { flexShrink: 0 },
-  inp: {
-    flex: "1 1 80px",
-    maxWidth: 110,
-    fontSize: 12,
-    padding: "4px 9px",
-  },
-  btn: { padding: "4px 10px", fontSize: 11, minHeight: 0 },
-};
-
-function parseFlexibleTimestamp(input) {
-  const raw = String(input ?? "").trim();
-  if (!raw) return null;
-  if (/^\d+$/.test(raw)) return Math.max(0, parseInt(raw, 10));
-  const chunks = raw.split(":").map((p) => p.trim()).filter(Boolean);
-  const nums = chunks.map((c) => parseInt(c, 10));
-  if (nums.some((n) => Number.isNaN(n))) return null;
-  if (nums.length === 1) return nums[0];
-  if (nums.length === 2) return nums[0] * 60 + nums[1];
-  if (nums.length === 3) return nums[0] * 3600 + nums[1] * 60 + nums[2];
-  return null;
-}
-
-function formatStopLabel(sec) {
-  const secs = Math.max(0, Math.floor(Number(sec)));
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const r = secs % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`
-    : `${m}:${String(r).padStart(2, "0")}`;
-}
-
-/** Thumbnail row + subtle manual timestamp (persisted per course / user scope). */
-function VideoRow({ video, courseId, stoppedSeconds }) {
-  const seeded =
-    stoppedSeconds != null && !Number.isNaN(Number(stoppedSeconds))
-      ? formatStopLabel(stoppedSeconds)
-      : "";
-  const [raw, setRaw] = useState(seeded);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setRaw(
-      stoppedSeconds != null && !Number.isNaN(Number(stoppedSeconds))
-        ? formatStopLabel(stoppedSeconds)
-        : ""
-    );
-  }, [stoppedSeconds, video?.videoId]);
-
-  const persist = async () => {
-    const secs = parseFlexibleTimestamp(raw);
-    if (secs == null || !video?.videoId || !courseId) return;
-    setBusy(true);
-    try {
-      await setVideoTimestampSeconds(courseId, video.videoId, secs);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div>
-      <VideoCard video={video} />
-      <div style={vidRow.shell}>
-        <span style={vidRow.lab}>Stopped at</span>
-        <input
-          className="cr-input"
-          type="text"
-          style={vidRow.inp}
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
-          placeholder="5:32"
-          aria-label={`Where you left off: ${video.title}`}
-        />
-        <button
-          type="button"
-          className="cr-btn cr-btn-ghost"
-          style={vidRow.btn}
-          disabled={busy}
-          onClick={() => void persist()}
-        >
-          {busy ? "…" : "Save"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function VideoCard({ video }) {
-  const ytUrl = "https://www.youtube.com/watch?v=" + video.videoId;
-  const thumb =
-    video.thumbnail ||
-    "https://img.youtube.com/vi/" + video.videoId + "/mqdefault.jpg";
-
-  return (
-    <a
-      href={ytUrl}
-      target="_blank"
-      rel="noreferrer"
-      className="cr-video-card"
-      style={vc.card}
-    >
-      <div style={vc.thumbWrap}>
-        <img src={thumb} alt={video.title} className="cr-video-thumb" style={vc.thumb} loading="lazy" />
-        <div className="cr-video-overlay" style={vc.overlay}>
-          <div style={vc.playBtn}>▶</div>
-        </div>
-        <div style={vc.ytBadge}>
-          <svg width="14" height="10" viewBox="0 0 24 17" fill="none">
-            <path
-              d="M23.495 2.656a3.016 3.016 0 0 0-2.122-2.135C19.505 0 12 0 12 0S4.495 0 2.627.521A3.016 3.016 0 0 0 .505 2.656 31.64 31.64 0 0 0 0 8.5a31.64 31.64 0 0 0 .505 5.844 3.016 3.016 0 0 0 2.122 2.135C4.495 17 12 17 12 17s7.505 0 9.373-.521a3.016 3.016 0 0 0 2.122-2.135A31.64 31.64 0 0 0 24 8.5a31.64 31.64 0 0 0-.505-5.844z"
-              fill="#FF0000"
-            />
-            <path d="M9.545 12.068V4.932L15.818 8.5l-6.273 3.568z" fill="white" />
-          </svg>
-          YouTube
-        </div>
-      </div>
-      <div style={vc.meta}>
-        <div style={vc.title}>{video.title}</div>
-        <div style={vc.bottom}>
-          <span style={vc.channel}>{video.channel}</span>
-          <span style={vc.watchLink}>Watch on YouTube →</span>
-        </div>
-      </div>
-    </a>
-  );
-}
-
-const vc = {
-  card: {
-    display: "block",
-    textDecoration: "none",
-    color: "inherit",
-    overflow: "hidden",
-    borderRadius: "var(--radius-lg)",
-    background: "transparent",
-    boxShadow: "none",
-    transition: "border-color var(--dur-2) var(--ease-out)",
-    marginBottom: 6,
-    border: 0,
-  },
-  thumbWrap: {
-    position: "relative",
-    paddingBottom: "52%",
-    background: "var(--ink)",
-    overflow: "hidden",
-    borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
-  },
-  thumb: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    transition: "opacity 180ms ease",
-  },
-  overlay: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "rgba(0,0,0,0.3)",
-    opacity: 0,
-    transition: "opacity 160ms ease",
-  },
-  playBtn: {
-    width: 54,
-    height: 54,
-    borderRadius: "50%",
-    background: "rgba(15,21,37,0.55)",
-    backdropFilter: "blur(8px)",
-    border: "1px solid rgba(255,255,255,0.18)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 18,
-    color: "#fff",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
-  },
-  ytBadge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    background: "rgba(8,11,22,0.78)",
-    backdropFilter: "blur(10px)",
-    padding: "5px 9px",
-    borderRadius: 8,
-    fontSize: 11,
-    color: "#f1f5f9",
-    fontWeight: 600,
-    boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    letterSpacing: "0.02em",
-  },
-  meta: {
-    padding: "16px 18px 18px",
-  },
-  title: {
-    fontSize: 15,
-    color: "var(--text)",
-    fontWeight: 600,
-    lineHeight: 1.48,
-    marginBottom: 10,
-    display: "-webkit-box",
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-  },
-  bottom: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  channel: {
-    fontSize: 12.5,
-    color: "var(--text-3)",
-    fontWeight: 500,
-  },
-  watchLink: {
-    fontSize: 12,
-    color: "var(--text-3)",
-    fontWeight: 600,
-    letterSpacing: "0.01em",
   },
 };
 

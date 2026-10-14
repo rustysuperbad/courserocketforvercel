@@ -249,9 +249,11 @@ User override: PYTHON preview stays ink. Featured library cards stay paper. Do n
 
 ## Course bento (this pass)
 
-Ask lives on the course (`AIChat`), not the sandbox. `/sandbox` is a blank in-browser runner with a language dropdown (Python, JavaScript, TypeScript, SQL, HTML) — no paid APIs. The course reader is a four-tile bento: **course** white `span-8`, **sandbox** ink `span-4`, **videos** ink `span-6`, **papers** white `span-6`. Nested lesson/paper cards flattened so the course tile can fill the column. Duplicate ink (featured cards, extra privacy copy) stays off unless asked.
+Ask lives on the course (`AIChat`), not the sandbox. `/sandbox` is a blank in-browser runner with a language dropdown (Python, JavaScript, TypeScript, SQL, HTML) — no paid APIs.
 
-Sandbox tile is **hidden** when the course topic is not coding (detected from title/topic/concepts/fences). Course then goes `span-12`. Nav **Sandbox** stays on every signed-in page. No course doc field yet — heuristic only. Needs input: a stored `sandboxEnabled` flag if we should let authors override.
+The reader is now **lesson first, tools last**. Lessons stay floating type. After the lesson, one 12-col practice bento: **Watch** (paper, featured YouTube + compact extras), **Try** (ink sandbox, tall, only on coding courses), **Read** (one featured paper + compact rest), **Check** (quiz inline, not a second page). Sandbox ink is the existing tile — no new ink surfaces. Duplicate ink stays off.
+
+Sandbox tile is **hidden** when the course topic is not coding (detected from title/topic/concepts/fences). Nav **Sandbox** stays on every signed-in page. No course doc field yet — heuristic only. Needs input: a stored `sandboxEnabled` flag if we should let authors override.
 
 ## Groq writer (this pass)
 
