@@ -10,7 +10,7 @@ import { specFromLearnerText, specsEquivalent } from "../src/rag/intake";
 import { runRagCourse, toLegacyModule } from "../src/rag/pipeline";
 import { EMBEDDED_PROMPTS, loadPrompt, PROMPT_NAMES } from "../src/rag/prompts";
 import { createFakeProvider } from "../src/rag/providers";
-import { FAKE_SOURCE_CHUNKS, NETWORKING_SOURCE_CHUNKS } from "../src/rag/liveRetrieve";
+import { FAKE_SOURCE_CHUNKS, NETWORKING_SOURCE_CHUNKS, launchRetrieve, lexicalRetrieve } from "../src/rag/liveRetrieve";
 import { redactDeep, redactForLog, redactPii } from "../src/rag/redact";
 import { selectEvidenceChunks } from "../src/rag/retrieve";
 import { evaluateGoal } from "../src/rag/runEval";
@@ -51,6 +51,15 @@ test("full fake pipeline publishes a grounded lesson with a quiz per objective",
   const legacy = toLegacyModule(lesson);
   assert.equal(legacy.lessons.length, 2);
   assert.equal(legacy.quiz[0]?.options.length, 4);
+});
+
+test("lexical retrieve finds four TCP chunks without embeddings", () => {
+  const hits = launchRetrieve("TCP three-way handshake SYN ACK", ["handshake"]);
+  assert.ok(hits.length >= 4);
+  assert.ok(hits.slice(0, 4).every((chunk) => ["N1", "N2", "N3", "N4"].includes(chunk.chunk_id) || chunk.score >= 0.12));
+  const dhcp = lexicalRetrieve("DHCP lease renew", NETWORKING_SOURCE_CHUNKS);
+  assert.ok(dhcp.length >= 4);
+  assert.ok(dhcp.some((chunk) => chunk.chunk_id.startsWith("N5")));
 });
 
 test("insufficient chunks block the lesson instead of writing from memory", async () => {

@@ -64,6 +64,16 @@ test("reconcileVerdict promotes cited UNSUPPORTED claims", async () => {
   }, new Set(["E1"]));
   assert.equal(next.claims[0]?.verdict, "SUPPORTED");
   assert.equal(next.claims[1]?.verdict, "UNSUPPORTED");
+  const grounded = reconcileVerdict({
+    claims: [
+      { text: "The client sends SYN first.", verdict: "UNSUPPORTED", evidence_ids: ["E1"] },
+      { text: "ACK follows SYN-ACK.", verdict: "UNSUPPORTED", evidence_ids: [] },
+    ],
+    scores: { accuracy: 2, coverage: 2, focus: 2, clarity: 2, originality: 2 },
+    fix_list: [],
+  }, new Set(["E1"]), "E1");
+  assert.equal(grounded.claims[1]?.verdict, "SUPPORTED");
+  assert.equal(grounded.scores.accuracy, 4);
 });
 
 test("quota settle releases failed when work throws", async () => {

@@ -9,7 +9,7 @@ CourseRocket keeps Firebase Authentication and Firestore for the existing produc
 | [Firebase](https://console.firebase.google.com/) | Existing sign-in, Firestore, and callable functions | Existing app config; Functions secrets below |
 | [Supabase](https://supabase.com/dashboard) | Postgres, pgvector, RLS, learner mastery and source retrieval | Public URL/anon key in local frontend; service-role key only in Functions |
 | [Inngest](https://app.inngest.com/) | Durable background jobs and retries | Event key + signing key in Functions secrets |
-| [OpenAI](https://platform.openai.com/api-keys) | Embeddings (`text-embedding-3-small`, 1536-d) | `OPENAI_API_KEY` server secret |
+| OpenAI | Optional private-notes ingest only. **Not used for RAG generate.** | skip unless you add embeddings later |
 | [Groq](https://console.groq.com/keys) | RAG writer/planner/extractor/quiz (`qwen/qwen3.8-27b`) | `GROQ_API_KEY` server secret |
 | [Langfuse](https://cloud.langfuse.com/) | LLM/job traces and cost metadata | Public + secret keys in Functions secrets |
 | [Sentry](https://sentry.io/) | Sanitized backend error reporting | DSN in Functions secret |
@@ -92,7 +92,7 @@ npm run ingest:networking -- --approve-cc-by-sa
 
 OpenStax's default textbook license is CC BY-NC-SA, so it is skipped unless you explicitly use `--allow-noncommercial`; the project-wide `ALLOW_NONCOMMERCIAL_SOURCES` setting must also be enabled for retrieval. IETF RFC entries and other official docs stay link-only until the individual document's rights are reviewed. Wikipedia and MDN pages need page-level attribution and ShareAlike handling. See [OpenStax licensing](https://help.openstax.org/s/article/Licensing-information-of-OpenStax-textbooks), [Wikimedia reuse terms](https://foundation.wikimedia.org/wiki/Terms_of_Use), [MDN attribution and licensing](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Attrib_copyright_license), and the [IETF Trust legal provisions](https://trustee.ietf.org/documents/trust-legal-provisions/).
 
-Ingestion uses the OpenAI embeddings API from the private script environment. Retrieved chunks include title, URL, license, attribution, authority, level, and relevance scores; the callable returns an explicit `retrievalStatus` if there are no approved sources or retrieval fails.
+RAG generate retrieves an in-repo networking corpus with lexical scoring (no OpenAI). Optional later ingest can still embed into `source_chunks` if you add a key; generate does not wait on that.
 
 ## 5. What is connected today
 
@@ -108,7 +108,7 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 - Signed-in learners can submit per-lesson feedback, record pre/post/delayed checks, export or delete learning-model data from `/privacy`, and view activation/completion/7-day return/cost-per-completion on `/learn/analytics`. Admins listed in `ADMIN_FIREBASE_UIDS` see project-wide stats and the feedback queue.
 - `/learn/notes` stores private text as owner-scoped sources (embeddings use OpenAI). Binary PDF parsing is not enabled; paste extracted text. Private notes are never labelled verified.
 
-`searchLearningSources` embeds the query with OpenAI, calls the hybrid RPC, then applies a second per-source diversity cap in TypeScript. Retrieved chunks always include title, URL, license, and attribution. A miss is returned as `no_approved_sources` or `unavailable`; the UI must not invent a fallback passage.
+`searchLearningSources` calls hybrid search with a **null** embedding (lexical FTS). A miss is `no_approved_sources` or `unavailable`; the UI must not invent a fallback passage. Generate uses `liveOrFakeRetrieve`, which prefers the in-repo corpus.
 
 The job worker writes lessons from retrieved passages when sources exist. A second model critiques every claim and independently solves each quiz. Unsupported claims can be rewritten once from the same passages; anything still ungrounded is stored as unverified and is not taught. Verified modules are cached by concept and evidence hash for reuse. YouTube and OpenAlex hits are scored for level fit, deduplicated, and cached for 12 hours. Source URLs are link-checked when a module is built. Do not mark content verified just because a job run completed.
 

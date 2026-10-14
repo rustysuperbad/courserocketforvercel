@@ -1,7 +1,5 @@
-import OpenAI from "openai";
 import { getServiceSupabase } from "./supabase";
-import { allowNonCommercialSources, booleanParam, embeddingCostPerMillion, numberParam, openAiApiKey, supabaseServiceRoleKey, supabaseUrl, youtubeApiKey } from "./config";
-import { traceOperation } from "./observability";
+import { allowNonCommercialSources, booleanParam, supabaseServiceRoleKey, supabaseUrl, youtubeApiKey } from "./config";
 import { hybridSearchParams, rankRetrievedChunks, toEvidenceChunks } from "./retrieval";
 import type { GenerationRun } from "./pipeline";
 import type { VerifiedLessonResult } from "./verifiedLesson";
@@ -38,36 +36,30 @@ export async function finalizeRun(runId: string, status: "completed" | "failed" 
 }
 
 export async function retrieveForGeneration(query: string, options: { targetLevel?: number; conceptSlug?: string; ownerUid?: string } = {}): Promise<{ chunks: ReturnType<typeof toEvidenceChunks>; inputTokens: number; costUsd: number; retrievalStatus: "attributed" | "no_approved_sources" }> {
-  const openai = new OpenAI({ apiKey: openAiApiKey.value() });
-  const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
-  const embedded = await traceOperation("courserocket-course-retrieval", {
-    provider: "openai", model: "text-embedding-3-small", fallbackUsed: false,
-  }, async () => {
-    const response = await openai.embeddings.create({ model: "text-embedding-3-small", input: query, dimensions: 1536 });
-    const vector = response.data[0]?.embedding;
-    if (!vector) throw new Error("Source retrieval did not return an embedding.");
-    const inputTokens = response.usage?.prompt_tokens ?? 0;
-    const costUsd = (inputTokens * costPerMillion) / 1_000_000;
-    return { vector, inputTokens, costUsd };
-  }, (result) => ({ inputTokens: result.inputTokens, outputTokens: 0, costEstimateUsd: result.costUsd }));
   const params = hybridSearchParams({
     query,
-    embedding: embedded.vector,
+    embedding: null,
     limit: 8,
     allowNonCommercial: booleanParam(allowNonCommercialSources.value()),
     targetLevel: options.targetLevel ?? 1,
     conceptSlugs: options.conceptSlug ? [options.conceptSlug] : null,
     ownerUid: options.ownerUid ?? null,
   });
-  const { data, error } = await serviceClient().rpc("hybrid_search_source_chunks", params);
-  if (error) throw new Error("Approved source retrieval failed.");
-  const ranked = rankRetrievedChunks(data, 8);
-  return {
-    chunks: toEvidenceChunks(ranked),
-    inputTokens: embedded.inputTokens,
-    costUsd: embedded.costUsd,
-    retrievalStatus: ranked.length ? "attributed" : "no_approved_sources",
-  };
+  try {
+    const { data, error } = await serviceClient().rpc("hybrid_search_source_chunks", params);
+    if (error || !data) {
+      return { chunks: [], inputTokens: 0, costUsd: 0, retrievalStatus: "no_approved_sources" };
+    }
+    const ranked = rankRetrievedChunks(data, 8);
+    return {
+      chunks: toEvidenceChunks(ranked),
+      inputTokens: 0,
+      costUsd: 0,
+      retrievalStatus: ranked.length ? "attributed" : "no_approved_sources",
+    };
+  } catch {
+    return { chunks: [], inputTokens: 0, costUsd: 0, retrievalStatus: "no_approved_sources" };
+  }
 }
 
 export async function ensureCourse(run: GenerationRun, estimatedMinutes: number): Promise<string> {

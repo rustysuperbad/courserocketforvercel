@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
-import { NETWORKING_SOURCE_CHUNKS } from "./liveRetrieve";
+import { launchRetrieve } from "./liveRetrieve";
 import { runRagCourse } from "./pipeline";
 import { createLiveProvider } from "./providers";
 import { fakeProvidersEnabled } from "./config";
@@ -56,7 +56,7 @@ async function main() {
   try {
     const result = await runRagCourse(SMOKE_GOAL, {
       provider: createLiveProvider(),
-      retrieve: async () => NETWORKING_SOURCE_CHUNKS,
+      retrieve: async (query, concepts) => launchRetrieve(query, concepts),
       ownerUid: "live-smoke",
       saveArtifact: async (row) => { artifacts.push(row); },
       reserveUsd: async () => {
@@ -95,7 +95,9 @@ async function main() {
       quotaReleased,
       artifactCount: artifacts.length,
     }));
-    if (result.spec.status !== "ok") process.exit(1);
+    const quizItems = result.lessons[0]?.quiz.length || 0;
+    const hasLesson = result.lessons.some((item) => Boolean(item.lesson));
+    if (result.spec.status !== "ok" || !hasLesson || quizItems < 1) process.exit(1);
   } catch (error) {
     await settleGenerationQuota({
       quotaRunId: "smoke-quota",

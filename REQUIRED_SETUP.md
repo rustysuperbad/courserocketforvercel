@@ -6,11 +6,9 @@ Do not merge `rag-pipeline` into `main` until step 6 passes. The live site still
 
 1. **Commit** the RAG work on `rag-pipeline` (uncommitted files are not on GitHub).
 2. **Push the branch only:** `git push -u origin rag-pipeline`. No PR yet.
-3. **Secrets on Supabase Edge** (Dashboard → Edge Functions → Secrets). Names only: `GROQ_API_KEY`, `GEMINI_API_KEY` (optional until Gemini responds), `GEMINI_MODEL=gemini-3.8-flash`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Do **not** set `COURSE_AI_FAKE` in production. Leave `VERIFIER_SAME_AS_WRITER` unset (Groq verifier).
+3. **Secrets on Supabase Edge** (Dashboard → Edge Functions → Secrets). Names only: `GROQ_API_KEY`, `GEMINI_API_KEY` (optional), `GEMINI_MODEL=gemini-3.8-flash`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Do **not** set `COURSE_AI_FAKE` in production. Leave `VERIFIER_SAME_AS_WRITER` unset (Groq verifier). **OpenAI is not required for generate.**
 4. **Migration:** `npx supabase db push` so `rag_run_artifacts` exists.
-5. **Ingest networking sources** (this spends OpenAI embedding cents):  
-   `cd functions && npm run ingest:networking`  
-   Without this, every live generate except cached fakes will say “No approved sources.”
+5. **Launch retrieve is in-repo lexical** (`NETWORKING_SOURCE_CHUNKS`). Do **not** run `ingest:networking` unless you later add an embeddings provider. Generate on TCP/DHCP/DNS/HTTP/CIDR/TLS/routing/ARP works without OpenAI.
 6. **Deploy Edge, then the app:**
    ```sh
    node scripts/bundle-edge.mjs
@@ -26,11 +24,11 @@ Gemini: unpaid AI Studio may train on prompts. Link Cloud billing before sending
 
 # Required setup (you do this)
 
-Nothing outside this repo is assumed. Until these items are done, the RAG pipeline runs against **fake providers** and local tests only. Paid Groq/Gemini/OpenAI calls stay off.
+Nothing outside this repo is assumed. Until these items are done, the RAG pipeline runs against **fake providers** and local tests only. Paid Groq calls stay off until Edge secrets are set. OpenAI is not part of generate.
 
 Do **not** put secrets in `VITE_*` variables, git, chat, or logs. Rotate anything that was ever pasted into a client env or committed.
 
-Current live stack: Firebase project `courserocket26` (Auth + Firestore, Spark), Supabase Edge `api`/`inngest`, Inngest Cloud app `courserocket`. Embeddings are OpenAI `text-embedding-3-small` at **1536 dimensions**, matching `source_chunks.embedding`.
+Current live stack: Firebase project `courserocket26` (Auth + Firestore, Spark), Supabase Edge `api`/`inngest`, Inngest Cloud app `courserocket`. Course generate retrieves the in-repo networking corpus with lexical scoring. OpenAI embeddings are unused for RAG generate.
 
 ---
 
@@ -88,17 +86,13 @@ If you stay on the unpaid Gemini tier, treat verifier traffic as **leaving your 
 
 ---
 
-## 3. OpenAI embeddings key (required for live retrieval)
+## 3. OpenAI embeddings key (not required for generate)
 
-**What:** **`OPENAI_API_KEY`** for `text-embedding-3-small` at **1536 dimensions**.
+**What:** Optional. Private-notes ingest still uses OpenAI if you turn that feature on later.
 
-**Why:** `hybrid_search_source_chunks` ranks with `extensions.vector(1536)`. A different size will fail at the RPC.
+**Why:** RAG generate uses Groq plus the in-repo networking corpus. `hybrid_search_source_chunks` already accepts a null embedding and falls back to lexical FTS.
 
-**Steps:** [platform.openai.com/api-keys](https://platform.openai.com/api-keys) → set `OPENAI_API_KEY` as an Edge/server secret. Optional: `OPENAI_EMBEDDING_COST_PER_MILLION_USD=0.02`.
-
-Do not change `EMBEDDING_DIMENSIONS` without a **new** migration that replaces the vector column.
-
-Fake-provider mode skips this (deterministic fake vectors).
+Skip `OPENAI_API_KEY` until you want vector ingest. Do not block launch on it.
 
 ---
 
@@ -204,7 +198,7 @@ Copy `.env.example` → `.env.local` for Vite. Server secrets go in Edge secrets
 | `GEMINI_API_KEY` | server, optional | Gemini verifier when `VERIFIER_SAME_AS_WRITER=false` |
 | `GEMINI_MODEL` | server | default `gemini-3.8-flash` |
 | `VERIFIER_SAME_AS_WRITER` | server, optional | default `true` (Groq verifier). `false` tries Gemini first |
-| `OPENAI_API_KEY` | server | embeddings 1536-d |
+| `OPENAI_API_KEY` | skip | not used for generate |
 | `INNGEST_EVENT_KEY` | server | job dispatch |
 | `INNGEST_SIGNING_KEY` | server | job auth |
 | `DAILY_COURSE_RUN_LIMIT` | server, optional | default `3` |
@@ -217,7 +211,7 @@ Copy `.env.example` → `.env.local` for Vite. Server secrets go in Edge secrets
 
 ## 8. Deploy Edge (when you are ready to spend money)
 
-This costs real Groq/Gemini/OpenAI usage. Do not do it until keys and billing are set.
+This costs real Groq usage. Do not do it until `GROQ_API_KEY` is set.
 
 ```sh
 node scripts/bundle-edge.mjs
@@ -229,18 +223,11 @@ JWT verify is handled inside `gateway.ts` (Firebase ID token). Confirm that flag
 
 ---
 
-## 9. Source corpus (or retrieval stays empty)
+## 9. Source corpus
 
-Hybrid search returns nothing until approved `sources` / `source_chunks` exist.
+Generate uses the in-repo networking corpus (TCP, DHCP, DNS, HTTP caching, CIDR, TLS, routing, ARP). Other topics still block with insufficient evidence.
 
-```sh
-cd functions
-# Review licenses first. CC BY-SA is stored review_required unless you explicitly approve.
-npm run ingest:networking -- --dry-run
-# Live ingest needs OPENAI_API_KEY + service role; costs embeddings.
-```
-
-Without ingested sources, the RAG pipeline **blocks** the lesson (`insufficient evidence`) instead of writing from model memory. That is intended.
+`npm run ingest:networking` is optional and still needs an embeddings provider; skip it for launch.
 
 ---
 
@@ -257,7 +244,7 @@ cd functions && npm test && npm run build
 Live (only after keys + billing):
 
 1. Sign in on the deployed app.
-2. Generate a short course on a topic you have ingested sources for.
+2. Generate `TCP three-way handshake`. You should get lessons and at least one quiz.
 3. Confirm Edge logs show stages `intake → plan → retrieve → compile → write → verify → gates` with **no** raw prompt text.
 4. Confirm `rag_run_artifacts` rows exist for your uid and **do not** contain the original prompt.
 5. Confirm a second generate with `COURSE_AI_FAKE=1` still never hits Groq/Gemini.

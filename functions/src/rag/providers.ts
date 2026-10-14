@@ -171,7 +171,7 @@ async function completeGroq(stage: StageName, system: string, user: string): Pro
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify(body),
   }, cfg.timeoutMs));
-  const gapMs = Number(readEnv("GROQ_STAGE_GAP_MS", "8000"));
+  const gapMs = Number(readEnv("GROQ_STAGE_GAP_MS", "2500"));
   if (Number.isFinite(gapMs) && gapMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, gapMs));
   }

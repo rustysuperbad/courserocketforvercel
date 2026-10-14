@@ -95,7 +95,6 @@ const listLearningRuns = guarded("list-learning-runs", async (_data, uid) => {
 const searchLearningSources = guarded("search-learning-sources", async (data, uid) => {
   const input = parseInput(retrievalQuerySchema, data, "Enter a short topic to search learning sources.");
   const supabase = serviceClient();
-  const costPerMillion = numberParam(embeddingCostPerMillion.value(), 0.02);
   const reservedUsd = 0.00005;
   const { data: usageDay, error: reserveError } = await supabase.rpc("reserve_source_search", {
     p_firebase_uid: uid,
@@ -111,20 +110,9 @@ const searchLearningSources = guarded("search-learning-sources", async (data, ui
 
   let actualUsd = 0;
   try {
-    const openai = new OpenAI({ apiKey: openAiApiKey.value() });
-    const embedding = await traceOperation("courserocket-source-retrieval", {
-      provider: "openai", model: "text-embedding-3-small", fallbackUsed: false,
-    }, async () => {
-      const response = await openai.embeddings.create({ model: "text-embedding-3-small", input: input.query, dimensions: 1536 });
-      const vector = response.data[0]?.embedding;
-      if (!vector) throw new Error("OpenAI did not return an embedding.");
-      const tokens = response.usage?.prompt_tokens ?? 0;
-      actualUsd = (tokens * costPerMillion) / 1_000_000;
-      return { vector, tokens };
-    }, (result) => ({ inputTokens: result.tokens, outputTokens: 0, costEstimateUsd: actualUsd }));
     const params = hybridSearchParams({
       query: input.query,
-      embedding: embedding.vector,
+      embedding: null,
       limit: input.limit,
       allowNonCommercial: booleanParam(allowNonCommercialSources.value()),
       targetLevel: input.targetLevel,
@@ -137,13 +125,13 @@ const searchLearningSources = guarded("search-learning-sources", async (data, ui
     return {
       chunks,
       retrievalStatus: chunks.length ? "attributed" as const : "no_approved_sources" as const,
-      provider: "supabase-pgvector",
-      model: "text-embedding-3-small",
-      inputTokens: embedding.tokens,
-      estimatedCostUsd: actualUsd,
+      provider: "supabase-fts",
+      model: "none",
+      inputTokens: 0,
+      estimatedCostUsd: 0,
     };
   } catch {
-    return { chunks: [], retrievalStatus: "unavailable" as const, provider: "openai+supabase", model: "text-embedding-3-small", inputTokens: 0, estimatedCostUsd: actualUsd };
+    return { chunks: [], retrievalStatus: "unavailable" as const, provider: "supabase-fts", model: "none", inputTokens: 0, estimatedCostUsd: actualUsd };
   } finally {
     await supabase.rpc("settle_source_search", { p_firebase_uid: uid, p_usage_day: usageDay, p_reserved_usd: reservedUsd, p_actual_usd: actualUsd });
   }

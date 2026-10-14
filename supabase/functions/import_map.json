@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "openai": "npm:openai",
+    "inngest": "npm:inngest",
+    "inngest/edge": "npm:inngest/edge",
+    "jose": "npm:jose",
+    "zod": "npm:zod",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js"
+  }
+}

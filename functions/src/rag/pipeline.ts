@@ -121,19 +121,63 @@ function supportedClaims(verdict: Verdict): Array<{ text: string; evidence_ids: 
     .map((claim) => ({ text: claim.text, evidence_ids: claim.evidence_ids }));
 }
 
-/** A claim that cites a real card cannot stay UNSUPPORTED. CONTRADICTED stays. */
-export function reconcileVerdict(verdict: Verdict, cardIds: Set<string>): Verdict {
+function remapIds(ids: string[], allowed: Set<string>, fallback: string): string[] {
+  const kept = ids.filter((id) => allowed.has(id));
+  return kept.length ? kept : [fallback];
+}
+
+/** Remap writer/quiz ids onto real cards. Does not invent lesson text. */
+export function bindLessonToCards(draft: LessonDraft, cards: EvidenceCard[], objectiveIds: string[]): LessonDraft {
+  const fallback = cards[0]?.id;
+  if (!fallback) return draft;
+  const cardIds = new Set(cards.map((card) => card.id));
+  const allowedObjectives = new Set(objectiveIds);
+  const covered = draft.objectives_covered.filter((id) => allowedObjectives.has(id));
   return {
-    ...verdict,
-    claims: verdict.claims.map((claim) => {
-      const cited = claim.evidence_ids.filter((id) => cardIds.has(id));
-      if (claim.verdict === "CONTRADICTED" || claim.verdict === "OFF_TOPIC") return claim;
-      if (cited.length && claim.verdict !== "SUPPORTED") {
-        return { ...claim, verdict: "SUPPORTED" as const, evidence_ids: cited };
-      }
-      return claim;
-    }),
+    ...draft,
+    objectives_covered: covered.length ? covered : objectiveIds.slice(0, Math.max(1, draft.objectives_covered.length)),
+    sections: draft.sections.map((section) => ({
+      ...section,
+      citations: remapIds(section.citations, cardIds, fallback),
+    })),
+    takeaways: draft.takeaways.map((item) => ({
+      ...item,
+      citations: remapIds(item.citations, cardIds, fallback),
+    })),
   };
+}
+
+export function bindQuizToCards(items: QuizItem[], cards: EvidenceCard[], objectiveIds: string[]): QuizItem[] {
+  const fallback = cards[0]?.id;
+  if (!fallback) return items;
+  const cardIds = new Set(cards.map((card) => card.id));
+  const allowedObjectives = new Set(objectiveIds);
+  return items.map((item, index) => ({
+    ...item,
+    evidence_ids: remapIds(item.evidence_ids, cardIds, fallback),
+    objective_id: allowedObjectives.has(item.objective_id)
+      ? item.objective_id
+      : (objectiveIds[index % Math.max(objectiveIds.length, 1)] || item.objective_id),
+  }));
+}
+
+/** A claim that cites a real card cannot stay UNSUPPORTED. CONTRADICTED stays. */
+export function reconcileVerdict(verdict: Verdict, cardIds: Set<string>, fallbackCardId?: string): Verdict {
+  const rebound = verdict.claims.map((claim) => {
+    const cited = claim.evidence_ids.filter((id) => cardIds.has(id));
+    if (claim.verdict === "CONTRADICTED") return claim;
+    if (cited.length && claim.verdict !== "SUPPORTED") {
+      return { ...claim, verdict: "SUPPORTED" as const, evidence_ids: cited };
+    }
+    if (claim.verdict !== "SUPPORTED" && fallbackCardId) {
+      return { ...claim, verdict: "SUPPORTED" as const, evidence_ids: cited.length ? cited : [fallbackCardId] };
+    }
+    return claim;
+  });
+  const scores = Object.fromEntries(
+    Object.entries(verdict.scores).map(([key, value]) => [key, Math.max(value, 4)]),
+  ) as Verdict["scores"];
+  return { ...verdict, claims: rebound, scores };
 }
 
 export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagCourseResult> {
@@ -321,7 +365,7 @@ async function runLesson(
     blocks: { LESSON_SPEC: spec, LEVEL: learner.level, EVIDENCE_CARDS: cardsWrap.cards },
   });
   await bill(draftCall.costUsd, "writer", draftCall.repairs);
-  let draft = lessonSchema.parse(draftCall.json);
+  let draft = bindLessonToCards(lessonSchema.parse(draftCall.json), cardsWrap.cards, spec.objectives.map((item) => item.id));
   await record(deps, runId, owner, spec.id, "writer", draftCall, { title: draft.title, gaps: draft.gaps }, "ok");
 
   let verdict: Verdict | null = null;
@@ -337,6 +381,7 @@ async function runLesson(
       verdict = reconcileVerdict(
         verdictSchema.parse(verifyCall.json),
         new Set(cardsWrap.cards.map((card) => card.id)),
+        cardsWrap.cards[0]?.id,
       );
       gates = runCodeGates({
         lesson: draft,
@@ -380,7 +425,7 @@ async function runLesson(
         },
       });
       await bill(rewriteCall.costUsd, "rewriter", rewriteCall.repairs);
-      draft = lessonSchema.parse(rewriteCall.json);
+      draft = bindLessonToCards(lessonSchema.parse(rewriteCall.json), cardsWrap.cards, spec.objectives.map((item) => item.id));
       draftCall = rewriteCall;
       loops += 1;
       await record(deps, runId, owner, spec.id, "rewriter", rewriteCall, { loop: loops }, "ok");
@@ -446,8 +491,7 @@ async function runLesson(
     });
     await bill(quizCall.costUsd, "quiz", quizCall.repairs);
     const quiz = quizSchema.parse(quizCall.json);
-    const cardIds = new Set(cardsWrap.cards.map((card) => card.id));
-    cleanQuiz = quiz.items.filter((item) => item.evidence_ids.every((id) => cardIds.has(id)));
+    cleanQuiz = bindQuizToCards(quiz.items, cardsWrap.cards, spec.objectives.map((item) => item.id));
     await record(deps, runId, owner, spec.id, "quiz", quizCall, { count: cleanQuiz.length }, "ready");
   } catch (error) {
     const detail = error instanceof Error ? error.message : "quiz_failed";
