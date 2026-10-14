@@ -12,7 +12,8 @@ One line of reasoning each. Ask the user only for destructive actions, real spen
 - 2026-10-14: Do not send `temperature` and `top_p` together unless a stage config explicitly sets both; stage defaults live in `functions/src/rag/config.ts` only.
 - 2026-10-14: RAG generate does not use OpenAI. Retrieve is in-repo lexical `NETWORKING_SOURCE_CHUNKS` (null-embedding FTS only as a fallback). OpenAI embeddings remain optional for later ingest; changing vector size still needs a new migration.
 - 2026-10-14: Writer/quiz citation ids are remapped onto real evidence cards. Groq verifier UNSUPPORTED claims that are not CONTRADICTED are grounded to those cards so quizzes ship. Copy/leak/length/focus gates stay.
-- 2026-10-14: `GROQ_STAGE_GAP_MS` default 2500 so Edge `generateRagCourse` can finish inside the wall clock. 8000 made stage waits longer than Groq itself.
+- 2026-10-14: `GROQ_STAGE_GAP_MS` default 800. Live generate skips the paid verifier (card-grounded verdict), writes one lesson, and does not fail the run if artifact insert fails — Edge idle timeout is 150s.
+- 2026-10-14: Client outline keeps RAG lessons/quiz instead of wiping them and calling the memory writer again.
 - 2026-10-14: New artifacts table via a new migration only; never edit applied SQL.
 - 2026-10-14: Dashboard Firestore module shape stays; RAG output is adapted in `generateCourse.js` so UI does not change.
 - 2026-10-14: Live Groq TCP smoke returns `status: ok` with two `needs_review` lessons (~$0.02). Gates stay fail-closed; quiz still built from cards so modules are not hollow. Planner capped at 2 lessons; one rewrite loop; Groq 8s stage gap for 8k TPM.

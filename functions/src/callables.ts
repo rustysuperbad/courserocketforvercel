@@ -432,7 +432,16 @@ const generateRagCourse = guarded("generate-rag-course", async (data, uid) => {
         failed: true,
       });
     } catch { /* run remains queryable */ }
-    throw error;
+    if (error instanceof HttpsError) throw error;
+    const detail = error instanceof Error ? error.message : "generate_failed";
+    console.error("generate-rag-course:", detail);
+    if (/GROQ_API_KEY/.test(detail)) {
+      throw new HttpsError("failed-precondition", "The course writer is not configured.");
+    }
+    if (/schema_invalid/.test(detail)) {
+      throw new HttpsError("internal", "The writer returned invalid JSON. Please try again.");
+    }
+    throw new HttpsError("internal", "Course generation failed. Please try again.");
   }
 });
 

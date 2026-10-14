@@ -38,7 +38,10 @@ export async function invokeBackend<T>(name: string, data: unknown = {}, timeout
     const payload = await response.json().catch(() => ({})) as { result?: T; error?: { status?: string; message?: string } };
     if (!response.ok || payload.error) {
       const status = payload.error?.status || (response.status === 401 ? "unauthenticated" : "internal");
-      const message = payload.error?.message || "Something went wrong. Please try again.";
+      const message = payload.error?.message
+        || (response.status === 504 ? "The course writer timed out. Please try again." : null)
+        || (response.status === 546 ? "The course writer ran too long. Please try again." : null)
+        || `Something went wrong (${response.status}). Please try again.`;
       const error: CallableError = Object.assign(new Error(message), { code: `functions/${status}` });
       throw error;
     }

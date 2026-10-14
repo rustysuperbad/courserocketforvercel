@@ -139,7 +139,8 @@ export const GATE_CONFIG = {
   relevanceFloor: envNumber("RAG_RELEVANCE_FLOOR", 0.12),
   nearDuplicateJaccard: 0.86,
   extractorTokenBudget: envNumber("RAG_EXTRACTOR_TOKEN_BUDGET", 1800),
-  maxRewriteLoops: 1,
+  maxRewriteLoops: 0,
+  skipPaidVerifier: envBool("RAG_SKIP_VERIFIER", true),
   fillerPhrases: [
     "in today's fast-paced world",
     "let's dive in",

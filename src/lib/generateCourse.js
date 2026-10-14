@@ -87,6 +87,7 @@ function shapeEnrichedModule(module, lessonResult, videos, papers) {
     generationQuality: lessonResult.generationQuality || "template-fallback",
     videos: (videos || []).slice(0, 2),
     papers: (papers || []).slice(0, 2),
+    mediaAttempted: true,
   };
 }
 
@@ -571,7 +572,10 @@ export async function enrichModules(modules, topic, level, onProgress, options =
 export function moduleNeedsEnrichment(m) {
   if (!m) return true;
   if (m.generationQuality === "failed") return false;
-  return !(Array.isArray(m.lessons) && m.lessons.length > 0);
+  const hasLessons = Array.isArray(m.lessons) && m.lessons.length > 0;
+  const mediaTried = m.mediaAttempted === true;
+  const hasMedia = (Array.isArray(m.videos) && m.videos.length > 0) || (Array.isArray(m.papers) && m.papers.length > 0);
+  return !hasLessons || (!mediaTried && !hasMedia);
 }
 
 /**

@@ -306,10 +306,10 @@ export async function runOrResumeCourseGeneration(courseId, userId) {
 
       const outlineMods = courseData.modules.map((m) => ({
         ...m,
-        lessons: [],
-        quiz: [],
-        videos: [],
-        papers: [],
+        lessons: Array.isArray(m.lessons) ? m.lessons : [],
+        quiz: Array.isArray(m.quiz) ? m.quiz : [],
+        videos: Array.isArray(m.videos) ? m.videos : [],
+        papers: Array.isArray(m.papers) ? m.papers : [],
       }));
 
       const totalMod = outlineMods.length;

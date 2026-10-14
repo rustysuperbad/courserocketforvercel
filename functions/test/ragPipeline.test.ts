@@ -112,7 +112,7 @@ test("copying and leak gates fail closed", () => {
   assert.equal(results.find((item) => item.name === "prompt_leakage")?.passed, false);
   assert.equal(results.find((item) => item.name === "grounding")?.passed, false);
   assert.ok(gateFixList(results).length >= 2);
-  assert.ok(GATE_CONFIG.maxRewriteLoops === 1);
+  assert.ok(GATE_CONFIG.maxRewriteLoops === 0);
 });
 
 test("near-duplicate retrieval drops almost-identical chunks", () => {
