@@ -1,5 +1,31 @@
 # Required setup (you do this)
 
+## Production go-live (this order)
+
+Do not merge `rag-pipeline` into `main` until step 6 passes. The live site still runs the old Groq memory writer until Edge is redeployed with `generateRagCourse`.
+
+1. **Commit** the RAG work on `rag-pipeline` (uncommitted files are not on GitHub).
+2. **Push the branch only:** `git push -u origin rag-pipeline`. No PR yet.
+3. **Secrets on Supabase Edge** (Dashboard → Edge Functions → Secrets). Names only: `GROQ_API_KEY`, `GEMINI_API_KEY` (optional until Gemini responds), `GEMINI_MODEL=gemini-3.8-flash`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Do **not** set `COURSE_AI_FAKE` in production. Leave `VERIFIER_SAME_AS_WRITER` unset (Groq verifier).
+4. **Migration:** `npx supabase db push` so `rag_run_artifacts` exists.
+5. **Ingest networking sources** (this spends OpenAI embedding cents):  
+   `cd functions && npm run ingest:networking`  
+   Without this, every live generate except cached fakes will say “No approved sources.”
+6. **Deploy Edge, then the app:**
+   ```sh
+   node scripts/bundle-edge.mjs
+   npx supabase functions deploy api --no-verify-jwt
+   npx supabase functions deploy inngest --no-verify-jwt
+   ```
+   Merge `rag-pipeline` → `main` only after that deploy, so Vercel and Edge ship together.
+7. **Smoke on the website:** sign in, generate `TCP three-way handshake`. You should see RAG stages, not a 2-lesson memory dump. A vague “make a course” should fail with “Need a clearer topic,” not hang.
+
+Gemini: unpaid AI Studio may train on prompts. Link Cloud billing before sending real learner text.
+
+---
+
+# Required setup (you do this)
+
 Nothing outside this repo is assumed. Until these items are done, the RAG pipeline runs against **fake providers** and local tests only. Paid Groq/Gemini/OpenAI calls stay off.
 
 Do **not** put secrets in `VITE_*` variables, git, chat, or logs. Rotate anything that was ever pasted into a client env or committed.
@@ -47,8 +73,8 @@ Qwen on Groq (docs 2026-10-14): instruct = `reasoning_effort: none`; planner thi
 
 1. Create a key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) on a Cloud project you control.
 2. Set secret **`GEMINI_API_KEY`** the same way as Groq (Edge secrets / untracked local env).
-3. Set non-secret **`GEMINI_MODEL`**. Recommended default for this rebuild: `gemini-2.5-flash` (structured JSON, thinking can be turned off with `thinkingBudget: 0`). Alternatives on current docs: `gemini-3.8-flash`, `gemini-2.5-pro`. Confirm the id still appears in [Gemini models](https://ai.google.dev/gemini-api/docs/models) before going live.
-4. Optional A/B: **`VERIFIER_SAME_AS_WRITER=true`** runs the verifier on Groq Qwen instead of Gemini (eval only).
+3. Set non-secret **`GEMINI_MODEL`**. Default is `gemini-3.8-flash` (`thinkingBudget: 0`). Confirm the id still appears in [Gemini models](https://ai.google.dev/gemini-api/docs/models) before going live.
+4. Production default: verifier runs on Groq Qwen (`VERIFIER_SAME_AS_WRITER` defaults **true**) because Gemini 3.8-flash currently 404s or hangs past 20s. Set **`VERIFIER_SAME_AS_WRITER=false`** to try Gemini first; if it 404s/times out, the stage still falls back to Groq.
 
 **Data terms (read this):**
 
@@ -175,9 +201,9 @@ Copy `.env.example` → `.env.local` for Vite. Server secrets go in Edge secrets
 | `SUPABASE_SERVICE_ROLE_KEY` | server | RLS bypass |
 | `GROQ_API_KEY` | server | writer family |
 | `GROQ_MODEL` | server, optional | default `qwen/qwen3.8-27b` |
-| `GEMINI_API_KEY` | server | verifier |
-| `GEMINI_MODEL` | server | recommended `gemini-2.5-flash` |
-| `VERIFIER_SAME_AS_WRITER` | server, optional | `true` for A/B eval |
+| `GEMINI_API_KEY` | server, optional | Gemini verifier when `VERIFIER_SAME_AS_WRITER=false` |
+| `GEMINI_MODEL` | server | default `gemini-3.8-flash` |
+| `VERIFIER_SAME_AS_WRITER` | server, optional | default `true` (Groq verifier). `false` tries Gemini first |
 | `OPENAI_API_KEY` | server | embeddings 1536-d |
 | `INNGEST_EVENT_KEY` | server | job dispatch |
 | `INNGEST_SIGNING_KEY` | server | job auth |

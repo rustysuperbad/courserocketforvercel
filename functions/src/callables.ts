@@ -369,41 +369,75 @@ const getNetworkingConceptMap = guarded("get-networking-concept-map", async () =
 });
 
 const ragCourseSchema = z.object({
-  topic: z.string().trim().min(4).max(2000),
+  topic: z.string().max(8000),
 }).strict();
 
 const generateRagCourse = guarded("generate-rag-course", async (data, uid) => {
   const input = parseInput(ragCourseSchema, data, "A learning topic is required.");
-  const client = fakeProvidersEnabled() ? null : serviceClient();
-  const result = await runRagCourse(input.topic, {
-    provider: createConfiguredProvider(),
-    retrieve: (query, concepts) => liveOrFakeRetrieve(query, concepts, uid),
-    ownerUid: uid,
-    saveArtifact: client ? (row) => saveRagArtifact(client, row) : undefined,
-  });
-  return {
-    runId: result.runId,
-    spec: result.spec,
-    publishable: result.publishable,
-    summary: result.summary,
-    costUsd: result.costUsd,
-    modules: result.lessons.map((lesson, index) => {
-      const mapped = toLegacyModule(lesson);
-      return {
-        id: `module_${index + 1}`,
-        title: mapped.title,
-        summary: mapped.summary,
-        lessons: mapped.lessons,
-        quiz: mapped.quiz,
-        concepts: result.spec.topic.split(" ").slice(0, 4),
-        youtubeQueries: [mapped.title],
-        paperTopics: [mapped.title],
-        generationQuality: mapped.generationQuality,
-        gaps: mapped.gaps,
-        status: lesson.status,
-      };
-    }),
-  };
+  const fake = fakeProvidersEnabled();
+  const client = fake ? null : serviceClient();
+  const started = Date.now();
+  let quotaRunId: string | null = null;
+  if (!fake && client) {
+    const goal = input.topic.trim().slice(0, 500) || "course request";
+    const { error: reservationError, data: reservedId } = await client.rpc("reserve_generation_run", {
+      p_firebase_uid: uid,
+      p_idempotency_key: `rag-${globalThis.crypto.randomUUID()}`,
+      p_goal: goal,
+      p_estimate_usd: 0.12,
+      p_daily_user_limit: Math.max(1, Math.floor(numberParam(dailyUserLimit.value(), 3, 1))),
+      p_project_daily_limit_usd: Math.max(1, numberParam(projectDailySpendLimit.value(), 25, 1)),
+      p_domain: "general",
+      p_target_concept_slug: null,
+    });
+    if (reservationError || !reservedId) {
+      const failure = reservationFailure(reservationError?.message);
+      throw new HttpsError(failure.code, failure.message);
+    }
+    quotaRunId = String(reservedId);
+  }
+  try {
+    const result = await runRagCourse(input.topic, {
+      provider: createConfiguredProvider(),
+      retrieve: (query, concepts) => liveOrFakeRetrieve(query, concepts, uid),
+      ownerUid: uid,
+      saveArtifact: client ? (row) => saveRagArtifact(client, row) : undefined,
+    });
+    if (quotaRunId) {
+      const finStatus = result.spec.status === "ok" && result.publishable ? "completed" : "blocked";
+      await finalizeRun(quotaRunId, finStatus, Date.now() - started, result.publishable ? undefined : "rag_unpublishable", result.costUsd);
+    }
+    return {
+      runId: result.runId,
+      spec: result.spec,
+      status: result.spec.status,
+      publishable: result.publishable,
+      summary: result.summary,
+      costUsd: result.costUsd,
+      ingestionRequested: result.ingestionRequested,
+      modules: result.lessons.map((lesson, index) => {
+        const mapped = toLegacyModule(lesson);
+        return {
+          id: `module_${index + 1}`,
+          title: mapped.title,
+          summary: mapped.summary,
+          lessons: mapped.lessons,
+          quiz: mapped.quiz,
+          concepts: result.spec.topic.split(" ").slice(0, 4),
+          youtubeQueries: [mapped.title],
+          paperTopics: [mapped.title],
+          generationQuality: mapped.generationQuality,
+          gaps: mapped.gaps,
+          status: lesson.status,
+        };
+      }),
+    };
+  } catch (error) {
+    if (quotaRunId) {
+      try { await finalizeRun(quotaRunId, "failed", Date.now() - started, "rag_failed"); } catch { /* run remains queryable */ }
+    }
+    throw error;
+  }
 });
 
 export type CallableHandler = (data: unknown, uid: string) => Promise<unknown>;

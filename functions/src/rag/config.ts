@@ -49,11 +49,11 @@ export function groqWriterModel(): string {
 }
 
 export function geminiVerifierModel(): string {
-  return envString("GEMINI_MODEL", "gemini-2.5-flash");
+  return envString("GEMINI_MODEL", "gemini-3.8-flash");
 }
 
 export function verifierSameAsWriter(): boolean {
-  return envBool("VERIFIER_SAME_AS_WRITER", false);
+  return envBool("VERIFIER_SAME_AS_WRITER", true);
 }
 
 export function fakeProvidersEnabled(): boolean {
@@ -120,7 +120,7 @@ export function stageConfig(stage: StageName): StageModelConfig {
     topP: null,
     maxOutputTokens: 4000,
     inputTokenBudget: 8000,
-    timeoutMs: 80000,
+    timeoutMs: 20000,
   };
 }
 
@@ -139,7 +139,7 @@ export const GATE_CONFIG = {
   relevanceFloor: envNumber("RAG_RELEVANCE_FLOOR", 0.12),
   nearDuplicateJaccard: 0.86,
   extractorTokenBudget: envNumber("RAG_EXTRACTOR_TOKEN_BUDGET", 1800),
-  maxRewriteLoops: 2,
+  maxRewriteLoops: 1,
   fillerPhrases: [
     "in today's fast-paced world",
     "let's dive in",

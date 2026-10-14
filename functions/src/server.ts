@@ -20,11 +20,11 @@ export async function persistProgress(runId: string, stage: string, percent: num
   if (error) throw new Error("Could not save job progress.");
 }
 
-export async function finalizeRun(runId: string, status: "completed" | "failed" | "blocked", latencyMs: number, errorCode?: string) {
+export async function finalizeRun(runId: string, status: "completed" | "failed" | "blocked", latencyMs: number, errorCode?: string, actualCostUsd?: number) {
   const { error } = await serviceClient().rpc("finalize_generation_run", {
     p_run_id: runId,
     p_status: status,
-    p_actual_cost_usd: null,
+    p_actual_cost_usd: actualCostUsd ?? null,
     p_progress: { stage: status, percent: status === "completed" ? 100 : 0 },
     p_provider: null,
     p_model: null,

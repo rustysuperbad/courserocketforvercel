@@ -16,7 +16,9 @@ import {
   type SyllabusLesson,
   type Verdict,
 } from "./schemas";
+import { specFromLearnerText } from "./intake";
 import { hashedShingleSet, jaccard } from "./shingles";
+import { redactDeep, redactPii } from "./redact";
 import { buildRetrievalQuery, selectEvidenceChunks, type RetrievedSourceChunk } from "./retrieve";
 
 export type RagRetrieve = (query: string, concepts: string[]) => Promise<RetrievedSourceChunk[]>;
@@ -66,6 +68,8 @@ export type RagCourseResult = {
   costUsd: number;
   publishable: boolean;
   summary: { ready: number; needs_review: number; blocked: number };
+  paidStages: string[];
+  ingestionRequested: boolean;
 };
 
 async function record(
@@ -92,8 +96,8 @@ async function record(
     tokens_out: call?.tokensOut ?? null,
     latency_ms: call?.latencyMs ?? null,
     cost_usd: call?.costUsd ?? null,
-    output,
-    gate_results: gates,
+    output: redactDeep(output),
+    gate_results: redactDeep(gates),
     status,
   });
 }
@@ -118,28 +122,87 @@ function supportedClaims(verdict: Verdict): Array<{ text: string; evidence_ids: 
 export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagCourseResult> {
   const runId = deps.runId || globalThis.crypto.randomUUID();
   const owner = deps.ownerUid || "local";
-  const leakHashes = hashedShingleSet(rawText, 4);
+  const safeText = redactPii(rawText);
+  const leakHashes = hashedShingleSet(safeText, 4);
   let spent = 0;
-  const bill = async (cost: number) => {
+  const paidStages: string[] = [];
+  const bill = async (cost: number, stage: string) => {
     spent += cost;
+    paidStages.push(stage);
     if (deps.settleUsd && cost > 0) await deps.settleUsd(cost);
   };
 
+  const local = specFromLearnerText(rawText);
+  let spec = local.spec;
+  if (local.skipModel) {
+    await record(deps, runId, owner, null, "intake", null, spec, spec.status);
+    return {
+      runId,
+      spec,
+      lessons: [],
+      costUsd: 0,
+      publishable: false,
+      summary: { ready: 0, needs_review: 0, blocked: 0 },
+      paidStages,
+      ingestionRequested: false,
+    };
+  }
+
   if (deps.reserveUsd) await deps.reserveUsd(0.12);
 
-  const intakeCall = await deps.provider.complete({ stage: "intake", blocks: { LEARNER_TEXT: { text: rawText } } });
-  await bill(intakeCall.costUsd);
-  const spec = learnerSpecSchema.parse(intakeCall.json);
-  await record(deps, runId, owner, null, "intake", intakeCall, spec, "ok");
+  const intakeCall = await deps.provider.complete({
+    stage: "intake",
+    blocks: { LEARNER_TEXT: { text: safeText.slice(0, 8000) } },
+  });
+  await bill(intakeCall.costUsd, "intake");
+  spec = learnerSpecSchema.parse(intakeCall.json);
+  if (local.spec.status !== "ok") spec = local.spec;
+  else {
+    if (!spec.ignored_requests.length && local.spec.ignored_requests.length) {
+      spec = { ...spec, ignored_requests: local.spec.ignored_requests };
+    }
+    if (!spec.constraints.length && local.spec.constraints.length) {
+      spec = { ...spec, constraints: local.spec.constraints };
+    }
+  }
+  spec = learnerSpecSchema.parse(spec);
+  await record(deps, runId, owner, null, "intake", { ...intakeCall, json: spec }, spec, spec.status);
+  if (spec.status !== "ok") {
+    return {
+      runId,
+      spec,
+      lessons: [],
+      costUsd: spent,
+      publishable: false,
+      summary: { ready: 0, needs_review: 0, blocked: 0 },
+      paidStages,
+      ingestionRequested: false,
+    };
+  }
 
   const planCall = await deps.provider.complete({ stage: "planner", blocks: { LEARNER_SPEC: spec } });
-  await bill(planCall.costUsd);
+  await bill(planCall.costUsd, "planner");
   const syllabus = syllabusSchema.parse(planCall.json);
   await record(deps, runId, owner, null, "planner", planCall, { lessonIds: syllabus.lessons.map((item) => item.id) }, "ok");
 
   const lessons: RagLessonResult[] = [];
   for (const item of syllabus.lessons) {
-    lessons.push(await runLesson(item, spec, leakHashes, deps, runId, owner, bill));
+    try {
+      lessons.push(await runLesson(item, spec, leakHashes, deps, runId, owner, bill));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "lesson_failed";
+      lessons.push({
+        id: item.id,
+        title: item.title,
+        status: "needs_review",
+        lesson: null,
+        quiz: [],
+        gaps: [detail.slice(0, 240)],
+        missingConcepts: [],
+        gateResults: [],
+        verdict: null,
+      });
+    }
   }
 
   const ready = lessons.filter((item) => item.status === "ready").length;
@@ -164,6 +227,8 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
     costUsd: spent,
     publishable,
     summary: { ready, needs_review: needsReview, blocked },
+    paidStages,
+    ingestionRequested: lessons.some((item) => item.status === "blocked" && item.missingConcepts.length > 0),
   };
 }
 
@@ -174,7 +239,7 @@ async function runLesson(
   deps: RagDeps,
   runId: string,
   owner: string,
-  bill: (cost: number) => Promise<void>,
+  bill: (cost: number, stage: string) => Promise<void>,
 ): Promise<RagLessonResult> {
   const query = buildRetrievalQuery(spec.objectives, spec.key_concepts);
   const rawChunks = await deps.retrieve(query, spec.key_concepts);
@@ -199,7 +264,7 @@ async function runLesson(
     stage: "extractor",
     blocks: { LESSON_SPEC: spec, CHUNKS: chunks.map((chunk) => ({ chunk_id: chunk.chunk_id, source_id: chunk.source_id, text: chunk.text })) },
   });
-  await bill(extractCall.costUsd);
+  await bill(extractCall.costUsd, "extractor");
   const cardsWrap = evidenceCardsSchema.parse(extractCall.json);
   const cardTokens = estimateTokens(JSON.stringify(cardsWrap.cards));
   if (cardTokens > GATE_CONFIG.extractorTokenBudget) {
@@ -211,34 +276,68 @@ async function runLesson(
     stage: "writer",
     blocks: { LESSON_SPEC: spec, LEVEL: learner.level, EVIDENCE_CARDS: cardsWrap.cards },
   });
-  await bill(draftCall.costUsd);
+  await bill(draftCall.costUsd, "writer");
   let draft = lessonSchema.parse(draftCall.json);
   await record(deps, runId, owner, spec.id, "writer", draftCall, { title: draft.title, gaps: draft.gaps }, "ok");
 
-  let verdict: Verdict;
+  let verdict: Verdict | null = null;
   let gates: GateResult[] = [];
   let loops = 0;
   while (true) {
-    const verifyCall = await deps.provider.complete({
-      stage: "verifier",
-      blocks: { LESSON_DRAFT: draft, LESSON_SPEC: spec, EVIDENCE_CARDS: cardsWrap.cards },
-    });
-    await bill(verifyCall.costUsd);
-    verdict = verdictSchema.parse(verifyCall.json);
-    gates = runCodeGates({
-      lesson: draft,
-      spec,
-      cards: cardsWrap.cards,
-      sourceTexts: chunks.map((chunk) => ({ chunk_id: chunk.chunk_id, text: chunk.text })),
-      leakHashes,
-      verdict,
-      writerInputTokens: draftCall.tokensIn,
-      writerBudget: stageConfig("writer").inputTokenBudget,
-      sectionFocus: sectionFocusScores(draft, spec),
-    });
-    await record(deps, runId, owner, spec.id, "verify", verifyCall, { scores: verdict.scores }, gatesPassed(gates) ? "ok" : "failed", gates);
+    try {
+      const verifyCall = await deps.provider.complete({
+        stage: "verifier",
+        blocks: { LESSON_DRAFT: draft, LESSON_SPEC: spec, EVIDENCE_CARDS: cardsWrap.cards },
+      });
+      await bill(verifyCall.costUsd, "verifier");
+      verdict = verdictSchema.parse(verifyCall.json);
+      gates = runCodeGates({
+        lesson: draft,
+        spec,
+        cards: cardsWrap.cards,
+        sourceTexts: chunks.map((chunk) => ({ chunk_id: chunk.chunk_id, text: chunk.text })),
+        leakHashes,
+        verdict,
+        writerInputTokens: draftCall.tokensIn,
+        writerBudget: stageConfig("writer").inputTokenBudget,
+        sectionFocus: sectionFocusScores(draft, spec),
+      });
+      await record(deps, runId, owner, spec.id, "verify", verifyCall, { scores: verdict.scores }, gatesPassed(gates) ? "ok" : "failed", gates);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "verifier_failed";
+      return {
+        id: spec.id,
+        title: spec.title,
+        status: "needs_review",
+        lesson: draft,
+        quiz: [],
+        gaps: [...draft.gaps, detail.slice(0, 160)],
+        missingConcepts: [],
+        gateResults: gates,
+        verdict,
+      };
+    }
     if (gatesPassed(gates)) break;
     if (loops >= GATE_CONFIG.maxRewriteLoops) {
+      await record(deps, runId, owner, spec.id, "gates", null, { gates }, "needs_review");
+      break;
+    }
+    try {
+      const rewriteCall = await deps.provider.complete({
+        stage: "rewriter",
+        blocks: {
+          LESSON_DRAFT: draft,
+          LESSON_SPEC: spec,
+          EVIDENCE_CARDS: cardsWrap.cards,
+          FIX_LIST: [...(verdict?.fix_list || []), ...gateFixList(gates)],
+        },
+      });
+      await bill(rewriteCall.costUsd, "rewriter");
+      draft = lessonSchema.parse(rewriteCall.json);
+      draftCall = rewriteCall;
+      loops += 1;
+      await record(deps, runId, owner, spec.id, "rewriter", rewriteCall, { loop: loops }, "ok");
+    } catch {
       await record(deps, runId, owner, spec.id, "gates", null, { gates }, "needs_review");
       return {
         id: spec.id,
@@ -252,23 +351,29 @@ async function runLesson(
         verdict,
       };
     }
-    const rewriteCall = await deps.provider.complete({
-      stage: "rewriter",
-      blocks: {
-        LESSON_DRAFT: draft,
-        LESSON_SPEC: spec,
-        EVIDENCE_CARDS: cardsWrap.cards,
-        FIX_LIST: [...verdict.fix_list, ...gateFixList(gates)],
-      },
-    });
-    await bill(rewriteCall.costUsd);
-    draft = lessonSchema.parse(rewriteCall.json);
-    draftCall = rewriteCall;
-    loops += 1;
-    await record(deps, runId, owner, spec.id, "rewriter", rewriteCall, { loop: loops }, "ok");
   }
 
-  const supported = supportedClaims(verdict);
+  if (!verdict) {
+    return {
+      id: spec.id,
+      title: spec.title,
+      status: "needs_review",
+      lesson: draft,
+      quiz: [],
+      gaps: [...draft.gaps, "Verifier did not return a verdict."],
+      missingConcepts: [],
+      gateResults: gates,
+      verdict: null,
+    };
+  }
+
+  let supported = supportedClaims(verdict);
+  if (!supported.length && cardsWrap.cards.length) {
+    supported = cardsWrap.cards.slice(0, spec.objectives.length).map((card) => ({
+      text: card.claim,
+      evidence_ids: [card.id],
+    }));
+  }
   if (!supported.length) {
     return {
       id: spec.id,
@@ -283,29 +388,46 @@ async function runLesson(
     };
   }
 
-  const quizCall = await deps.provider.complete({
-    stage: "quiz",
-    blocks: { OBJECTIVES: spec.objectives, SUPPORTED_CLAIMS: supported },
-  });
-  await bill(quizCall.costUsd);
-  const quiz = quizSchema.parse(quizCall.json);
+  let cleanQuiz: QuizItem[] = [];
+  try {
+    const quizCall = await deps.provider.complete({
+      stage: "quiz",
+      blocks: { OBJECTIVES: spec.objectives, SUPPORTED_CLAIMS: supported },
+    });
+    await bill(quizCall.costUsd, "quiz");
+    const quiz = quizSchema.parse(quizCall.json);
+    const cardIds = new Set(cardsWrap.cards.map((card) => card.id));
+    cleanQuiz = quiz.items.filter((item) => item.evidence_ids.every((id) => cardIds.has(id)));
+    await record(deps, runId, owner, spec.id, "quiz", quizCall, { count: cleanQuiz.length }, "ready");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "quiz_failed";
+    return {
+      id: spec.id,
+      title: spec.title,
+      status: "needs_review",
+      lesson: draft,
+      quiz: [],
+      gaps: [...draft.gaps, detail.slice(0, 160)],
+      missingConcepts: [],
+      gateResults: gates,
+      verdict,
+    };
+  }
   const cardIds = new Set(cardsWrap.cards.map((card) => card.id));
-  const cleanQuiz = quiz.items.filter((item) => item.evidence_ids.every((id) => cardIds.has(id)));
-  await record(deps, runId, owner, spec.id, "quiz", quizCall, { count: cleanQuiz.length }, "ready");
 
   const objectiveOk = spec.objectives.every((objective) => draft.objectives_covered.includes(objective.id)
     && cleanQuiz.some((item) => item.objective_id === objective.id));
   const citationsOk = [...draft.sections.flatMap((section) => section.citations), ...draft.takeaways.flatMap((item) => item.citations)]
     .every((id) => cardIds.has(id));
 
-  const status: LessonStatus = objectiveOk && citationsOk ? "ready" : "needs_review";
+  const status: LessonStatus = gatesPassed(gates) && objectiveOk && citationsOk ? "ready" : "needs_review";
   return {
     id: spec.id,
     title: spec.title,
     status,
     lesson: draft,
     quiz: cleanQuiz,
-    gaps: draft.gaps,
+    gaps: [...draft.gaps, ...(gatesPassed(gates) ? [] : gateFixList(gates))],
     missingConcepts: [],
     gateResults: gates,
     verdict,

@@ -1,13 +1,22 @@
 import { z } from "zod";
 
 export const levelSchema = z.enum(["beginner", "intermediate", "advanced"]);
+export const specStatusSchema = z.enum(["ok", "needs_clarification", "rejected"]);
 
 export const learnerSpecSchema = z.object({
-  topic: z.string().trim().min(2).max(80),
+  status: specStatusSchema,
+  topic: z.string().trim().max(80),
   level: levelSchema,
-  goal: z.string().trim().min(4).max(160),
+  goal: z.string().trim().max(160),
   constraints: z.array(z.string().trim().min(2).max(120)).max(8),
-}).strict();
+  ignored_requests: z.array(z.string().trim().min(4).max(120)).max(4).default([]),
+}).strict().superRefine((spec, ctx) => {
+  if (spec.status !== "ok") return;
+  if (spec.topic.length < 2) ctx.addIssue({ code: "custom", message: "ok spec needs a topic", path: ["topic"] });
+  if (spec.goal.split(/\s+/).filter(Boolean).length > 20) {
+    ctx.addIssue({ code: "custom", message: "goal exceeds 20 words", path: ["goal"] });
+  }
+});
 export type LearnerSpec = z.infer<typeof learnerSpecSchema>;
 
 export const objectiveSchema = z.object({

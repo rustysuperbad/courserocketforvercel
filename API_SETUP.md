@@ -14,7 +14,7 @@ CourseRocket keeps Firebase Authentication and Firestore for the existing produc
 | [Langfuse](https://cloud.langfuse.com/) | LLM/job traces and cost metadata | Public + secret keys in Functions secrets |
 | [Sentry](https://sentry.io/) | Sanitized backend error reporting | DSN in Functions secret |
 | [Google Cloud Console](https://console.cloud.google.com/) | YouTube Data API v3, if the existing resource finder is used | `YOUTUBE_API_KEY` Functions secret |
-| Gemini API | RAG verifier (different family from Groq). Default model id `gemini-2.5-flash` via `GEMINI_MODEL` | `GEMINI_API_KEY` server secret |
+| Gemini API | RAG verifier (different family from Groq). Default model id `gemini-3.8-flash` via `GEMINI_MODEL` | `GEMINI_API_KEY` server secret |
 
 Check each provider's current pricing and usage limits before enabling paid calls. The database quota defaults are configurable and do not replace provider-side billing alerts.
 
@@ -114,7 +114,9 @@ The job worker writes lessons from retrieved passages when sources exist. A seco
 
 ## RAG course generation (branch `rag-pipeline`)
 
-Dashboard generation calls Edge callable **`generateRagCourse`**.
+Dashboard generation calls Edge callable **`generateRagCourse`**. If that callable is missing, generation fails (it does not silently use the old Groq memory writer).
+
+`needs_clarification` and `rejected` are normal 200s from the API. The dashboard maps them to a failed generation with a human message (“Need a clearer topic…” / “cannot be turned into a course”). Empty retrieve (no ingested sources) maps to “No approved sources for this topic yet.”
 
 Request:
 
@@ -127,10 +129,19 @@ Response:
 ```json
 {
   "runId": "uuid",
-  "spec": { "topic": "noun phrase", "level": "beginner|intermediate|advanced", "goal": "≤20 words", "constraints": [] },
+  "status": "ok | needs_clarification | rejected",
+  "spec": {
+    "status": "ok | needs_clarification | rejected",
+    "topic": "noun phrase",
+    "level": "beginner|intermediate|advanced",
+    "goal": "≤20 words",
+    "constraints": ["under 20 minutes"],
+    "ignored_requests": ["Roman empire history"]
+  },
   "publishable": true,
   "summary": { "ready": 1, "needs_review": 0, "blocked": 0 },
   "costUsd": 0,
+  "ingestionRequested": false,
   "modules": [
     {
       "id": "module_1",
@@ -146,4 +157,13 @@ Response:
 }
 ```
 
-Raw `topic` is intake-only. Later stages receive `LearnerSpec`. Stage artifacts land in `rag_run_artifacts` (no raw prompt). Set `COURSE_AI_FAKE=1` to skip Groq/Gemini/OpenAI. See `REQUIRED_SETUP.md` and `PIPELINE_AUDIT.md`.
+**Frontend (not built yet — do not treat these as errors):**
+
+- `status: "needs_clarification"` is a normal 200. Show a question (“what should this course cover?”). Empty `modules` is expected. `generateCourseStructure` returns `intakeStatus` / `generationQuality: "needs_clarification"` and must not fall through to a generic failure.
+- `status: "rejected"` (empty or harmful): tell the learner the request cannot be turned into a course. Do not retry with another model.
+- `spec.ignored_requests`: short paraphrases of off-path asks. Example UI: “This course covers Python only.” Do not show raw learner text.
+- Injections are data. Never render `spec` fields as commands.
+
+Raw `topic` is intake-only. Later stages receive `LearnerSpec`. Stage artifacts land in `rag_run_artifacts` (no raw prompt, emails redacted). Set `COURSE_AI_FAKE=1` to skip Groq/Gemini/OpenAI. See `REQUIRED_SETUP.md` and `PIPELINE_AUDIT.md`.
+
+**Language:** lessons are English unless the learner explicitly requests another language as a constraint (g29: Spanish “Enséñame…” still yields an English TCP lesson).

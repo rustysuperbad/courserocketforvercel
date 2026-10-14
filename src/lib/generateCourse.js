@@ -17,9 +17,8 @@
 
 import { fetchYouTubeVideos } from "./fetchYoutube";
 import { fetchPapers } from "./fetchPapers";
-import { generateStructuredJson, requestRagCourse } from "./courseAiApi";
-import { buildCurriculumPrompt, buildCurriculumUserMessage, generateModuleLessons } from "./courseWriterPipeline";
-import { detectComplexity, MODULE_COUNT } from "./courseGenerationUtils";
+import { requestRagCourse } from "./courseAiApi";
+import { generateModuleLessons } from "./courseWriterPipeline";
 import {
   assessLessonTextQuality,
   assessQuizLeakage,
@@ -365,84 +364,54 @@ function fallbackStructure(topic, complexity) {
 // ─── Phase 1: course structure ──────────────────────────────────────────────
 export async function generateCourseStructure(topic, onProgress) {
   const cb = onProgress || (() => {});
-
-  const complexity = detectComplexity(topic);
-  const moduleTarget = MODULE_COUNT[complexity];
   cb("Designing your course…");
 
-  try {
-    const rag = await requestRagCourse({ topic });
-    if (Array.isArray(rag?.modules) && rag.modules.length > 0) {
-      const { goal } = splitLearnerRequest(rag.spec?.goal || topic);
-      const modules = rag.modules.map((mod, i) => ({
-        id: mod.id || `module_${i + 1}`,
-        title: mod.title,
-        summary: mod.summary,
-        concepts: Array.isArray(mod.concepts) ? mod.concepts : [],
-        youtubeQueries: mod.youtubeQueries || [mod.title],
-        paperTopics: mod.paperTopics || [mod.title],
-        lessons: Array.isArray(mod.lessons) ? mod.lessons : [],
-        quiz: Array.isArray(mod.quiz) ? mod.quiz : [],
-        generationQuality: mod.generationQuality || (mod.status === "ready" ? "generated" : mod.status),
-        gaps: mod.gaps || [],
-      }));
-      return {
-        title: refineCatalogTitleIfLazy(rag.spec?.topic || goal, goal),
-        description: rag.spec?.goal || "",
-        level: rag.spec?.level || "beginner",
-        estimatedHours: Math.max(1, modules.length),
-        courseKeyConcepts: normalizeCourseKeyConcepts(
-          (rag.spec?.topic || "").split(" ").filter(Boolean),
-          modules,
-        ),
-        modules,
-        generationQuality: rag.publishable ? "generated" : "needs_review",
-        ragRunId: rag.runId,
-        ragSummary: rag.summary,
-      };
-    }
-    const raw = await generateStructuredJson({
-      kind: "outline",
-      systemPrompt: buildCurriculumPrompt(moduleTarget, topic),
-      userMessage: buildCurriculumUserMessage(moduleTarget, topic),
-    });
-    const course = parseJSON(raw);
-    if (!Array.isArray(course.modules) || course.modules.length === 0) {
-      throw new Error("Empty modules.");
-    }
-    course.modules = normalizeOutlineModules(course.modules, moduleTarget);
-    const needed = Number(moduleTarget) || 5;
-    const { goal } = splitLearnerRequest(topic);
-    while (course.modules.length < needed) {
-      const i = course.modules.length;
-      const label = `Practice ${goal}`.replace(/\s+/g, " ").trim().slice(0, 72);
-      course.modules.push({
-        id: `module_${i + 1}`,
-        title: label || `Module ${i + 1}`,
-        summary: `Apply what you just learned in a small, checkable piece of ${goal}.`,
-        concepts: takeStrings(course.modules[0]?.concepts, 4),
-        youtubeQueries: [String(goal || topic).slice(0, 80)],
-        paperTopics: [String(goal || topic).slice(0, 80)],
-      });
-    }
-    course.modules = course.modules.slice(0, needed);
-
-    course.title = refineCatalogTitleIfLazy(course.title, goal);
-    course.courseKeyConcepts = normalizeCourseKeyConcepts(course.courseKeyConcepts, course.modules);
-    course.generationQuality = "generated";
-    return course;
-  } catch (e) {
-    console.warn("[gen] structure failed:", e.message);
-    return {
-      generationQuality: "blocked",
-      title: "Course not generated",
-      description: "The writer did not return a grounded syllabus.",
-      level: "beginner",
-      estimatedHours: 1,
-      courseKeyConcepts: [],
-      modules: [],
-    };
+  const rag = await requestRagCourse({ topic });
+  const intakeStatus = rag?.spec?.status || rag?.status;
+  if (intakeStatus === "needs_clarification") {
+    throw new Error("Need a clearer topic. Say what this course should cover.");
   }
+  if (intakeStatus === "rejected") {
+    throw new Error("This request cannot be turned into a course.");
+  }
+  const ragModules = Array.isArray(rag?.modules) ? rag.modules : [];
+  const usable = ragModules.filter((mod) => (mod.lessons || []).length > 0 || mod.status === "ready");
+  if (!usable.length) {
+    throw new Error("No approved sources for this topic yet. Try a networking topic, or ingest sources first.");
+  }
+  const { goal } = splitLearnerRequest(rag.spec?.goal || topic);
+  const ignored = (rag.spec?.ignored_requests || []).filter(Boolean);
+  const modules = usable.map((mod, i) => ({
+    id: mod.id || `module_${i + 1}`,
+    title: mod.title,
+    summary: mod.summary,
+    concepts: Array.isArray(mod.concepts) ? mod.concepts : [],
+    youtubeQueries: mod.youtubeQueries || [mod.title],
+    paperTopics: mod.paperTopics || [mod.title],
+    lessons: Array.isArray(mod.lessons) ? mod.lessons : [],
+    quiz: Array.isArray(mod.quiz) ? mod.quiz : [],
+    generationQuality: mod.generationQuality || (mod.status === "ready" ? "generated" : mod.status),
+    gaps: mod.gaps || [],
+  }));
+  return {
+    title: refineCatalogTitleIfLazy(rag.spec?.topic || goal, goal),
+    description: ignored.length
+      ? `${rag.spec?.goal || ""} This course covers ${rag.spec?.topic} only.`.trim()
+      : rag.spec?.goal || "",
+    level: rag.spec?.level || "beginner",
+    estimatedHours: Math.max(1, modules.length),
+    courseKeyConcepts: normalizeCourseKeyConcepts(
+      (rag.spec?.topic || "").split(" ").filter(Boolean),
+      modules,
+    ),
+    modules,
+    generationQuality: rag.publishable ? "generated" : "needs_review",
+    ragRunId: rag.runId,
+    ragSummary: rag.summary,
+    spec: rag.spec,
+    intakeStatus,
+    ignoredRequests: ignored,
+  };
 }
 
 // ─── Phase 2: enrich every module with lessons + videos + papers ────────────
@@ -475,7 +444,7 @@ function assessModuleContentGate(lessons, quiz, fingerprints) {
 }
 
 async function generateLessonForModule(m, topic, i, total, level, extraUserInstructions = "") {
-  if (!String(extraUserInstructions).trim() && Array.isArray(m.lessons) && m.lessons.length >= 1 && Array.isArray(m.quiz) && m.quiz.length >= 1) {
+  if (!String(extraUserInstructions).trim() && Array.isArray(m.lessons) && m.lessons.length >= 1) {
     return {
       lessons: normalizeLessonsPayload(m.lessons),
       quiz: normalizeQuizItems(m.quiz),
