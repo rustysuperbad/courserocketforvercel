@@ -261,6 +261,8 @@ Navbar top-right: crescent moon, ink-coloured, 44px hit. Toggles `html[data-them
 
 Code surfaces (`--code-bg` / `--code-fg`) do not invert: Python and fenced lesson code stay midnight + white. Generate waits up to 12 minutes and does not mark the course failed if the worker is still running.
 
+Landing preview and “Keep it light” are paper cells (ink type in light, reversed in dark) — not always-midnight slabs.
+
 ## Groq writer (this pass)
 
 Empty modules were a quality-gate bug: a failed lesson bar returned **zero** lessons/quiz, and papers aborted at 7s. Completeness now pads to 2 lessons + 2 quiz; papers wait 20s; videos retry on the module title. Groq prompts follow the Groq guide: static system persona + few-shot first, live request last (prefix cache), temperature 0.2 and no top-p, `max_completion_tokens`, `reasoning_effort: none` on Qwen, json_schema with minItems 2. Bayesian BKT in `functions/src/learning.ts` is correct and unit-tested; the live `/course` quiz still only stores Firestore progress and does not update `learner_mastery`.
