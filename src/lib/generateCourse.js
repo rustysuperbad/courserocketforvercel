@@ -378,7 +378,7 @@ export async function generateCourseStructure(topic, onProgress) {
   const ragModules = Array.isArray(rag?.modules) ? rag.modules : [];
   const usable = ragModules.filter((mod) => (mod.lessons || []).length > 0 || mod.status === "ready");
   if (!usable.length) {
-    throw new Error("No approved sources for this topic yet. Try a networking topic, or ingest sources first.");
+    throw new Error("We couldn't find enough reliable material to teach this well. Try a more specific topic or rephrase it.");
   }
   const { goal } = splitLearnerRequest(rag.spec?.goal || topic);
   const ignored = (rag.spec?.ignored_requests || []).filter(Boolean);

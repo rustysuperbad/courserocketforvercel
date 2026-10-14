@@ -10,11 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "lint": "npm run build && node --check index.js",
     "test": "tsx --test test/*.test.ts",
-    "seed:networking": "tsx src/seed-networking.ts",
-    "ingest:networking": "tsx src/ingestion.ts",
-    "eval:networking": "tsx src/evalHarness.ts",
-    "eval:rag": "tsx src/rag/runEval.ts",
-    "eval:rag-live": "tsx src/rag/liveSmoke.ts"
+    "eval:v3": "tsx src/pipeline/eval/runEval.ts",
+    "eval:v3-live": "tsx src/pipeline/eval/liveSmoke.ts"
   },
   "dependencies": {
     "@langfuse/otel": "^5.13.1",

@@ -1,8 +1,0 @@
-[
-  {
-    "id": "E1",
-    "claim": "The client sends SYN and the server replies SYN-ACK, then the client sends ACK.",
-    "source_id": "N1",
-    "chunk_id": "C1"
-  }
-]

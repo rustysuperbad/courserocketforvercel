@@ -1,9 +1,10 @@
 import { serve } from "inngest/edge";
-import { inngest, processCourseGeneration } from "./workflow";
+import { inngest } from "./inngestClient";
+import { processV3CourseGeneration } from "./pipeline/worker";
 
 const handler = serve({
   client: inngest,
-  functions: [processCourseGeneration],
+  functions: [processV3CourseGeneration],
   servePath: "/functions/v1/inngest",
 });
 

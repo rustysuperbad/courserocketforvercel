@@ -1,4 +1,5 @@
 import { invokeBackend } from "./backend";
+import { startGeneration, waitForJob } from "./courseJobs";
 
 function raceWithAbort(promise, signal) {
   if (!signal) return promise;
@@ -28,11 +29,36 @@ export async function generateStructuredJson({ kind, systemPrompt, userMessage, 
   return JSON.stringify(content);
 }
 
-/** Staged RAG course write. Raw topic is intake-only; the server never echoes it back. */
+/** Job-based generate. Polls until the course is ready so existing callers keep working. */
 export async function requestRagCourse({ topic }) {
-  const response = await invokeBackend("generateRagCourse", { topic }, 180000);
-  if (!response || typeof response !== "object") throw new Error("The course writer returned no content.");
-  return response;
+  const started = await startGeneration(String(topic || ""));
+  const job = await waitForJob(started.jobId);
+  if (job.status === "needs_clarification") {
+    return {
+      runId: job.jobId,
+      spec: job.spec || { status: "needs_clarification", question: job.learnerMessage },
+      status: "needs_clarification",
+      publishable: false,
+      summary: job.summary || { ready: 0, needs_review: 0, blocked: 0 },
+      modules: [],
+    };
+  }
+  if (job.status === "failed") {
+    throw new Error(job.learnerMessage || "Something went wrong on our side. Please try again.");
+  }
+  if (job.status === "blocked" && !job.course) {
+    throw new Error(job.learnerMessage || "We couldn't find enough reliable material to teach this well. Try a more specific topic or rephrase it.");
+  }
+  const course = job.course && typeof job.course === "object" ? job.course : {};
+  return {
+    runId: job.jobId,
+    spec: job.spec,
+    status: job.spec?.status || job.status,
+    publishable: Boolean(job.publishable),
+    summary: job.summary || { ready: 0, needs_review: 0, blocked: 0 },
+    costUsd: job.costUsd,
+    modules: Array.isArray(course.modules) ? course.modules : [],
+  };
 }
 
 export function buildTutorSystemPrompt({ courseTitle, moduleTitle, moduleSummary, concepts, lessons, sources }) {
