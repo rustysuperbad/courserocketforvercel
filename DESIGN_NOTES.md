@@ -257,7 +257,7 @@ Sandbox tile is **hidden** when the course topic is not coding (detected from ti
 
 ## Theme toggle (pipeline-v3)
 
-Navbar top-right: crescent moon, ink-coloured, 44px hit. Toggles `html[data-theme]` between paper (`#f3f5f9`) and midnight (`#0a0e1a`) — same hues, inverted roles. Stored as `cr-theme`. No new hues. Status colours lighten in dark for AA on ink.
+Navbar top-right: crescent moon, ink-coloured, 44px hit. Toggles `html[data-theme]` between paper (`#f3f5f9`) and midnight (`#0a0e1a`) — same hues, inverted roles. Default is **dark**. Stored as `cr-theme`. No new hues. Status colours lighten in dark for AA on ink.
 
 Code surfaces (`--code-bg` / `--code-fg`) do not invert: Python and fenced lesson code stay midnight + white. Generate waits up to 12 minutes and does not mark the course failed if the worker is still running.
 

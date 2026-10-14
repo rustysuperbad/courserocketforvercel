@@ -5,14 +5,14 @@ import { auth } from "../lib/firebase";
 import { useAuth } from "../context/AuthContext";
 
 function readTheme() {
-  if (typeof document === "undefined") return "light";
+  if (typeof document === "undefined") return "dark";
   const attr = document.documentElement.getAttribute("data-theme");
   if (attr === "dark" || attr === "light") return attr;
   try {
     const stored = localStorage.getItem("cr-theme");
     if (stored === "dark" || stored === "light") return stored;
   } catch { /* private mode */ }
-  return "light";
+  return "dark";
 }
 
 function applyTheme(theme) {
