@@ -32,7 +32,11 @@ export default function PracticeBento({
 
   return (
     <section
-      className={"cr-practice has-videos" + (showSandbox ? " has-sandbox" : "")}
+      className={
+        "cr-practice" +
+        (videos.length ? " has-videos" : "") +
+        (showSandbox ? " has-sandbox" : "")
+      }
       aria-label="Watch, try, read, and check"
     >
       <p className="cr-kicker">After the lesson</p>
