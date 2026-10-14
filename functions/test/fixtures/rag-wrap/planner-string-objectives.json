@@ -1,0 +1,12 @@
+{
+  "lessons": [
+    {
+      "id": "L1",
+      "title": "TCP three-way handshake",
+      "objectives": ["Explain SYN", "Explain ACK"],
+      "key_concepts": ["SYN"],
+      "prerequisites": [],
+      "est_minutes": 12
+    }
+  ]
+}

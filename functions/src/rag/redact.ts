@@ -1,13 +1,14 @@
 /** Emails and other identifiers stripped before hashing, logging, or model I/O. */
 export const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const ZERO_WIDTH_RE = /[\u200b\u200c\u200d\u2060\ufeff]/g;
+const SECRET_RE = /\b(?:gsk_[A-Za-z0-9]{8,}|sk-[A-Za-z0-9]{16,}|AIza[A-Za-z0-9_-]{16,})\b/g;
 
 export function stripZeroWidth(text: string): string {
   return String(text || "").replace(ZERO_WIDTH_RE, "");
 }
 
 export function redactPii(text: string): string {
-  return String(text || "").replace(EMAIL_RE, "[redacted-email]");
+  return String(text || "").replace(EMAIL_RE, "[redacted-email]").replace(SECRET_RE, "[redacted-key]");
 }
 
 export function redactDeep(value: unknown): unknown {

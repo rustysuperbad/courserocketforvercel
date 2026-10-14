@@ -7,6 +7,7 @@ One line of reasoning each. Ask the user only for destructive actions, real spen
 - 2026-10-14: Writer family is Groq `qwen/qwen3.8-27b`; planner uses `reasoning_effort: default` (thinking); other Groq stages use `none` (instruct). Strip `reasoning` / thought parts before parse/store.
 - 2026-10-14: Verifier ships on Groq Qwen (`VERIFIER_SAME_AS_WRITER` default true). Gemini 3.8-flash 404s or hangs; keep Gemini path behind `VERIFIER_SAME_AS_WRITER=false` with a 20s timeout then Groq fallback. `gemini-2.5-flash` 404s for new users.
 - 2026-10-14: Groq JSON uses `response_format.json_schema` with `strict: true` (supported on this model as of 2026-10-14 docs); Zod still validates.
+- 2026-10-14: Coercion is unwrap-only (`normalizeStageOutput`). No invented ids, minutes, padded objectives, or dummy quizzes. Zod runs after unwrap; one validation retry then `schema_invalid` fails the run. Repairs are logged and `coercion_rate` is stored on assemble.
 - 2026-10-14: Do not send `temperature` and `top_p` together unless a stage config explicitly sets both; stage defaults live in `functions/src/rag/config.ts` only.
 - 2026-10-14: Embeddings stay OpenAI `text-embedding-3-small` @ 1536 to match `source_chunks.embedding`; changing size needs a new migration.
 - 2026-10-14: New artifacts table via a new migration only; never edit applied SQL.

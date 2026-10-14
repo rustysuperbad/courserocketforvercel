@@ -1,0 +1,14 @@
+{
+  "title": "TCP three-way handshake",
+  "objectives_covered": [],
+  "sections": [
+    {
+      "heading": "Handshake",
+      "body_markdown": "The client sends SYN, the server replies SYN-ACK, then ACK [E1].",
+      "citations": ["E1"],
+      "kind": "explanation"
+    }
+  ],
+  "takeaways": [],
+  "gaps": []
+}

@@ -1,0 +1,12 @@
+{
+  "quiz": [
+    {
+      "question": "Which packet does the server send after SYN?",
+      "options": ["SYN-ACK", "FIN", "RST", "a random ACK"],
+      "correctIndex": 0,
+      "explanation": "The server acknowledges SYN and offers its own SYN.",
+      "objective_id": "O1",
+      "evidence_ids": ["E1"]
+    }
+  ]
+}

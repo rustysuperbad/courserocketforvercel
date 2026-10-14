@@ -59,7 +59,7 @@ npx supabase secrets set GROQ_API_KEY=YOUR_NEW_GROQ_KEY
 
 Optional override: **`GROQ_MODEL`** (default `qwen/qwen3.8-27b`). Leave unset unless A/B testing.
 
-Qwen on Groq (docs 2026-10-14): instruct = `reasoning_effort: none`; planner thinking = `default`/`medium`; max output 16384; `strict: true` JSON schema is supported. Developer-plan base limits: 30 RPM / 1K RPD / 8K TPM.
+Qwen on Groq (docs 2026-10-14): instruct = `reasoning_effort: none`; planner thinking = `default`/`medium`; max output 16384; every RAG stage sends `response_format.json_schema` with `strict: true`. Developer-plan base limits: 30 RPM / 1K RPD / 8K TPM.
 
 ---
 

@@ -1,0 +1,16 @@
+{
+  "course_title": "Networking 101",
+  "lessons": [
+    {
+      "id": "L1",
+      "title": "TCP three-way handshake",
+      "objectives": [
+        { "id": "O1", "text": "Explain SYN, SYN-ACK, and ACK in order." },
+        { "id": "O2", "text": "Apply the sequence-number check on a handshake." }
+      ],
+      "key_concepts": ["SYN"],
+      "prerequisites": [],
+      "est_minutes": 12
+    }
+  ]
+}

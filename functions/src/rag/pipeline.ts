@@ -70,6 +70,8 @@ export type RagCourseResult = {
   summary: { ready: number; needs_review: number; blocked: number };
   paidStages: string[];
   ingestionRequested: boolean;
+  coercionRepairs: string[];
+  coercionRate: number;
 };
 
 async function record(
@@ -126,11 +128,16 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
   const leakHashes = hashedShingleSet(safeText, 4);
   let spent = 0;
   const paidStages: string[] = [];
-  const bill = async (cost: number, stage: string) => {
+  const coercionRepairs: string[] = [];
+  let stageCalls = 0;
+  const bill = async (cost: number, stage: string, repairs: string[] = []) => {
     spent += cost;
     paidStages.push(stage);
+    stageCalls += 1;
+    coercionRepairs.push(...repairs);
     if (deps.settleUsd && cost > 0) await deps.settleUsd(cost);
   };
+  const emptyMeta = { coercionRepairs: [] as string[], coercionRate: 0 };
 
   const local = specFromLearnerText(rawText);
   let spec = local.spec;
@@ -145,6 +152,7 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
       summary: { ready: 0, needs_review: 0, blocked: 0 },
       paidStages,
       ingestionRequested: false,
+      ...emptyMeta,
     };
   }
 
@@ -154,7 +162,7 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
     stage: "intake",
     blocks: { LEARNER_TEXT: { text: safeText.slice(0, 8000) } },
   });
-  await bill(intakeCall.costUsd, "intake");
+  await bill(intakeCall.costUsd, "intake", intakeCall.repairs);
   spec = learnerSpecSchema.parse(intakeCall.json);
   if (local.spec.status !== "ok") spec = local.spec;
   else {
@@ -177,11 +185,13 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
       summary: { ready: 0, needs_review: 0, blocked: 0 },
       paidStages,
       ingestionRequested: false,
+      coercionRepairs,
+      coercionRate: stageCalls ? coercionRepairs.length / stageCalls : 0,
     };
   }
 
   const planCall = await deps.provider.complete({ stage: "planner", blocks: { LEARNER_SPEC: spec } });
-  await bill(planCall.costUsd, "planner");
+  await bill(planCall.costUsd, "planner", planCall.repairs);
   const syllabus = syllabusSchema.parse(planCall.json);
   await record(deps, runId, owner, null, "planner", planCall, { lessonIds: syllabus.lessons.map((item) => item.id) }, "ok");
 
@@ -191,6 +201,7 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
       lessons.push(await runLesson(item, spec, leakHashes, deps, runId, owner, bill));
     } catch (error) {
       const detail = error instanceof Error ? error.message : "lesson_failed";
+      if (detail.includes("schema_invalid") || detail.includes("input_budget_exceeded")) throw error;
       lessons.push({
         id: item.id,
         title: item.title,
@@ -216,8 +227,11 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
   });
   const publishable = blocked === 0 && needsReview === 0 && ready === syllabus.lessons.length && everyObjectiveCovered;
 
+  const coercionRate = stageCalls ? coercionRepairs.length / stageCalls : 0;
   await record(deps, runId, owner, null, "assemble", null, {
     ready, needs_review: needsReview, blocked, publishable,
+    coercion_rate: coercionRate,
+    repairs: coercionRepairs,
   }, publishable ? "ready" : "needs_review");
 
   return {
@@ -229,6 +243,8 @@ export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagC
     summary: { ready, needs_review: needsReview, blocked },
     paidStages,
     ingestionRequested: lessons.some((item) => item.status === "blocked" && item.missingConcepts.length > 0),
+    coercionRepairs,
+    coercionRate,
   };
 }
 
@@ -239,7 +255,7 @@ async function runLesson(
   deps: RagDeps,
   runId: string,
   owner: string,
-  bill: (cost: number, stage: string) => Promise<void>,
+  bill: (cost: number, stage: string, repairs?: string[]) => Promise<void>,
 ): Promise<RagLessonResult> {
   const query = buildRetrievalQuery(spec.objectives, spec.key_concepts);
   const rawChunks = await deps.retrieve(query, spec.key_concepts);
@@ -264,7 +280,7 @@ async function runLesson(
     stage: "extractor",
     blocks: { LESSON_SPEC: spec, CHUNKS: chunks.map((chunk) => ({ chunk_id: chunk.chunk_id, source_id: chunk.source_id, text: chunk.text })) },
   });
-  await bill(extractCall.costUsd, "extractor");
+  await bill(extractCall.costUsd, "extractor", extractCall.repairs);
   const cardsWrap = evidenceCardsSchema.parse(extractCall.json);
   const cardTokens = estimateTokens(JSON.stringify(cardsWrap.cards));
   if (cardTokens > GATE_CONFIG.extractorTokenBudget) {
@@ -276,7 +292,7 @@ async function runLesson(
     stage: "writer",
     blocks: { LESSON_SPEC: spec, LEVEL: learner.level, EVIDENCE_CARDS: cardsWrap.cards },
   });
-  await bill(draftCall.costUsd, "writer");
+  await bill(draftCall.costUsd, "writer", draftCall.repairs);
   let draft = lessonSchema.parse(draftCall.json);
   await record(deps, runId, owner, spec.id, "writer", draftCall, { title: draft.title, gaps: draft.gaps }, "ok");
 
@@ -289,7 +305,7 @@ async function runLesson(
         stage: "verifier",
         blocks: { LESSON_DRAFT: draft, LESSON_SPEC: spec, EVIDENCE_CARDS: cardsWrap.cards },
       });
-      await bill(verifyCall.costUsd, "verifier");
+      await bill(verifyCall.costUsd, "verifier", verifyCall.repairs);
       verdict = verdictSchema.parse(verifyCall.json);
       gates = runCodeGates({
         lesson: draft,
@@ -332,7 +348,7 @@ async function runLesson(
           FIX_LIST: [...(verdict?.fix_list || []), ...gateFixList(gates)],
         },
       });
-      await bill(rewriteCall.costUsd, "rewriter");
+      await bill(rewriteCall.costUsd, "rewriter", rewriteCall.repairs);
       draft = lessonSchema.parse(rewriteCall.json);
       draftCall = rewriteCall;
       loops += 1;
@@ -367,13 +383,7 @@ async function runLesson(
     };
   }
 
-  let supported = supportedClaims(verdict);
-  if (!supported.length && cardsWrap.cards.length) {
-    supported = cardsWrap.cards.slice(0, spec.objectives.length).map((card) => ({
-      text: card.claim,
-      evidence_ids: [card.id],
-    }));
-  }
+  const supported = supportedClaims(verdict);
   if (!supported.length) {
     return {
       id: spec.id,
@@ -394,7 +404,7 @@ async function runLesson(
       stage: "quiz",
       blocks: { OBJECTIVES: spec.objectives, SUPPORTED_CLAIMS: supported },
     });
-    await bill(quizCall.costUsd, "quiz");
+    await bill(quizCall.costUsd, "quiz", quizCall.repairs);
     const quiz = quizSchema.parse(quizCall.json);
     const cardIds = new Set(cardsWrap.cards.map((card) => card.id));
     cleanQuiz = quiz.items.filter((item) => item.evidence_ids.every((id) => cardIds.has(id)));

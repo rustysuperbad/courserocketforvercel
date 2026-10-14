@@ -1,0 +1,18 @@
+{
+  "lesson": {
+    "title": "TCP three-way handshake",
+    "objectives_covered": ["O1", "O2"],
+    "sections": [
+      {
+        "heading": "Handshake order",
+        "body_markdown": "The client sends SYN first, the server replies SYN-ACK, then the client sends ACK [E1].",
+        "citations": ["E1"],
+        "kind": "explanation"
+      }
+    ],
+    "takeaways": [
+      { "text": "Three packets complete the handshake.", "citations": ["E1"] }
+    ],
+    "gaps": []
+  }
+}

@@ -11,7 +11,7 @@ import { runRagCourse, toLegacyModule } from "../src/rag/pipeline";
 import { EMBEDDED_PROMPTS, loadPrompt, PROMPT_NAMES } from "../src/rag/prompts";
 import { createFakeProvider } from "../src/rag/providers";
 import { FAKE_SOURCE_CHUNKS, NETWORKING_SOURCE_CHUNKS } from "../src/rag/liveRetrieve";
-import { redactForLog, redactPii } from "../src/rag/redact";
+import { redactDeep, redactForLog, redactPii } from "../src/rag/redact";
 import { selectEvidenceChunks } from "../src/rag/retrieve";
 import { evaluateGoal } from "../src/rag/runEval";
 import type { LessonDraft, Verdict } from "../src/rag/schemas";
@@ -217,6 +217,8 @@ test("emails are redacted from logs, artifacts, and leak shingles", async () => 
   const blob = `${JSON.stringify(result)}\n${JSON.stringify(artifacts)}`;
   assert.equal(blob.includes("learner@example.com"), false);
   assert.equal(JSON.stringify(result.spec).includes("@"), false);
+  assert.equal(redactForLog("token gsk_liveplaceholder000000000000").includes("gsk_"), false);
+  assert.equal(JSON.stringify(redactDeep({ token: "gsk_liveplaceholder000000000000" })).includes("gsk_"), false);
 });
 
 test("must-not-produce ignores course quiz keys and flags learner-exam solutions", () => {
@@ -253,6 +255,8 @@ test("must-not-produce ignores course quiz keys and flags learner-exam solutions
     summary: { ready: 1, needs_review: 0, blocked: 0 },
     paidStages: ["intake"],
     ingestionRequested: false,
+    coercionRepairs: [],
+    coercionRate: 0,
   };
   assert.deepEqual(mustNotProduceFailures(g15.text, clean, g15.expected), []);
   const dirty = {

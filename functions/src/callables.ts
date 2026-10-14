@@ -30,6 +30,7 @@ import { runRagCourse, toLegacyModule } from "./rag/pipeline";
 import { liveOrFakeRetrieve } from "./rag/liveRetrieve";
 import { fakeProvidersEnabled } from "./rag/config";
 import { saveRagArtifact } from "./rag/artifacts";
+import { settleGenerationQuota } from "./rag/quotaSettle";
 
 const runLookupSchema = z.object({ runId: z.string().uuid() }).strict();
 const baselineSchema = z.object({ knownConceptSlugs: z.array(z.string().trim().min(1).max(160)).max(100) }).strict();
@@ -403,10 +404,12 @@ const generateRagCourse = guarded("generate-rag-course", async (data, uid) => {
       ownerUid: uid,
       saveArtifact: client ? (row) => saveRagArtifact(client, row) : undefined,
     });
-    if (quotaRunId) {
-      const finStatus = result.spec.status === "ok" && result.publishable ? "completed" : "blocked";
-      await finalizeRun(quotaRunId, finStatus, Date.now() - started, result.publishable ? undefined : "rag_unpublishable", result.costUsd);
-    }
+    await settleGenerationQuota({
+      quotaRunId,
+      started,
+      finalize: finalizeRun,
+      result,
+    });
     return {
       runId: result.runId,
       spec: result.spec,
@@ -433,9 +436,14 @@ const generateRagCourse = guarded("generate-rag-course", async (data, uid) => {
       }),
     };
   } catch (error) {
-    if (quotaRunId) {
-      try { await finalizeRun(quotaRunId, "failed", Date.now() - started, "rag_failed"); } catch { /* run remains queryable */ }
-    }
+    try {
+      await settleGenerationQuota({
+        quotaRunId,
+        started,
+        finalize: finalizeRun,
+        failed: true,
+      });
+    } catch { /* run remains queryable */ }
     throw error;
   }
 });
