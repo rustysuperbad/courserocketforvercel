@@ -32,7 +32,7 @@ export default function GenerateStartOverlay({ goal, stage, note, percent = 4, s
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         />
-        <GenerationTheatre variant="ink" stage={stage} note={note} percent={percent} status={status} />
+        <GenerationTheatre stage={stage} note={note} percent={percent} status={status} />
       </div>
     </div>
   );

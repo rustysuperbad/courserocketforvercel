@@ -261,7 +261,7 @@ Navbar top-right: crescent moon, ink-coloured, 44px hit. Toggles `html[data-them
 
 Code surfaces (`--code-bg` / `--code-fg`) do not invert: Python and fenced lesson code stay midnight + white. Generate waits up to 12 minutes and does not mark the course failed if the worker is still running.
 
-Landing preview and “Keep it light” are paper cells (ink type in light, reversed in dark) — not always-midnight slabs.
+Landing preview and “Keep it light” are paper cells (ink type in light, reversed in dark) — not always-midnight slabs. The generate overlay and course reader use `--canvas` / `--text-1` the same way (no inverted ink slab).
 
 ## Groq writer (this pass)
 
