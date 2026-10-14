@@ -6,8 +6,10 @@
   padding: 0;
 }
 
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
 html, body {
-  color-scheme: light;
   background: var(--canvas);
   color: var(--text-1);
   font-family: var(--font-sans);
@@ -140,7 +142,7 @@ input, textarea, select {
   background: var(--ink);
   color: var(--canvas);
 }
-.cr-btn-primary:hover:not(:disabled) { background: #131a2c; color: var(--canvas); }
+.cr-btn-primary:hover:not(:disabled) { background: var(--ink-hover); color: var(--canvas); }
 
 .cr-btn-ghost {
   background: transparent;
@@ -148,6 +150,28 @@ input, textarea, select {
   padding-inline: var(--space-12);
 }
 .cr-btn-ghost:hover:not(:disabled) { color: var(--text-1); }
+
+.cr-theme-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+}
+.cr-theme-toggle:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.cr-theme-toggle:active:not(:disabled) { transform: scale(0.96); }
+.cr-theme-toggle[aria-pressed="true"] { color: var(--ink); }
+.cr-theme-toggle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.cr-theme-toggle svg { display: block; }
 .cr-btn-plain {
   text-transform: none;
   letter-spacing: 0;

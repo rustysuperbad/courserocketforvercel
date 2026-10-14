@@ -255,6 +255,10 @@ The reader is now **lesson first, tools last**. Lessons stay floating type. Afte
 
 Sandbox tile is **hidden** when the course topic is not coding (detected from title/topic/concepts/fences). Nav **Sandbox** stays on every signed-in page. No course doc field yet — heuristic only. Needs input: a stored `sandboxEnabled` flag if we should let authors override.
 
+## Theme toggle (pipeline-v3)
+
+Navbar top-right: crescent moon, ink-coloured, 44px hit. Toggles `html[data-theme]` between paper (`#f3f5f9`) and midnight (`#0a0e1a`) — same hues, inverted roles. Stored as `cr-theme`. No new hues. Status colours lighten in dark for AA on ink.
+
 ## Groq writer (this pass)
 
 Empty modules were a quality-gate bug: a failed lesson bar returned **zero** lessons/quiz, and papers aborted at 7s. Completeness now pads to 2 lessons + 2 quiz; papers wait 20s; videos retry on the module title. Groq prompts follow the Groq guide: static system persona + few-shot first, live request last (prefix cache), temperature 0.2 and no top-p, `max_completion_tokens`, `reasoning_effort: none` on Qwen, json_schema with minItems 2. Bayesian BKT in `functions/src/learning.ts` is correct and unit-tested; the live `/course` quiz still only stores Firestore progress and does not update `learner_mastery`.

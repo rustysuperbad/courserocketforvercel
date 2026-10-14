@@ -9,6 +9,7 @@
   --text-2: #3a4156;
   --text-3: #5c657c;
   --ink: #0a0e1a;
+  --ink-hover: #131a2c;
   --accent: #4f46e5;
   --accent-2: #6366f1;
   --accent-soft: rgba(99, 102, 241, 0.1);
@@ -116,6 +117,31 @@
   --shadow-md: none;
   --shadow-lg: none;
   --key-surface: none;
+}
+
+/* Dark: same hues, inverted paper/midnight roles. Status colours lighten just enough for AA on ink. */
+html[data-theme="dark"] {
+  --canvas: #0a0e1a;
+  --canvas-2: #121722;
+  --text-1: #f3f5f9;
+  --text-2: #c5cad6;
+  --text-3: #8b93a7;
+  --ink: #f3f5f9;
+  --ink-hover: #e7ebf3;
+  --accent: #6366f1;
+  --accent-2: #818cf8;
+  --accent-soft: rgba(99, 102, 241, 0.16);
+  --accent-ring: rgba(129, 140, 248, 0.4);
+  --emphasis: #22d3ee;
+  --success: #34d399;
+  --warning: #f59e0b;
+  --danger: #f87171;
+  --white: #0a0e1a;
+  --surface: #121722;
+  --surface-2: #181e2c;
+  --surface-3: #222a3c;
+  --border: rgba(243, 245, 249, 0.12);
+  --border-strong: rgba(243, 245, 249, 0.22);
 }
 
 @media (max-width: 680px) {
