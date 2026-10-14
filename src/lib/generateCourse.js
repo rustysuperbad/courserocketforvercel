@@ -17,7 +17,7 @@
 
 import { fetchYouTubeVideos } from "./fetchYoutube";
 import { fetchPapers } from "./fetchPapers";
-import { generateStructuredJson } from "./courseAiApi";
+import { generateStructuredJson, requestRagCourse } from "./courseAiApi";
 import { buildCurriculumPrompt, buildCurriculumUserMessage, generateModuleLessons } from "./courseWriterPipeline";
 import { detectComplexity, MODULE_COUNT } from "./courseGenerationUtils";
 import {
@@ -371,6 +371,36 @@ export async function generateCourseStructure(topic, onProgress) {
   cb("Designing your course…");
 
   try {
+    const rag = await requestRagCourse({ topic });
+    if (Array.isArray(rag?.modules) && rag.modules.length > 0) {
+      const { goal } = splitLearnerRequest(rag.spec?.goal || topic);
+      const modules = rag.modules.map((mod, i) => ({
+        id: mod.id || `module_${i + 1}`,
+        title: mod.title,
+        summary: mod.summary,
+        concepts: Array.isArray(mod.concepts) ? mod.concepts : [],
+        youtubeQueries: mod.youtubeQueries || [mod.title],
+        paperTopics: mod.paperTopics || [mod.title],
+        lessons: Array.isArray(mod.lessons) ? mod.lessons : [],
+        quiz: Array.isArray(mod.quiz) ? mod.quiz : [],
+        generationQuality: mod.generationQuality || (mod.status === "ready" ? "generated" : mod.status),
+        gaps: mod.gaps || [],
+      }));
+      return {
+        title: refineCatalogTitleIfLazy(rag.spec?.topic || goal, goal),
+        description: rag.spec?.goal || "",
+        level: rag.spec?.level || "beginner",
+        estimatedHours: Math.max(1, modules.length),
+        courseKeyConcepts: normalizeCourseKeyConcepts(
+          (rag.spec?.topic || "").split(" ").filter(Boolean),
+          modules,
+        ),
+        modules,
+        generationQuality: rag.publishable ? "generated" : "needs_review",
+        ragRunId: rag.runId,
+        ragSummary: rag.summary,
+      };
+    }
     const raw = await generateStructuredJson({
       kind: "outline",
       systemPrompt: buildCurriculumPrompt(moduleTarget, topic),
@@ -402,8 +432,16 @@ export async function generateCourseStructure(topic, onProgress) {
     course.generationQuality = "generated";
     return course;
   } catch (e) {
-    console.warn("[gen] structure failed, using starter outline:", e.message);
-    return fallbackStructure(topic, complexity);
+    console.warn("[gen] structure failed:", e.message);
+    return {
+      generationQuality: "blocked",
+      title: "Course not generated",
+      description: "The writer did not return a grounded syllabus.",
+      level: "beginner",
+      estimatedHours: 1,
+      courseKeyConcepts: [],
+      modules: [],
+    };
   }
 }
 
@@ -437,6 +475,15 @@ function assessModuleContentGate(lessons, quiz, fingerprints) {
 }
 
 async function generateLessonForModule(m, topic, i, total, level, extraUserInstructions = "") {
+  if (!String(extraUserInstructions).trim() && Array.isArray(m.lessons) && m.lessons.length >= 1 && Array.isArray(m.quiz) && m.quiz.length >= 1) {
+    return {
+      lessons: normalizeLessonsPayload(m.lessons),
+      quiz: normalizeQuizItems(m.quiz),
+      sources: [],
+      groundingStatus: "rag",
+      generationQuality: m.generationQuality === "generated" ? "generated" : m.generationQuality || "generated",
+    };
+  }
   try {
     const moduleInput =
       String(extraUserInstructions).trim()

@@ -28,6 +28,13 @@ export async function generateStructuredJson({ kind, systemPrompt, userMessage, 
   return JSON.stringify(content);
 }
 
+/** Staged RAG course write. Raw topic is intake-only; the server never echoes it back. */
+export async function requestRagCourse({ topic }) {
+  const response = await invokeBackend("generateRagCourse", { topic }, 180000);
+  if (!response || typeof response !== "object") throw new Error("The course writer returned no content.");
+  return response;
+}
+
 export function buildTutorSystemPrompt({ courseTitle, moduleTitle, moduleSummary, concepts, lessons, sources }) {
   const lessonText = (lessons || []).map((lesson) => `• ${lesson.heading}: ${lesson.text}`).join("\n");
   const sourceText = (sources || [])

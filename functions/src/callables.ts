@@ -25,6 +25,11 @@ import {
 } from "./trust";
 import { generateStructuredContent, askCourseTutor, searchYouTubeVideos, searchAcademicPapers } from "./legacyAi";
 import { courseGenerationRequested } from "./events";
+import { createConfiguredProvider } from "./rag/providers";
+import { runRagCourse, toLegacyModule } from "./rag/pipeline";
+import { liveOrFakeRetrieve } from "./rag/liveRetrieve";
+import { fakeProvidersEnabled } from "./rag/config";
+import { saveRagArtifact } from "./rag/artifacts";
 
 const runLookupSchema = z.object({ runId: z.string().uuid() }).strict();
 const baselineSchema = z.object({ knownConceptSlugs: z.array(z.string().trim().min(1).max(160)).max(100) }).strict();
@@ -363,6 +368,44 @@ const getNetworkingConceptMap = guarded("get-networking-concept-map", async () =
   return conceptMapFromCatalog(catalog);
 });
 
+const ragCourseSchema = z.object({
+  topic: z.string().trim().min(4).max(2000),
+}).strict();
+
+const generateRagCourse = guarded("generate-rag-course", async (data, uid) => {
+  const input = parseInput(ragCourseSchema, data, "A learning topic is required.");
+  const client = fakeProvidersEnabled() ? null : serviceClient();
+  const result = await runRagCourse(input.topic, {
+    provider: createConfiguredProvider(),
+    retrieve: (query, concepts) => liveOrFakeRetrieve(query, concepts, uid),
+    ownerUid: uid,
+    saveArtifact: client ? (row) => saveRagArtifact(client, row) : undefined,
+  });
+  return {
+    runId: result.runId,
+    spec: result.spec,
+    publishable: result.publishable,
+    summary: result.summary,
+    costUsd: result.costUsd,
+    modules: result.lessons.map((lesson, index) => {
+      const mapped = toLegacyModule(lesson);
+      return {
+        id: `module_${index + 1}`,
+        title: mapped.title,
+        summary: mapped.summary,
+        lessons: mapped.lessons,
+        quiz: mapped.quiz,
+        concepts: result.spec.topic.split(" ").slice(0, 4),
+        youtubeQueries: [mapped.title],
+        paperTopics: [mapped.title],
+        generationQuality: mapped.generationQuality,
+        gaps: mapped.gaps,
+        status: lesson.status,
+      };
+    }),
+  };
+});
+
 export type CallableHandler = (data: unknown, uid: string) => Promise<unknown>;
 
 export const CALLABLES: Record<string, CallableHandler> = {
@@ -389,6 +432,7 @@ export const CALLABLES: Record<string, CallableHandler> = {
   getLearningAnalytics,
   uploadLearnerNotes,
   getNetworkingConceptMap,
+  generateRagCourse,
   generateStructuredContent,
   askCourseTutor,
   searchYouTubeVideos,

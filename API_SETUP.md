@@ -9,11 +9,12 @@ CourseRocket keeps Firebase Authentication and Firestore for the existing produc
 | [Firebase](https://console.firebase.google.com/) | Existing sign-in, Firestore, and callable functions | Existing app config; Functions secrets below |
 | [Supabase](https://supabase.com/dashboard) | Postgres, pgvector, RLS, learner mastery and source retrieval | Public URL/anon key in local frontend; service-role key only in Functions |
 | [Inngest](https://app.inngest.com/) | Durable background jobs and retries | Event key + signing key in Functions secrets |
-| [OpenAI](https://platform.openai.com/api-keys) | Existing course writing and embeddings (`text-embedding-3-small`) | `OPENAI_API_KEY` Functions secret |
+| [OpenAI](https://platform.openai.com/api-keys) | Embeddings (`text-embedding-3-small`, 1536-d) | `OPENAI_API_KEY` server secret |
+| [Groq](https://console.groq.com/keys) | RAG writer/planner/extractor/quiz (`qwen/qwen3.8-27b`) | `GROQ_API_KEY` server secret |
 | [Langfuse](https://cloud.langfuse.com/) | LLM/job traces and cost metadata | Public + secret keys in Functions secrets |
 | [Sentry](https://sentry.io/) | Sanitized backend error reporting | DSN in Functions secret |
 | [Google Cloud Console](https://console.cloud.google.com/) | YouTube Data API v3, if the existing resource finder is used | `YOUTUBE_API_KEY` Functions secret |
-| Gemini API | Existing Google Search grounding for the current content flow | `GEMINI_API_KEY` Functions secret |
+| Gemini API | RAG verifier (different family from Groq). Default model id `gemini-2.5-flash` via `GEMINI_MODEL` | `GEMINI_API_KEY` server secret |
 
 Check each provider's current pricing and usage limits before enabling paid calls. The database quota defaults are configurable and do not replace provider-side billing alerts.
 
@@ -110,3 +111,39 @@ Ingestion uses the OpenAI embeddings API from the private script environment. Re
 `searchLearningSources` embeds the query with OpenAI, calls the hybrid RPC, then applies a second per-source diversity cap in TypeScript. Retrieved chunks always include title, URL, license, and attribution. A miss is returned as `no_approved_sources` or `unavailable`; the UI must not invent a fallback passage.
 
 The job worker writes lessons from retrieved passages when sources exist. A second model critiques every claim and independently solves each quiz. Unsupported claims can be rewritten once from the same passages; anything still ungrounded is stored as unverified and is not taught. Verified modules are cached by concept and evidence hash for reuse. YouTube and OpenAlex hits are scored for level fit, deduplicated, and cached for 12 hours. Source URLs are link-checked when a module is built. Do not mark content verified just because a job run completed.
+
+## RAG course generation (branch `rag-pipeline`)
+
+Dashboard generation calls Edge callable **`generateRagCourse`**.
+
+Request:
+
+```json
+{ "topic": "<raw learner text>" }
+```
+
+Response:
+
+```json
+{
+  "runId": "uuid",
+  "spec": { "topic": "noun phrase", "level": "beginner|intermediate|advanced", "goal": "≤20 words", "constraints": [] },
+  "publishable": true,
+  "summary": { "ready": 1, "needs_review": 0, "blocked": 0 },
+  "costUsd": 0,
+  "modules": [
+    {
+      "id": "module_1",
+      "title": "...",
+      "summary": "...",
+      "lessons": [{ "heading": "...", "text": "..." }],
+      "quiz": [{ "question": "...", "options": ["A","B","C","D"], "correctIndex": 0, "explanation": "..." }],
+      "status": "ready|needs_review|blocked",
+      "generationQuality": "generated|needs_review|blocked",
+      "gaps": []
+    }
+  ]
+}
+```
+
+Raw `topic` is intake-only. Later stages receive `LearnerSpec`. Stage artifacts land in `rag_run_artifacts` (no raw prompt). Set `COURSE_AI_FAKE=1` to skip Groq/Gemini/OpenAI. See `REQUIRED_SETUP.md` and `PIPELINE_AUDIT.md`.
