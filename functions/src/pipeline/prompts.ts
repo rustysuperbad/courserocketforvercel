@@ -1,6 +1,6 @@
-import { readFileSync } from "fs";
-import { join } from "path";
 import { sha256 } from "./text";
+
+declare const __V3_PROMPTS__: string | undefined;
 
 export type PromptName =
   | "intake"
@@ -33,15 +33,30 @@ RULES: 1) At least one question per objective, testing understanding or applicat
 
 function loadFromDisk(name: PromptName): string | null {
   try {
-    const path = join(process.cwd(), "prompts/v3", `${name}.md`);
-    return readFileSync(path, "utf8").trim();
+    const req = (0, eval)("typeof require === 'function' ? require : undefined") as NodeRequire | undefined;
+    if (!req) return null;
+    const fs = req("node:fs") as typeof import("node:fs");
+    const path = req("node:path") as typeof import("node:path");
+    const cwd = typeof process !== "undefined" ? process.cwd() : "";
+    if (!cwd) return null;
+    return fs.readFileSync(path.join(cwd, "prompts/v3", `${name}.md`), "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+function loadFromBundle(name: PromptName): string | null {
+  if (typeof __V3_PROMPTS__ !== "string") return null;
+  try {
+    const map = JSON.parse(__V3_PROMPTS__) as Partial<Record<PromptName, string>>;
+    return map[name] || null;
   } catch {
     return null;
   }
 }
 
 export function loadPrompt(name: PromptName): { name: string; content: string; hash: string } {
-  const content = loadFromDisk(name) || FALLBACK[name];
+  const content = loadFromDisk(name) || loadFromBundle(name) || FALLBACK[name];
   return { name: `v3/${name}`, content, hash: sha256(content).slice(0, 16) };
 }
 

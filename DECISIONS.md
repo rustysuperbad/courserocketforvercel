@@ -16,3 +16,4 @@
 - 2026-10-14: Gemini verifier sends both `responseSchema` and `responseJsonSchema` with `responseMimeType: application/json`.
 - 2026-10-14: robots.txt is not fetched in fake tests. Live fetch is https-only with SSRF, size, time, and redirect caps. Full robots parsing is a follow-up before crawling aggressive sites.
 - 2026-10-14: After v3 tests passed, old RAG/ingest/networking seeds were deleted. Linked Supabase uses forward drop `20261014230000_drop_old_pipeline.sql`.
+- 2026-10-14: Edge bundle cannot import Node `crypto`/`fs`/`path`. SHA-256 is a small sync implementation; prompt `.md` files are inlined at bundle time, with disk reads only in Node tests.
