@@ -13,6 +13,8 @@ const outlineSchema = {
     courseKeyConcepts: { type: "array", items: { type: "string" } },
     modules: {
       type: "array",
+      minItems: 4,
+      maxItems: 7,
       items: {
         type: "object",
         additionalProperties: false,
@@ -37,6 +39,8 @@ const moduleSchema = {
   properties: {
     lessons: {
       type: "array",
+      minItems: 2,
+      maxItems: 2,
       items: {
         type: "object",
         additionalProperties: false,
@@ -46,12 +50,14 @@ const moduleSchema = {
     },
     quiz: {
       type: "array",
+      minItems: 2,
+      maxItems: 2,
       items: {
         type: "object",
         additionalProperties: false,
         properties: {
           question: { type: "string" },
-          options: { type: "array", items: { type: "string" } },
+          options: { type: "array", minItems: 4, maxItems: 4, items: { type: "string" } },
           correctIndex: { type: "integer" },
           explanation: { type: "string" },
         },
@@ -305,20 +311,15 @@ async function openAiJson(input: { systemPrompt: string; userMessage: string; ki
 }
 
 function writerPrompt(input: { systemPrompt: string; userMessage: string; kind: "outline" | "module"; evidence: string; sources: Array<{ id: number; title: string; url: string }> }) {
-  let instructions = input.systemPrompt;
+  const instructions = input.systemPrompt;
   let user = input.userMessage;
   if (input.kind === "module") {
-    instructions += [
-      "Ground factual teaching in the evidence included by the application.",
-      "Do not invent URLs, organizations, paper titles, or citations.",
-      "Where an important factual explanation is directly supported by a listed source, cite it in the lesson as [1], [2], using that source's id.",
-      "Keep citations sparse and accurate. If evidence is insufficient, explain the stable concept without a citation rather than guessing.",
-    ].join("\n");
     user += "\n\nResearch evidence retrieved for this module:\n" + (input.evidence || "No grounded web evidence was available for this module.");
     if (input.sources.length) {
       user += "\n\nUse only these source ids for inline citations:\n" +
         input.sources.map((source) => `[${source.id}] ${source.title} — ${source.url}`).join("\n");
     }
+    user += "\n\nWrite the JSON object now.";
   }
   return { instructions, user };
 }
@@ -359,16 +360,21 @@ async function groqChat(input: {
   messages: Array<{ role: string; content: string }>;
   maxTokens: number;
   timeoutMs: number;
+  temperature?: number;
   responseFormat?: Record<string, unknown>;
 }): Promise<Record<string, unknown>> {
   const body: Record<string, unknown> = {
     model: input.model,
-    temperature: 0.4,
-    max_tokens: input.maxTokens,
+    temperature: input.temperature ?? 0.2,
+    max_completion_tokens: input.maxTokens,
     messages: input.messages,
   };
   if (input.responseFormat) body.response_format = input.responseFormat;
-  if (input.model.startsWith("openai/gpt-oss")) body.reasoning_effort = "low";
+  if (input.model.startsWith("qwen/") || input.model.includes("qwen")) {
+    body.reasoning_effort = "none";
+  } else if (input.model.startsWith("openai/gpt-oss")) {
+    body.reasoning_effort = "low";
+  }
   return fetchJson("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.apiKey}` },
@@ -381,8 +387,8 @@ async function groqJson(input: { systemPrompt: string; userMessage: string; kind
   const schema = input.kind === "outline" ? outlineSchema : moduleSchema;
   const schemaName = input.kind === "outline" ? "course_outline" : "course_module";
   const messages = [
-    { role: "system", content: `${instructions}\n\nReturn JSON matching this schema:\n${JSON.stringify(schema)}` },
-    { role: "user", content: `${user}\n\nReturn only valid JSON.` },
+    { role: "system", content: instructions },
+    { role: "user", content: user },
   ];
   const formats: Array<Record<string, unknown>> = [
     { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
@@ -396,8 +402,9 @@ async function groqJson(input: { systemPrompt: string; userMessage: string; kind
           apiKey: input.apiKey,
           model,
           messages,
-          maxTokens: input.kind === "outline" ? 8000 : 12000,
-          timeoutMs: 65000,
+          maxTokens: input.kind === "outline" ? 6000 : 10000,
+          timeoutMs: 70000,
+          temperature: 0.2,
           responseFormat,
         });
         return finalizeWriterJson(parseJsonObject(extractGroqText(response)), input.kind, input.evidence, input.sources);
@@ -452,6 +459,7 @@ export async function askCourseTutor(data: unknown, _uid: string) {
         messages: [{ role: "system", content: system }, ...safeMessages],
         maxTokens: 1300,
         timeoutMs: 35000,
+        temperature: 0.35,
       });
       const text = extractGroqText(response);
       if (!text) throw new HttpsError("internal", "The tutor returned an empty answer. Please retry.");

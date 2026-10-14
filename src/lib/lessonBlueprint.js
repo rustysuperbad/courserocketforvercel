@@ -66,7 +66,7 @@ export function extractLessonH2(text) {
 export function lessonMeetsSimpleBar(text) {
   const t = String(text || "");
   const h2 = extractLessonH2(t);
-  if (h2.length < 3 || h2.length > 8) return false;
-  if (t.length < 600 || t.length > 6000) return false;
+  if (h2.length < 2 || h2.length > 10) return false;
+  if (t.length < 400 || t.length > 8000) return false;
   return true;
 }
