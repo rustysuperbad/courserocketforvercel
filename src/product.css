@@ -384,8 +384,8 @@
   align-items: center;
 }
 .cr-practice-sandbox .lr-sandbox-out {
-  background: rgba(243, 245, 249, 0.1);
-  color: var(--canvas);
+  background: var(--code-bg);
+  color: var(--code-fg);
 }
 
 .cr-practice-paper-stack {

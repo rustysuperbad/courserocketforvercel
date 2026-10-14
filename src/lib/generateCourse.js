@@ -363,11 +363,27 @@ function fallbackStructure(topic, complexity) {
 }
 
 // ─── Phase 1: course structure ──────────────────────────────────────────────
+function noteForJobStage(stage, fallback) {
+  const value = String(stage || "").toLowerCase();
+  if (!value || value === "queued") return "Reading your goal…";
+  if (value.includes("intake")) return "Reading your goal…";
+  if (value.includes("plan") || value.includes("path")) return "Choosing the path…";
+  if (value.includes("research") || value.includes("source") || value.includes("compile")) return "Gathering sources…";
+  if (value.includes("write") || value.includes("lesson") || value.includes("rewrite")) return "Writing the lessons…";
+  if (value.includes("verif") || value.includes("quiz")) return "Checking the quiz…";
+  if (value.includes("video") || value.includes("paper") || value.includes("resource")) return "Picking a video…";
+  if (value.includes("assemble") || value.includes("done") || value.includes("complete")) return "Ready to open…";
+  return fallback || "Designing your course…";
+}
+
 export async function generateCourseStructure(topic, onProgress) {
   const cb = onProgress || (() => {});
-  cb("Designing your course…");
+  cb("Reading your goal…", 4);
 
-  const rag = await requestRagCourse({ topic });
+  const rag = await requestRagCourse({
+    topic,
+    onProgress: (job) => cb(noteForJobStage(job.stage, "Designing your course…"), Number(job.percent) || 0),
+  });
   const intakeStatus = rag?.spec?.status || rag?.status;
   if (intakeStatus === "needs_clarification") {
     throw new Error("Need a clearer topic. Say what this course should cover.");

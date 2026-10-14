@@ -30,9 +30,9 @@ export async function generateStructuredJson({ kind, systemPrompt, userMessage, 
 }
 
 /** Job-based generate. Polls until the course is ready so existing callers keep working. */
-export async function requestRagCourse({ topic }) {
+export async function requestRagCourse({ topic, onProgress }) {
   const started = await startGeneration(String(topic || ""));
-  const job = await waitForJob(started.jobId);
+  const job = await waitForJob(started.jobId, 720000, onProgress);
   if (job.status === "needs_clarification") {
     return {
       runId: job.jobId,

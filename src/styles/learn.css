@@ -142,8 +142,9 @@
   font-size: 13px;
   line-height: 1.55;
   border-radius: var(--radius-nested);
-  background: var(--ink);
-  color: var(--canvas);
+  background: var(--code-bg);
+  color: var(--code-fg);
+  caret-color: var(--code-fg);
   border: 0;
   padding: var(--space-18);
 }
@@ -154,8 +155,8 @@
   margin-top: var(--space-12);
   padding: var(--space-18);
   border-radius: var(--radius-nested);
-  background: var(--ink);
-  color: var(--canvas);
+  background: var(--code-bg);
+  color: var(--code-fg);
   font-size: 13px;
   overflow: auto;
   max-height: 260px;

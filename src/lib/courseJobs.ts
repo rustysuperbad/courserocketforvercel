@@ -35,16 +35,29 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function waitForJob(jobId: string, timeoutMs = 170000): Promise<GenerationJob> {
+export async function waitForJob(
+  jobId: string,
+  timeoutMs = 720000,
+  onProgress?: (job: GenerationJob) => void,
+): Promise<GenerationJob> {
   const started = Date.now();
   let delay = 800;
+  let last: GenerationJob | null = null;
   while (Date.now() - started < timeoutMs) {
     const job = await getJob(jobId);
+    last = job;
+    onProgress?.(job);
     if (job.status === "completed" || job.status === "failed" || job.status === "blocked" || job.status === "needs_clarification") {
       return job;
     }
     await sleep(delay);
     delay = Math.min(4000, Math.floor(delay * 1.4));
+  }
+  if (last && (last.status === "queued" || last.status === "running")) {
+    throw Object.assign(
+      new Error("The course is still writing. Leave this page open or come back in a few minutes."),
+      { code: "still_running" },
+    );
   }
   throw new Error("The course writer timed out. Please try again.");
 }

@@ -10,6 +10,9 @@
   --text-3: #5c657c;
   --ink: #0a0e1a;
   --ink-hover: #131a2c;
+  /* Code editors never invert with theme — midnight tile, white type. */
+  --code-bg: #0a0e1a;
+  --code-fg: #ffffff;
   --accent: #4f46e5;
   --accent-2: #6366f1;
   --accent-soft: rgba(99, 102, 241, 0.1);
@@ -128,6 +131,8 @@ html[data-theme="dark"] {
   --text-3: #8b93a7;
   --ink: #f3f5f9;
   --ink-hover: #e7ebf3;
+  --code-bg: #0a0e1a;
+  --code-fg: #ffffff;
   --accent: #6366f1;
   --accent-2: #818cf8;
   --accent-soft: rgba(99, 102, 241, 0.16);

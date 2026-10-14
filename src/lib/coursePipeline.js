@@ -250,15 +250,22 @@ export async function startOrResumeGeneratingCourse(userId, topicRaw) {
   return { courseId, resumed: false };
 }
 
-async function safeSetGenerationMessage(cref, userId, generationId, msg) {
+async function safeSetGenerationMessage(cref, userId, generationId, msg, percent) {
   const res = await transactionalCourseUpdate(cref, {
     expectedUserId: userId,
     expectedGenerationId: generationId,
-    buildPatch: () => ({
-      generationMessage: msg ? msg : deleteField(),
-      generationLockUntil: Date.now() + LOCK_MS,
-      generationHeartbeatAt: Date.now(),
-    }),
+    buildPatch: () => {
+      const patch = {
+        generationMessage: msg ? msg : deleteField(),
+        generationLockUntil: Date.now() + LOCK_MS,
+        generationHeartbeatAt: Date.now(),
+      };
+      if (Number.isFinite(Number(percent)) && Number(percent) >= 0) {
+        patch.generationProgressDone = Math.min(100, Math.max(0, Math.round(Number(percent))));
+        patch.generationProgressTotal = 100;
+      }
+      return patch;
+    },
   });
   if (res === "stale_generation") {
     throw new Error("stale_generation");
@@ -299,9 +306,9 @@ export async function runOrResumeCourseGeneration(courseId, userId) {
     const topic = String(data.topic || "").trim();
 
     if (!Array.isArray(data.modules) || data.modules.length === 0) {
-      await safeSetGenerationMessage(cref, userId, generationId, "Designing your course…");
-      const courseData = await generateCourseStructure(topic, async (m) => {
-        if (m) await safeSetGenerationMessage(cref, userId, generationId, m);
+      await safeSetGenerationMessage(cref, userId, generationId, "Reading your goal…", 4);
+      const courseData = await generateCourseStructure(topic, async (m, percent) => {
+        if (m) await safeSetGenerationMessage(cref, userId, generationId, m, percent);
       });
 
       const outlineMods = courseData.modules.map((m) => ({
@@ -443,6 +450,17 @@ export async function runOrResumeCourseGeneration(courseId, userId) {
     const msg = String(e?.message || "");
     if (msg.includes("stale_generation")) {
       console.warn("[coursePipeline] generation superseded or lock lost; stopping worker");
+      return;
+    }
+    if (e?.code === "still_running" || msg.toLowerCase().includes("still writing")) {
+      if (generationId) {
+        await safeSetGenerationMessage(
+          cref,
+          userId,
+          generationId,
+          "Still writing. Leave this page open or come back in a few minutes.",
+        );
+      }
       return;
     }
     const errText =

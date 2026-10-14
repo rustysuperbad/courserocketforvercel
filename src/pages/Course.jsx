@@ -1713,7 +1713,7 @@ const s = {
     alignItems: "center",
     justifyContent: "space-between",
     padding: "10px 14px 9px",
-    background: "var(--ink)",
+    background: "var(--code-bg)",
     borderBottom: "1px solid rgba(243, 245, 249, 0.12)",
   },
   codeLangPill: {
@@ -1734,7 +1734,7 @@ const s = {
   codePre: {
     margin: 0,
     padding: "20px 22px 22px",
-    background: "var(--ink)",
+    background: "var(--code-bg)",
     border: "none",
     borderRadius: 0,
     overflowX: "auto",
@@ -1745,7 +1745,7 @@ const s = {
       "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     fontSize: 13.25,
     lineHeight: 1.68,
-    color: "#e4e7ef",
+    color: "var(--code-fg)",
     whiteSpace: "pre",
     tabSize: 2,
     display: "block",
