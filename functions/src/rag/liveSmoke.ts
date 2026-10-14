@@ -87,6 +87,8 @@ async function main() {
       lessonStatuses: result.lessons.map((item) => item.status),
       title: result.lessons[0]?.title || "",
       quizItems: result.lessons[0]?.quiz.length || 0,
+      failedGates: result.lessons.map((item) => item.gateResults.filter((gate) => !gate.passed).map((gate) => gate.name)),
+      supportedClaims: result.lessons.map((item) => item.verdict?.claims.filter((claim) => claim.verdict === "SUPPORTED").length || 0),
       coercionRate: result.coercionRate,
       repairs: result.coercionRepairs,
       quotaReserved: true,

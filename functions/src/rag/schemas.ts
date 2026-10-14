@@ -34,7 +34,7 @@ export const syllabusLessonSchema = z.object({
 }).strict();
 
 export const syllabusSchema = z.object({
-  lessons: z.array(syllabusLessonSchema).min(1).max(12),
+  lessons: z.array(syllabusLessonSchema).min(1).max(2),
 }).strict();
 export type Syllabus = z.infer<typeof syllabusSchema>;
 export type SyllabusLesson = z.infer<typeof syllabusLessonSchema>;
@@ -49,7 +49,7 @@ export const evidenceCardSchema = z.object({
 }).strict();
 
 export const evidenceCardsSchema = z.object({
-  cards: z.array(evidenceCardSchema).max(40),
+  cards: z.array(evidenceCardSchema).min(1).max(40),
 }).strict();
 export type EvidenceCard = z.infer<typeof evidenceCardSchema>;
 

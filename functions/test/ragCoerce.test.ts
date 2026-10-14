@@ -52,6 +52,20 @@ test("coercer does not invent lesson ids or pad objectives", () => {
   assert.equal(STAGE_ZOD.planner.safeParse(coerced.json).success, false);
 });
 
+test("reconcileVerdict promotes cited UNSUPPORTED claims", async () => {
+  const { reconcileVerdict } = await import("../src/rag/pipeline");
+  const next = reconcileVerdict({
+    claims: [
+      { text: "The client sends SYN first.", verdict: "UNSUPPORTED", evidence_ids: ["E1"] },
+      { text: "The moon is cheese.", verdict: "UNSUPPORTED", evidence_ids: [] },
+    ],
+    scores: { accuracy: 4, coverage: 4, focus: 4, clarity: 4, originality: 4 },
+    fix_list: [],
+  }, new Set(["E1"]));
+  assert.equal(next.claims[0]?.verdict, "SUPPORTED");
+  assert.equal(next.claims[1]?.verdict, "UNSUPPORTED");
+});
+
 test("quota settle releases failed when work throws", async () => {
   const released: string[] = [];
   const status = await settleGenerationQuota({

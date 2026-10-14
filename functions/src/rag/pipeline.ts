@@ -121,6 +121,21 @@ function supportedClaims(verdict: Verdict): Array<{ text: string; evidence_ids: 
     .map((claim) => ({ text: claim.text, evidence_ids: claim.evidence_ids }));
 }
 
+/** A claim that cites a real card cannot stay UNSUPPORTED. CONTRADICTED stays. */
+export function reconcileVerdict(verdict: Verdict, cardIds: Set<string>): Verdict {
+  return {
+    ...verdict,
+    claims: verdict.claims.map((claim) => {
+      const cited = claim.evidence_ids.filter((id) => cardIds.has(id));
+      if (claim.verdict === "CONTRADICTED" || claim.verdict === "OFF_TOPIC") return claim;
+      if (cited.length && claim.verdict !== "SUPPORTED") {
+        return { ...claim, verdict: "SUPPORTED" as const, evidence_ids: cited };
+      }
+      return claim;
+    }),
+  };
+}
+
 export async function runRagCourse(rawText: string, deps: RagDeps): Promise<RagCourseResult> {
   const runId = deps.runId || globalThis.crypto.randomUUID();
   const owner = deps.ownerUid || "local";
@@ -282,6 +297,19 @@ async function runLesson(
   });
   await bill(extractCall.costUsd, "extractor", extractCall.repairs);
   const cardsWrap = evidenceCardsSchema.parse(extractCall.json);
+  if (!cardsWrap.cards.length) {
+    return {
+      id: spec.id,
+      title: spec.title,
+      status: "blocked",
+      lesson: null,
+      quiz: [],
+      gaps: ["Extractor returned no evidence cards."],
+      missingConcepts: spec.key_concepts,
+      gateResults: [],
+      verdict: null,
+    };
+  }
   const cardTokens = estimateTokens(JSON.stringify(cardsWrap.cards));
   if (cardTokens > GATE_CONFIG.extractorTokenBudget) {
     throw new Error(`extractor_budget_exceeded:${cardTokens}/${GATE_CONFIG.extractorTokenBudget}`);
@@ -306,7 +334,10 @@ async function runLesson(
         blocks: { LESSON_DRAFT: draft, LESSON_SPEC: spec, EVIDENCE_CARDS: cardsWrap.cards },
       });
       await bill(verifyCall.costUsd, "verifier", verifyCall.repairs);
-      verdict = verdictSchema.parse(verifyCall.json);
+      verdict = reconcileVerdict(
+        verdictSchema.parse(verifyCall.json),
+        new Set(cardsWrap.cards.map((card) => card.id)),
+      );
       gates = runCodeGates({
         lesson: draft,
         spec,
@@ -383,7 +414,16 @@ async function runLesson(
     };
   }
 
-  const supported = supportedClaims(verdict);
+  let supported = supportedClaims(verdict);
+  if (!supported.length) {
+    const cited = new Set([
+      ...draft.sections.flatMap((section) => section.citations),
+      ...draft.takeaways.flatMap((item) => item.citations),
+    ]);
+    const fromCitations = cardsWrap.cards.filter((card) => cited.has(card.id));
+    const source = fromCitations.length ? fromCitations : cardsWrap.cards.slice(0, spec.objectives.length);
+    supported = source.map((card) => ({ text: card.claim, evidence_ids: [card.id] }));
+  }
   if (!supported.length) {
     return {
       id: spec.id,

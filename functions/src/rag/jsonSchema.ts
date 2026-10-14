@@ -80,10 +80,10 @@ export const STAGE_JSON_SCHEMA: Record<StageName, JsonSchema> = {
     ignored_requests: arr(str(4, 120), 0, 4),
   }),
   planner: obj({
-    lessons: arr(syllabusLesson, 1, 12),
+    lessons: arr(syllabusLesson, 1, 2),
   }),
   extractor: obj({
-    cards: arr(evidenceCard, 0, 40),
+    cards: arr(evidenceCard, 1, 40),
   }),
   writer: lesson,
   rewriter: lesson,
